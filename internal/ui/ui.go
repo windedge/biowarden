@@ -1,6 +1,7 @@
 // Package ui is GUI mode: a tray icon plus one window. The window's four pages
-// (Browsers, Keys, Settings, Log) come from the UI prototype; this shell only
-// carries the MyGo entry path.
+// (Browsers, Keys, Settings, Log) are a clickable prototype built from fake
+// in-memory data, so a human can settle the interactions and the layout before
+// the platform seams behind them are wired up.
 package ui
 
 import (
@@ -17,8 +18,6 @@ import (
 
 const appName = "biowarden"
 
-var pages = []string{"Browsers", "Keys", "Settings", "Log"}
-
 // Run blocks until the app quits.
 func Run() error {
 	mygo.App.SetName(appName)
@@ -26,13 +25,34 @@ func Run() error {
 	return mygo.App.Run()
 }
 
+// view builds the whole window from the prototype state, rebuilding after
+// every click or switch.
+func (app *protoState) view(c *ui.Context) {
+	app.tick(c)
+	t := c.Theme()
+	ui.Column(c).Fill().Background(t.Background).Children(func() {
+		ui.Tabs(c, &app.tab, "浏览器", "密钥", "设置", "日志")
+		switch app.tab {
+		case 0:
+			app.browsersPage(c)
+		case 1:
+			app.keysPage(c)
+		case 2:
+			app.settingsPage(c)
+		case 3:
+			app.logPage(c)
+		}
+	})
+}
+
 // start runs on the main thread, which WhenReady guarantees.
 func start() {
+	app := newProtoState()
 	win := mygo.NewWindow(mygo.WindowOptions{
 		Title:   appName,
-		Width:   760,
-		Height:  560,
-		Content: ui.View(shell),
+		Width:   820,
+		Height:  620,
+		Content: ui.View(app.view),
 	})
 	// Closing the window returns to the tray, as in the reference app; quitting
 	// stays deliberate, through the tray menu.
@@ -58,20 +78,6 @@ func start() {
 		defer tray.Destroy()
 	}
 	win.Show()
-}
-
-// shell stands in for the pages until the prototype fixes their layout.
-func shell(c *ui.Context) {
-	t := c.Theme()
-	ui.Column(c).Fill().Padding(24).Gap(10).Children(func() {
-		ui.Text(c, appName).FontSize(22).Bold()
-		ui.Text(c, "Shell only: the pages land with the UI prototype.").
-			FontSize(12).TextColor(t.TextMuted)
-		ui.Divider(c)
-		for _, page := range pages {
-			ui.Text(c, page)
-		}
-	})
 }
 
 // trayIcon draws a ring, blue so it stays visible on light and dark taskbars.
