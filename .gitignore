@@ -1,0 +1,34 @@
+# Build output: mygo build writes to dist/ (exe, NSIS installer, packed resources)
+dist/
+build/
+/mygo.exe
+/biowarden.exe
+/biowarden
+
+# mygo dev artifacts (dev harness, scratch runtime dirs)
+.mygo/
+mygo.ts
+
+# Go test and coverage artifacts
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Local sandbox and key material: never commit
+.env
+.env.local
+*.local.json
+dev-keys/
+*keyB64*
+
+# Logs (production logs go to %LOCALAPPDATA%\biowarden\; this catches dev leftovers)
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
