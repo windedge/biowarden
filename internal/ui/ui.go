@@ -27,7 +27,7 @@ func Run() error {
 
 // view builds the whole window from the prototype state, rebuilding after
 // every click or switch.
-func (app *protoState) view(c *ui.Context) {
+func (app *appState) view(c *ui.Context) {
 	app.tick(c)
 	t := c.Theme()
 	ui.Column(c).Fill().Background(t.Background).Children(func() {
@@ -47,7 +47,7 @@ func (app *protoState) view(c *ui.Context) {
 
 // start runs on the main thread, which WhenReady guarantees.
 func start() {
-	app := newProtoState()
+	app := newAppState()
 	win := mygo.NewWindow(mygo.WindowOptions{
 		Title:   appName,
 		Width:   820,
