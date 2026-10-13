@@ -25,6 +25,7 @@ type protoState struct {
 
 	accounts     []*protoAccount
 	scriptBody   string
+	scriptOpen   bool // the audit view of the extraction script starts collapsed
 	userId       string
 	keyB64       string
 	copiedAt     time.Time
@@ -104,7 +105,9 @@ func newProtoState() *protoState {
 			{userID: "b27ae6f80c1d4a53b6e9d7c240f8a1b5", email: "grace@example.com", created: "2026-02-03 18:07"},
 		},
 		scriptBody: extractSnippet,
-		logText:    fakeLog,
+		// scriptOpen stays false: the flow for a first-time user is the copy
+		// button, and the curious can open the disclosure to read the script.
+		logText: fakeLog,
 	}
 }
 

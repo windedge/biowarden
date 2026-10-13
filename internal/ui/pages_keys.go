@@ -35,10 +35,15 @@ func (app *protoState) keysPage(c *ui.Context) {
 								FontSize(12).TextColor(t.Success)
 						}
 					})
-					// The reference keeps the snippet off screen; the prototype
-					// shows it read-only so layout can be judged without pasting.
-					ui.TextArea(c, &app.scriptBody).ReadOnly(true).Lines(4, 10).
-						FontSize(11).Label("提取脚本预览").Placeholder("（脚本预览）")
+					// The reference hides the snippet because a long script wrecks
+					// its fixed-size SwiftUI layout; the page scrolls here, so the
+					// script can stay auditable behind a collapsed disclosure.
+					ui.Accordion(c, func() {
+						ui.AccordionItem(c, "查看提取脚本（可审计）", &app.scriptOpen, func() {
+							ui.TextArea(c, &app.scriptBody).ReadOnly(true).Lines(6, 14).
+								FontSize(11).Placeholder("（脚本预览）")
+						})
+					})
 				})
 
 				groupBox(c, "第二步：保存到本机（Windows Hello 保护）", func() {
