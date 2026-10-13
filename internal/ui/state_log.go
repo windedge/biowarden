@@ -1,19 +1,50 @@
 package ui
 
+// logTailBytes is how much of the host log the page keeps: enough to show a
+// recent unlock without loading a rotated multi-megabyte file.
+const logTailBytes = 64 * 1024
+
 // logState is the Log page's working data: a tail of the host's log file,
-// redacted. The page ticket swaps the fake text for the real file tail.
+// already redacted by the host that wrote it.
 type logState struct {
+	backend  settingsBackend
 	text     string
 	notice   string
 	noticeOK bool
 }
 
 func newLogState() logState {
-	// Fake lines stand where the real file tail will, including the redacted
-	// forms the host logger must produce.
-	return logState{text: fakeLog}
+	s := logState{backend: realSettingsInstance()}
+	s.load()
+	return s
 }
 
+// load replaces the view with a fresh tail. A missing file reads as empty, so
+// the page shows its placeholder until the host has run.
+func (s *logState) load() {
+	s.notice = ""
+	if s.backend == nil {
+		return
+	}
+	text, err := s.backend.logTail(logTailBytes)
+	if err != nil {
+		s.notice = "读取日志失败：" + err.Error()
+		s.noticeOK = false
+		return
+	}
+	s.text = text
+}
+
+func (s *logState) refresh() {
+	s.load()
+	if s.notice == "" {
+		s.notice = "已刷新"
+		s.noticeOK = true
+	}
+}
+
+// fakeLog stays for the prototype backend in backend_fake.go; the live page
+// reads the real file through logState.load.
 const fakeLog = `[2026-02-14 10:02:11.482] [INFO] host started: biowarden 0.1.0 (windows/amd64)
 [2026-02-14 10:02:11.483] [INFO] registry: 3 browsers known, 1 manifest owned by us
 [2026-02-14 10:03:40.115] [INFO] native message: action=unlock userId=6f1c9a04...
