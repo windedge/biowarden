@@ -1,0 +1,3 @@
+# Keep sources LF in the working tree too: gofmt flags CRLF, and diffs should
+# not depend on the checkout platform.
+* text=auto eol=lf
