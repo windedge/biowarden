@@ -181,10 +181,11 @@ func (s *keysState) applyRemove(id string, err error) {
 	s.noticeOK = true
 }
 
-// extractSnippet mirrors the reference implementation's snippet: read the
-// extension's session storage for the user key entry and print userId and
-// keyB64 as JSON. The page ticket reviews it against the current extension.
-const extractSnippet = `// biowarden prototype snippet - not the shipped script
+// extractSnippet is the reference implementation's extraction script verbatim:
+// read the extension's session storage for the user key entry and print
+// userId and keyB64 as JSON. If a future extension update changes the
+// storage layout, this is the first thing to re-check.
+const extractSnippet = `// biowarden: extract the user key from the unlocked extension
 chrome.storage.session.get(null, d => {
   for (const [k, v] of Object.entries(d)) {
     const m = k.match(/^user_([^_]+)_crypto_userKey$/);
