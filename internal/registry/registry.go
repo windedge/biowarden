@@ -52,9 +52,3 @@ type Registrar interface {
 	// registration that is not ours alone.
 	Uninstall(b Browser) error
 }
-
-type stub struct{}
-
-func (stub) Status(Browser) (Status, error) { return Status{}, ErrNotImplemented }
-func (stub) Install(Browser) error          { return ErrNotImplemented }
-func (stub) Uninstall(Browser) error        { return ErrNotImplemented }

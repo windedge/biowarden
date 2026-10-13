@@ -34,10 +34,3 @@ type Store interface {
 	Put(acc Account, key Key) error
 	Remove(userID string) error // removing a missing account is not an error
 }
-
-type stub struct{}
-
-func (stub) List() ([]Account, error) { return nil, ErrNotImplemented }
-func (stub) Get(string) (Key, error)  { return nil, ErrNotImplemented }
-func (stub) Put(Account, Key) error   { return ErrNotImplemented }
-func (stub) Remove(string) error      { return ErrNotImplemented }
