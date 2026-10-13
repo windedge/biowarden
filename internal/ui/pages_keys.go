@@ -9,8 +9,9 @@ import (
 )
 
 // keysPage mirrors the reference KeyTab: take the two values out of the
-// extension, then store them behind Windows Hello. The extraction script is
-// invented, and no value is written anywhere.
+// extension, then store them in the credential store behind Windows Hello.
+// The extraction script is still a prototype; the store and the consent are
+// real.
 func (app *appState) keysPage(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Grow(1).Children(func() {
@@ -59,12 +60,15 @@ func (app *appState) keysPage(c *ui.Context) {
 					})
 					ready := strings.TrimSpace(app.keys.userId) != "" && strings.TrimSpace(app.keys.keyB64) != ""
 					ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-						if ui.PrimaryButton(c, "保存并验证").Disabled(!ready || app.keys.verifying).Clicked() {
-							app.keys.startVerify()
+						if ui.PrimaryButton(c, "保存并验证").Disabled(!ready || app.keys.busy).Clicked() {
+							app.keys.saveKey()
+							// The consent runs off the UI thread, so ask for the frame
+							// that starts polling for its result.
+							c.Invalidate()
 						}
-						if app.keys.verifying {
+						if app.keys.busy {
 							ui.Spinner(c).Label("验证中")
-							ui.Text(c, "正在调用 Windows Hello 验证身份...（原型：模拟 0.9 秒）").
+							ui.Text(c, "正在调用 Windows Hello 验证身份...").
 								FontSize(12).TextColor(t.TextMuted)
 						}
 					})
@@ -83,16 +87,22 @@ func (app *appState) keysPage(c *ui.Context) {
 							AlignItems(ui.Center).Children(func() {
 							ui.Column(c).Grow(1).Gap(2).Children(func() {
 								ui.Text(c, acc.userID).FontSize(12).SingleLine().Tooltip(acc.userID)
-								muted(c, acc.email+" · 创建于 "+acc.created)
+								meta := "创建于 " + acc.created
+								if acc.email != "" {
+									meta = acc.email + " · " + meta
+								}
+								muted(c, meta)
 							})
-							if ui.Button(c, "测试解锁").Clicked() {
-								app.keys.notice = "验证通过：Windows Hello 已确认身份（原型，userId=" +
-									shortID(acc.userID) + "）"
-								app.keys.noticeOK = true
+							if ui.Button(c, "测试解锁").Disabled(app.keys.busy).Clicked() {
+								app.keys.testUnlock(acc)
+								c.Invalidate()
 							}
-							// The row collection changes, so delete waits until
-							// the view has finished building it.
-							ui.Button(c, "删除").OnClick(func() { app.keys.removeAccount(acc) })
+							// Removal runs off the UI thread, so the row is dropped by
+							// a later tick rather than while this list is built.
+							if ui.Button(c, "删除").Disabled(app.keys.busy).Clicked() {
+								app.keys.removeAccount(acc)
+								c.Invalidate()
+							}
 						})
 					}
 				})
