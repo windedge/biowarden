@@ -6,7 +6,8 @@ import (
 
 // browsersPage mirrors the reference BrowserTab: one row per browser with its
 // manifest state, the absolute path we would write, and the actions that
-// change that state. Everything is in memory.
+// change that state. Every action goes through the registry seam, then the
+// page reloads so it shows what actually happened.
 func (app *appState) browsersPage(c *ui.Context) {
 	bs := &app.browsers
 	configured := 0
@@ -36,65 +37,48 @@ func (app *appState) browsersPage(c *ui.Context) {
 func (app *appState) browserRow(c *ui.Context, i int) {
 	t := c.Theme()
 	bs := &app.browsers
-	b := app.browsers.rows[i]
+	b := &app.browsers.rows[i]
 	ui.Row(c).Key(b.name).Gap(12).Padding(10, 8).AlignItems(ui.Center).Children(func() {
 		ui.Column(c).Grow(1).Gap(2).Children(func() {
 			ui.Text(c, b.name).Bold()
 			ui.Text(c, browserStatusLabel(b.state)).FontSize(11).TextColor(browserStatusColor(t, b.state))
 			ui.Text(c, b.path).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(b.path)
 		})
+		// Actions run after the row is built: install/uninstall reload the rows,
+		// which must not happen while this one is still being constructed.
 		switch {
 		case bs.confirmCover == i:
 			// The overwrite needs a second click: the reference only writes
 			// over a foreign manifest after a human confirms.
-			if ui.Button(c, "取消").Clicked() {
+			ui.Button(c, "取消").OnClick(func() { bs.confirmCover = -1 })
+			ui.PrimaryButton(c, "确认覆盖").OnClick(func() {
 				bs.confirmCover = -1
-			}
-			if ui.PrimaryButton(c, "确认覆盖").Clicked() {
-				b.state = browserOurs
-				bs.confirmCover = -1
-				bs.notice = "已覆盖 " + b.name + " 的 manifest（原型：仅内存）"
-				bs.noticeOK = true
-			}
+				bs.install(b)
+			})
 		case b.state == browserOurs:
-			if ui.Button(c, "修复").Clicked() {
-				bs.notice = "已为 " + b.name + " 重写 manifest 路径（原型：仅内存）"
-				bs.noticeOK = true
-			}
-			if ui.Button(c, "卸载").Clicked() {
-				b.state = browserMissing
-				bs.notice = "已删除 " + b.name + " 的 manifest（原型：仅内存）"
-				bs.noticeOK = true
-			}
+			ui.Button(c, "修复").OnClick(func() { bs.install(b) })
+			ui.Button(c, "卸载").OnClick(func() { bs.uninstall(b) })
 		case b.state == browserForeign:
-			if ui.Button(c, "覆盖安装").Clicked() {
+			ui.Button(c, "覆盖安装").OnClick(func() {
 				bs.confirmCover = i
 				bs.notice = ""
-			}
+			})
 			if bs.confirmUninstall == i {
 				// Deleting a manifest that may be the official client's deserves
 				// the same second click as overwriting one.
-				if ui.Button(c, "取消").Clicked() {
+				ui.Button(c, "取消").OnClick(func() { bs.confirmUninstall = -1 })
+				ui.PrimaryButton(c, "确认卸载").OnClick(func() {
 					bs.confirmUninstall = -1
-				}
-				if ui.PrimaryButton(c, "确认卸载").Clicked() {
-					b.state = browserMissing
-					bs.confirmUninstall = -1
-					bs.notice = "已删除 " + b.name + " 的 manifest（原型：仅内存）"
-					bs.noticeOK = true
-				}
+					bs.uninstall(b)
+				})
 				break
 			}
-			if ui.Button(c, "卸载").Clicked() {
+			ui.Button(c, "卸载").OnClick(func() {
 				bs.confirmUninstall = i
 				bs.notice = ""
-			}
+			})
 		default:
-			if ui.Button(c, "安装").Clicked() {
-				b.state = browserOurs
-				bs.notice = "已为 " + b.name + " 写入 manifest（原型：仅内存）"
-				bs.noticeOK = true
-			}
+			ui.Button(c, "安装").OnClick(func() { bs.install(b) })
 		}
 	})
 }
