@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/windedge/biowarden/internal/host"
-	"github.com/windedge/biowarden/internal/ui"
 )
 
 func main() {
@@ -18,7 +17,7 @@ func main() {
 		}
 		return
 	}
-	if err := ui.Run(); err != nil {
+	if err := runGUI(); err != nil {
 		fmt.Fprintln(os.Stderr, "biowarden:", err)
 		os.Exit(1)
 	}
