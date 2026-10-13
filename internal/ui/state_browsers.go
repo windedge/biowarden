@@ -1,6 +1,11 @@
 package ui
 
-import "github.com/egoist/mygo/ui"
+import (
+	"errors"
+
+	"github.com/egoist/mygo/ui"
+	"github.com/windedge/biowarden/internal/registry"
+)
 
 // Manifest states of a browser, as the registry seam reports them.
 const (
@@ -9,10 +14,12 @@ const (
 	browserForeign        // a manifest we did not write (likely the official client)
 )
 
-// browsersState is the Browsers page's working data. The prototype fills it
-// with fake rows; the page ticket swaps in the registry seam.
+// browsersState is the Browsers page's working data, backed by the registry
+// seam.
 type browsersState struct {
-	rows []*browserRow
+	backend browsersBackend
+
+	rows []browserRow
 
 	// confirmCover and confirmUninstall are the row indexes (into rows)
 	// awaiting a second confirming click; -1 when none. Overwriting or
@@ -23,33 +30,74 @@ type browsersState struct {
 
 	notice   string
 	noticeOK bool
-
-	reload func(c *ui.Context) // the page ticket replaces this with a real refresh
 }
 
 type browserRow struct {
-	name  string // display name, from registry.Browsers
-	path  string // manifest path currently registered, "" when none
-	state int    // browserMissing / browserOurs / browserForeign
+	browser registry.Browser // the registration point install/uninstall target
+	name    string           // display name, from registry.Browsers
+	path    string           // manifest path currently registered, "" when none
+	state   int              // browserMissing / browserOurs / browserForeign
 }
 
 func newBrowsersState() browsersState {
-	// Fake rows stand where the registry seam will stand: the three
-	// supported browsers, one of them showing the foreign case this machine
-	// really has (the official client's registration).
-	return browsersState{
-		confirmCover:     -1,
-		confirmUninstall: -1,
-		rows: []*browserRow{
-			{name: "Chrome", path: `%LOCALAPPDATA%\biowarden\manifests\chrome.json`, state: browserOurs},
-			{name: "Microsoft Edge", path: `C:\Users\<user>\scoop\apps\bitwarden\...\browsers\edge.json`, state: browserForeign},
-			{name: "Firefox", path: "", state: browserMissing},
-		},
-	}
+	return newBrowsersStateWith(newRealBrowsers(nil))
 }
 
+// newBrowsersStateWith is the injectable form; tests pass an in-memory
+// backend, the app builds the registry-backed one.
+func newBrowsersStateWith(backend browsersBackend) browsersState {
+	s := browsersState{
+		backend:          backend,
+		confirmCover:     -1,
+		confirmUninstall: -1,
+	}
+	s.reload()
+	return s
+}
+
+// tick refreshes on every rebuild, so reopening or switching to the page shows
+// the registry as it is now rather than what it was when the app started.
 func (s *browsersState) tick(c *ui.Context) {
-	if s.reload != nil {
-		s.reload(c)
+	s.reload()
+}
+
+// reload re-reads every browser's manifest state.
+func (s *browsersState) reload() {
+	rows, err := s.backend.refresh()
+	if err != nil {
+		s.notice = "读取浏览器注册状态失败：" + err.Error()
+		s.noticeOK = false
+		return
+	}
+	s.rows = rows
+}
+
+// install writes our manifest for the row, replacing whatever was registered.
+func (s *browsersState) install(row *browserRow) {
+	if err := s.backend.install(*row); err != nil {
+		s.notice = "写入 " + row.name + " 的 manifest 失败：" + err.Error()
+		s.noticeOK = false
+		return
+	}
+	s.reload()
+	s.notice = "已为 " + row.name + " 写入 manifest"
+	s.noticeOK = true
+}
+
+// uninstall removes our manifest, unless the registration is foreign: then the
+// registry leaves it alone and the page says so.
+func (s *browsersState) uninstall(row *browserRow) {
+	err := s.backend.uninstall(*row)
+	s.reload()
+	switch {
+	case errors.Is(err, errForeignRegistration):
+		s.notice = "未删除 " + row.name + " 的注册：它可能属于官方 Bitwarden 桌面客户端"
+		s.noticeOK = false
+	case err != nil:
+		s.notice = "删除 " + row.name + " 的 manifest 失败：" + err.Error()
+		s.noticeOK = false
+	default:
+		s.notice = "已删除 " + row.name + " 的 manifest"
+		s.noticeOK = true
 	}
 }
