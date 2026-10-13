@@ -244,7 +244,7 @@ func decryptLegacyReply(t *testing.T, session *protocol.Session, stdoutR *io.Pip
 // --- legacy tests -----------------------------------------------------------
 
 func TestLegacyUnlockSucceeds(t *testing.T) {
-	key := secrets.Key("dXNlci1rZXk=")
+	key := secrets.Key("raw-key-bytes")
 	verifier := &fakeVerifier{available: true, result: hello.Verified}
 	store := newFakeStore(map[string]secrets.Key{"user-a": key})
 	logger, _ := newTestLogger(t, hostlog.LevelInfo)
@@ -263,7 +263,7 @@ func TestLegacyUnlockSucceeds(t *testing.T) {
 
 	var resp protocol.UnlockResponse
 	decryptLegacyReply(t, session, stdoutR, &resp)
-	if !resp.Response || resp.UserKeyB64 != string(key) {
+	if !resp.Response || resp.UserKeyB64 != base64.StdEncoding.EncodeToString(key) {
 		t.Fatalf("unlock response = %+v, want response=true userKeyB64=%q", resp, key)
 	}
 	if resp.MessageID != 7 {
@@ -280,7 +280,7 @@ func TestLegacyUnlockSucceeds(t *testing.T) {
 
 func TestLegacyUnlockDeniedNeverReadsKey(t *testing.T) {
 	verifier := &fakeVerifier{available: true, result: hello.Canceled}
-	store := newFakeStore(map[string]secrets.Key{"user-a": []byte("dXNlci1rZXk=")})
+	store := newFakeStore(map[string]secrets.Key{"user-a": []byte("raw-key-bytes")})
 	logger, _ := newTestLogger(t, hostlog.LevelInfo)
 
 	stdinW, stdoutR, done := startHost(t, verifier, store, logger)
@@ -308,7 +308,7 @@ func TestLegacyUnlockDeniedNeverReadsKey(t *testing.T) {
 
 func TestLegacyStatusForUser(t *testing.T) {
 	verifier := &fakeVerifier{available: true, result: hello.Verified}
-	store := newFakeStore(map[string]secrets.Key{"user-a": []byte("dXNlci1rZXk=")})
+	store := newFakeStore(map[string]secrets.Key{"user-a": []byte("raw-key-bytes")})
 	logger, _ := newTestLogger(t, hostlog.LevelInfo)
 
 	stdinW, stdoutR, done := startHost(t, verifier, store, logger)
@@ -387,7 +387,7 @@ func TestLegacyTamperedFrameRequestsRehandshake(t *testing.T) {
 // --- SDK IPC test -----------------------------------------------------------
 
 func TestSDKIPCEndToEnd(t *testing.T) {
-	key := secrets.Key("dXNlci1rZXk=")
+	key := secrets.Key("raw-key-bytes")
 	verifier := &fakeVerifier{available: true, result: hello.Verified}
 	store := newFakeStore(map[string]secrets.Key{"user-a": key})
 	logger, _ := newTestLogger(t, hostlog.LevelInfo)
@@ -417,7 +417,7 @@ func TestSDKIPCEndToEnd(t *testing.T) {
 		"request":      map[string]any{"user_id": "user-a"},
 	})
 	unlockOK, _ := unlock["result"].(map[string]any)["Ok"].(map[string]any)
-	if unlockOK["user_key"] != string(key) {
+	if unlockOK["user_key"] != base64.StdEncoding.EncodeToString(key) {
 		t.Fatalf("user_key = %v, want %q", unlockOK["user_key"], key)
 	}
 	if verifier.callCount() != 1 {
@@ -428,7 +428,7 @@ func TestSDKIPCEndToEnd(t *testing.T) {
 
 func TestSDKIPCUnlockDeniedNeverReadsKey(t *testing.T) {
 	verifier := &fakeVerifier{available: true, result: hello.Canceled}
-	store := newFakeStore(map[string]secrets.Key{"user-a": []byte("dXNlci1rZXk=")})
+	store := newFakeStore(map[string]secrets.Key{"user-a": []byte("raw-key-bytes")})
 	logger, _ := newTestLogger(t, hostlog.LevelInfo)
 
 	stdinW, stdoutR, done := startHost(t, verifier, store, logger)

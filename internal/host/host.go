@@ -4,6 +4,7 @@
 package host
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -200,15 +201,15 @@ func (h *host) unlockKey(userID string) (string, bool) {
 	if !h.verifyConsent(unlockReason) {
 		return "", false
 	}
-	// Put stores the base64 text of the account key, exactly as the extension
-	// expects it back in userKeyB64/user_key, so no re-encoding here.
+	// The store holds the raw key bytes; the extension expects base64 text
+	// in userKeyB64/user_key, so encode on the way out.
 	key, err := h.store.Get(userID)
 	if err != nil {
 		h.log.Error("secrets: read failed for userId=" + userID + ": " + err.Error())
 		return "", false
 	}
 	h.log.Info("unlock ok userId=" + userID)
-	return string(key), true
+	return base64.StdEncoding.EncodeToString(key), true
 }
 
 func (h *host) keyExists(userID string) bool {
