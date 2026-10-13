@@ -8,9 +8,12 @@ import (
 )
 
 // keysState is the Keys page's working data: the stored accounts, the entry
-// form, and the fake verification in flight. The page ticket swaps the fake
-// account list for the secrets seam and the fake verify for hello.
+// form, and any backend call in flight. Backend calls run off the UI thread
+// because Windows Hello blocks on a human, so their results come back through
+// results as closures that only the UI thread applies.
 type keysState struct {
+	backend keysBackend
+
 	accounts []*accountRow
 
 	scriptBody string
@@ -21,8 +24,8 @@ type keysState struct {
 
 	copiedAt time.Time
 
-	verifying   bool
-	verifyUntil time.Time
+	busy    bool
+	results chan func(*keysState)
 
 	notice   string
 	noticeOK bool
@@ -34,27 +37,31 @@ type accountRow struct {
 	created string
 }
 
-func newKeysState() keysState {
-	// Two accounts, both with the long userId the real credential store keys
-	// on, so the row layout is judged at its real width.
-	return keysState{
+func newKeysState() keysState { return newKeysStateWith(newRealKeys()) }
+
+func newKeysStateWith(backend keysBackend) keysState {
+	s := keysState{
+		backend:    backend,
 		scriptBody: extractSnippet,
-		// scriptOpen stays false: the flow for a first-time user is the copy
-		// button, and the curious can open the disclosure to read the script.
-		accounts: []*accountRow{
-			{userID: "6f1c9a04d2e84b7f9c3a1b8e5d0f2a7c", email: "ada@example.com", created: "2026-01-12 09:24"},
-			{userID: "b27ae6f80c1d4a53b6e9d7c240f8a1b5", email: "grace@example.com", created: "2026-02-03 18:07"},
-		},
+		results:    make(chan func(*keysState), 8),
 	}
+	// The first list must come from the credential store, not a seed, so the
+	// page shows real accounts from the first frame.
+	s.reload()
+	return s
 }
 
 func (s *keysState) tick(c *ui.Context) {
-	if s.verifying {
-		if left := time.Until(s.verifyUntil); left > 0 {
-			c.After(left)
-		} else {
-			s.finishVerify()
-		}
+	select {
+	case apply := <-s.results:
+		s.busy = false
+		apply(s)
+	default:
+	}
+	if s.busy {
+		// A backend call is still running; poll again so its result lands
+		// even though the goroutine cannot touch the UI.
+		c.After(60 * time.Millisecond)
 	}
 	if !s.copiedAt.IsZero() {
 		if left := 3*time.Second - time.Since(s.copiedAt); left > 0 {
@@ -65,48 +72,112 @@ func (s *keysState) tick(c *ui.Context) {
 	}
 }
 
-// startVerify pretends to store the key and run one Windows Hello consent.
-func (s *keysState) startVerify() {
-	s.verifying = true
-	s.verifyUntil = time.Now().Add(900 * time.Millisecond)
+// async runs work on its own goroutine and hands the UI a closure that applies
+// the outcome. Only one call is allowed at a time: a second Hello prompt while
+// the first is open would be confusing and pointless.
+func (s *keysState) async(work func() func(*keysState)) {
+	if s.busy {
+		return
+	}
+	s.busy = true
 	s.notice = ""
+	go func() { s.results <- work() }()
 }
 
-func (s *keysState) finishVerify() {
-	s.verifying = false
+func (s *keysState) reload() {
+	b := s.backend
+	s.async(func() func(*keysState) {
+		rows, err := b.accounts()
+		available, availErr := b.helloAvailable()
+		return func(st *keysState) { st.applyReload(rows, err, available, availErr) }
+	})
+}
+
+func (s *keysState) applyReload(rows []accountRow, err error, available bool, availErr error) {
+	switch {
+	case err != nil:
+		s.notice = "读取已保存账户失败：" + err.Error()
+		s.noticeOK = false
+	case availErr != nil:
+		s.notice = "检查 Windows Hello 失败：" + availErr.Error()
+		s.noticeOK = false
+	case !available:
+		s.notice = "此电脑未配置 Windows Hello，无法保存或删除密钥。"
+		s.noticeOK = false
+	}
+	s.accounts = s.accounts[:0]
+	for i := range rows {
+		s.accounts = append(s.accounts, &rows[i])
+	}
+}
+
+// saveKey decodes and stores the form's values behind one Hello consent. The
+// backend picks up the trimmed values so a pasted newline does not spoil the
+// key, and it runs off the UI thread because consent blocks.
+func (s *keysState) saveKey() {
+	b := s.backend
 	id := strings.TrimSpace(s.userId)
-	created := when(time.Now())
-	// Re-saving an existing userId updates that row: duplicate keys would
-	// otherwise share one element identity and confuse the rows.
-	replaced := false
-	for _, a := range s.accounts {
-		if a.userID == id {
-			a.created = created
-			replaced = true
-			break
-		}
+	key := strings.TrimSpace(s.keyB64)
+	s.async(func() func(*keysState) {
+		err := b.save(id, key)
+		return func(st *keysState) { st.applySave(err) }
+	})
+}
+
+func (s *keysState) applySave(err error) {
+	if err != nil {
+		s.notice = err.Error()
+		s.noticeOK = false
+		return
 	}
-	if !replaced {
-		s.accounts = append(s.accounts, &accountRow{
-			userID:  id,
-			email:   "（原型：未提供邮箱）",
-			created: created,
-		})
-	}
-	s.notice = "密钥已保存，Windows Hello 验证通过（原型：未写入凭据管理器）"
+	s.notice = "密钥已保存，Windows Hello 验证通过。"
 	s.noticeOK = true
 	s.userId, s.keyB64 = "", ""
+	s.reload()
+}
+
+func (s *keysState) testUnlock(acc *accountRow) {
+	b := s.backend
+	id := acc.userID
+	s.async(func() func(*keysState) {
+		err := b.verify("测试解锁 biowarden 密钥")
+		return func(st *keysState) { st.applyUnlock(id, err) }
+	})
+}
+
+func (s *keysState) applyUnlock(id string, err error) {
+	if err != nil {
+		s.notice = err.Error()
+		s.noticeOK = false
+		return
+	}
+	s.notice = "验证通过：Windows Hello 已确认身份（userId=" + shortID(id) + "）"
+	s.noticeOK = true
 }
 
 func (s *keysState) removeAccount(target *accountRow) {
+	b := s.backend
+	id := target.userID
+	s.async(func() func(*keysState) {
+		err := b.remove(id)
+		return func(st *keysState) { st.applyRemove(id, err) }
+	})
+}
+
+func (s *keysState) applyRemove(id string, err error) {
+	if err != nil {
+		s.notice = err.Error()
+		s.noticeOK = false
+		return
+	}
 	out := s.accounts[:0]
 	for _, a := range s.accounts {
-		if a != target {
+		if a.userID != id {
 			out = append(out, a)
 		}
 	}
 	s.accounts = out
-	s.notice = "已删除该账户的密钥（原型：仅内存）"
+	s.notice = "已删除该账户的密钥。"
 	s.noticeOK = true
 }
 
