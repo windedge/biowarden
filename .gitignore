@@ -32,3 +32,4 @@ dev-keys/
 .DS_Store
 Thumbs.db
 desktop.ini
+.pi/APPEND_SYSTEM.md
