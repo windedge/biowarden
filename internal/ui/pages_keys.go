@@ -45,11 +45,11 @@ func (app *protoState) keysPage(c *ui.Context) {
 					ui.Form(c, func() {
 						ui.Field(c, "User ID", func() {
 							ui.TextInput(c.Key("userId"), &app.userId).
-								Placeholder("控制台输出的 userId").Label("User ID")
+								Placeholder("控制台输出的 userId")
 						})
 						ui.Field(c, "加密密钥 (base64)", func() {
 							ui.TextInput(c.Key("keyB64"), &app.keyB64).Password().
-								Placeholder("keyB64").Label("加密密钥 (base64)")
+								Placeholder("keyB64")
 						})
 					})
 					ready := strings.TrimSpace(app.userId) != "" && strings.TrimSpace(app.keyB64) != ""
@@ -64,6 +64,7 @@ func (app *protoState) keysPage(c *ui.Context) {
 						}
 					})
 					muted(c, "输出含 User ID 和加密密钥，只保存在本机凭据管理器，请勿外传。")
+					muted(c, "保存成功后，还要在 Bitwarden 扩展 → 设置 → 安全中开启「解锁时使用生物识别」。")
 				})
 
 				groupBox(c, "已保存的账户", func() {

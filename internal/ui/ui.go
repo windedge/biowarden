@@ -55,11 +55,16 @@ func start() {
 		Content: ui.View(app.view),
 	})
 	// Closing the window returns to the tray, as in the reference app; quitting
-	// stays deliberate, through the tray menu.
+	// stays deliberate, through the tray menu. App.Quit must still be able to
+	// close the window, so OnBeforeQuit lets that close pass through.
+	quitting := false
 	win.OnClose(func(e *mygo.CloseEvent) {
-		e.PreventDefault()
-		win.Hide()
+		if !quitting {
+			e.PreventDefault()
+			win.Hide()
+		}
 	})
+	mygo.App.OnBeforeQuit(func(*mygo.QuitEvent) { quitting = true })
 
 	tray, err := mygo.NewTray(mygo.TrayOptions{
 		Icon:    trayIcon(),
@@ -75,7 +80,9 @@ func start() {
 		// costs the menu.
 		log.Println("biowarden: tray unavailable:", err)
 	} else {
-		defer tray.Destroy()
+		// The tray lives until the app quits; destroying it here would remove
+		// it the moment start returns.
+		mygo.App.OnWillQuit(func(*mygo.QuitEvent) { tray.Destroy() })
 	}
 	win.Show()
 }

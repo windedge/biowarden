@@ -17,7 +17,7 @@ func (app *protoState) browsersPage(c *ui.Context) {
 	ui.Column(c).Grow(1).Padding(16).Gap(10).Children(func() {
 		ui.Text(c, "浏览器 (Browsers)").FontSize(18).Bold()
 		muted(c, "已配置 "+itoa(configured)+" / "+itoa(len(app.browsers))+" 个浏览器 · 已存 "+
-			itoa(len(app.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生理解锁。")
+			itoa(len(app.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生物识别解锁。")
 		if app.confirmCover >= 0 {
 			notice(c, "覆盖前确认：该 manifest 可能属于 Bitwarden 官方桌面客户端，覆盖后官方生物解锁会失效。", false)
 		} else {
@@ -69,10 +69,23 @@ func (app *protoState) browserRow(c *ui.Context, i int) {
 				app.confirmCover = i
 				app.browserNotice = ""
 			}
+			if app.confirmUninstall == i {
+				// Deleting a manifest that may be the official client's deserves
+				// the same second click as overwriting one.
+				if ui.Button(c, "取消").Clicked() {
+					app.confirmUninstall = -1
+				}
+				if ui.PrimaryButton(c, "确认卸载").Clicked() {
+					b.state = browserMissing
+					app.confirmUninstall = -1
+					app.browserNotice = "已删除 " + b.name + " 的 manifest（原型：仅内存）"
+					app.browserNoticeOK = true
+				}
+				break
+			}
 			if ui.Button(c, "卸载").Clicked() {
-				b.state = browserMissing
-				app.browserNotice = "已删除 " + b.name + " 的 manifest（原型：仅内存）"
-				app.browserNoticeOK = true
+				app.confirmUninstall = i
+				app.browserNotice = ""
 			}
 		default:
 			if ui.Button(c, "安装").Clicked() {
@@ -87,7 +100,7 @@ func (app *protoState) browserRow(c *ui.Context, i int) {
 func browserStatusLabel(state int) string {
 	switch state {
 	case browserOurs:
-		return "已安装（WardenBio）"
+		return "已安装（biowarden）"
 	case browserForeign:
 		return "已存在（可能是官方 Bitwarden 桌面客户端的配置）"
 	default:

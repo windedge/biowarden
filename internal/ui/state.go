@@ -17,10 +17,11 @@ func itoa(n int) string { return strconv.Itoa(n) }
 type protoState struct {
 	tab int
 
-	browsers        []*protoBrowser
-	confirmCover    int // which row awaits the overwrite confirmation; -1 when none
-	browserNotice   string
-	browserNoticeOK bool
+	browsers         []*protoBrowser
+	confirmCover     int // which row awaits the overwrite confirmation; -1 when none
+	confirmUninstall int // which row awaits the uninstall confirmation; -1 when none
+	browserNotice    string
+	browserNoticeOK  bool
 
 	accounts     []*protoAccount
 	scriptBody   string
@@ -33,6 +34,7 @@ type protoState struct {
 	keysNoticeOK bool
 
 	launchAtLogin  bool
+	showTray       bool
 	helloChecking  bool
 	helloUntil     time.Time
 	helloOK        bool
@@ -69,11 +71,13 @@ var logLevels = []string{"错误", "信息", "调试"}
 
 func newProtoState() *protoState {
 	return &protoState{
-		confirmCover:  -1,
-		launchAtLogin: true,
-		helloOK:       true,
-		logLevel:      "信息",
-		logPath:       `%LOCALAPPDATA%\biowarden\host.log`,
+		confirmCover:     -1,
+		confirmUninstall: -1,
+		launchAtLogin:    true,
+		showTray:         true,
+		helloOK:          true,
+		logLevel:         "信息",
+		logPath:          `%LOCALAPPDATA%\biowarden\host.log`,
 		// Windows manifest locations, so the paths look like the real ones
 		// while the registry seam stays untouched.
 		browsers: []*protoBrowser{

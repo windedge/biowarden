@@ -20,11 +20,21 @@ func (app *protoState) settingsPage(c *ui.Context) {
 				ui.Form(c, func() {
 					ui.Fieldset(c, "入口", func() {
 						ui.Field(c, "登录时自动启动", func() {
-							if ui.Switch(c, &app.launchAtLogin).Label("登录时自动启动").Changed() {
+							if ui.Switch(c, &app.launchAtLogin).Changed() {
 								if app.launchAtLogin {
 									app.settingsNotice = "已开启登录时自动启动（原型：未写入注册表）"
 								} else {
 									app.settingsNotice = "已关闭登录时自动启动（原型：未写入注册表）"
+								}
+								app.settingsOK = true
+							}
+						})
+						ui.Field(c, "显示托盘图标", func() {
+							if ui.Switch(c, &app.showTray).Changed() {
+								if app.showTray {
+									app.settingsNotice = "已显示托盘图标（原型：仅内存）"
+								} else {
+									app.settingsNotice = "已隐藏托盘图标，退出只能从窗口（原型：仅内存）"
 								}
 								app.settingsOK = true
 							}
@@ -48,10 +58,10 @@ func (app *protoState) settingsPage(c *ui.Context) {
 					})
 					ui.Fieldset(c, "日志", func() {
 						ui.Field(c, "级别", func() {
-							ui.Select(c, &app.logLevel, logLevels).Label("日志级别")
+							ui.Select(c, &app.logLevel, logLevels)
 						})
 						ui.Field(c, "路径", func() {
-							ui.TextInput(c, &app.logPath).ReadOnly(true).Label("日志路径").FontSize(11)
+							ui.TextInput(c, &app.logPath).ReadOnly(true).FontSize(11)
 						})
 					})
 					ui.Fieldset(c, "关于", func() {
