@@ -34,7 +34,7 @@ kernel32.dll: CreateEventW / SetEvent / WaitForSingleObject / CloseHandle       
 3. `interop->RequestVerificationForWindowAsync(hwnd, msg, IID_IAsyncOperation<UserConsentVerificationResult>, &op)`
    - **泛型实例 IID = `FD596FFD-2318-558F-9DBE-D21DF43764A5`**（SDK `winrt/windows.security.credentials.ui.h:269` `IAsyncOperation<UserConsentVerificationResult>` 特化 uuid）
    - **Completed handler IID = `0CFFC6C9-4C2B-5CD4-B38C-7B8DF3FF5AFB`**（同文件 :294 `AsyncOperationCompletedHandler<UserConsentVerificationResult>` 特化）
-4. 等 `IAsyncOperation` 完成（无需消息泵！）：`IAsyncOperation` vtable 槽位：QI=0, AddRef=1, Release=2, GetIids=3, GetRuntimeClassName=4, GetTrustLevel=5, **put_Completed=6, get_Completed=7, GetResults=8**（IAsyncInfo: Cancel=9, Close=10, get_Status=11, get_ErrorCode=12）
+4. 等 `IAsyncOperation` 完成（无需消息泵！）：`IAsyncOperation<T>` vtable 槽位：QI=0, AddRef=1, Release=2, GetIids=3, GetRuntimeClassName=4, GetTrustLevel=5, **put_Completed=6, get_Completed=7, GetResults=8**（`IAsyncInfo` 是另一张 vtable 的独立接口，不在这张表上，本实现用不到）
    - windows-rs `join()` 的实现（crates/libs/future/src/async.rs + waiter.rs）：
      ```
      if get_Status() == Started:
@@ -44,12 +44,13 @@ kernel32.dll: CreateEventW / SetEvent / WaitForSingleObject / CloseHandle       
      return GetResults()
      ```
    - Completed 回调在 WinRT 线程池线程触发，**不需要**窗口消息泵，也不阻塞 host 的 stdin 读循环（goroutine 里等待即可）
-5. 结果映射（UserConsentVerificationResult 枚举，keyguard windows.rs:349-368 的映射可直接照抄）：
+   - **put_Completed 会对传入的 handler 做 QI，要求它实现该操作专属的 completed-handler IID**：验证路径 `0CFFC6C9-4C2B-5CD4-B38C-7B8DF3FF5AFB`，可用性路径 `28988174-ACE2-5C15-A0DF-580A26D94294`（本机 SDK 头文件核对）。handler 的 QueryInterface 不认它就会拿到 `E_NOINTERFACE (0x80004002)`，表现为 `put_Completed failed`。实现期实测踩过。
+5. 结果映射（`UserConsentVerificationResult`，数值以本机 SDK `winrt/windows.security.credentials.ui.h` 为准；本笔记初版曾串位，已按实测纠正）：
    - 0 Verified → 成功
-   - 1 DeviceNotPresent / 2 NotConfiguredForUser / 4 DisabledByPolicy → Unavailable（Hello 未配置）
-   - 3 RetriesExhausted → SecurityDeviceLocked（多次尝试锁定）
-   - 5 Canceled → UserCanceled
-   - 6 DeviceBusy → Unknown/重试提示
+   - 1 DeviceNotPresent / 2 NotConfiguredForUser / 3 DisabledByPolicy → Unavailable（Hello 未配置）
+   - 4 DeviceBusy → Busy（设备忙，可重试）
+   - 5 RetriesExhausted → Locked（多次尝试，Hello 暂时锁定）
+   - 6 Canceled → Canceled（用户取消）
 
 ## 3. 可直接照抄的本地参照
 
@@ -79,5 +80,6 @@ internal/hello/hello_windows.go  // syscall 实现
 ## 5. 对地图的影响
 
 - #7（Hello syscall 实现与 PoC）按此清单施工，预估 ~300 行（原估 200 行偏乐观，含 HSTRING/事件/守卫）
-- 无需引入第三方依赖，纯标准库 syscall + golang.org/x/sys/windows（mygo 已依赖）
+- 无需引入第三方依赖，纯标准库 syscall（本机实测通过，未用到 golang.org/x/sys）
 - 调研发现的 hiddenwindow 消息泵问题不存在：Completed 回调在线程池触发，host 主循环无阻塞风险
+- **实现已落地**：`internal/hello/`（合并提交 43996dd 前的 11a6ccd），实测 `Available() = true`、`Verify() = verified`（Windows Security 提示由隐藏窗口 owner 拉起），并在启用 `put_Completed` 之前暴露了上面那条 handler IID 的坑
