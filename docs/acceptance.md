@@ -12,7 +12,17 @@
 - [ ] 再次启动两个实例 → 第二个自动置前第一个的窗口后退出（单实例锁）
 - [ ] 设置页：自启动开关切换后，`reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v dev.windedge.biowarden` 出现/消失
 - [ ] 设置页：Windows Hello 显示「可用」
-- [ ] `printf '' | biowarden.exe` → 输出 `{"command":"connected",...}` 后退出（host 模式判据）
+- [ ] host 模式判据（**不要看 stdout**：host 的 stdout 是二进制协议流，4 字节小端长度 + JSON，cmd/PowerShell 里开头的长度字节与 NUL 不可见，看起来像“没有输出”）
+
+  cmd 里这样验（两条即可）：
+  ```
+  cd build\windows-amd64
+  echo. | biowarden.exe > nul 2>nul
+  type "%LOCALAPPDATA%\biowarden\host.log"
+  ```
+  - [ ] 日志末尾出现 `host started: pid=...` 与 `stdin closed, host exiting` 两行，且**没有窗口弹出**（有窗口 = 判据反了，进了 GUI）
+  - [ ] 想看协议内容：`set BIOWARDEN_LOG=debug` 后再跑一次，日志里应出现 `outgoing legacy: {"command":"connected","appId":"dev.windedge.biowarden"}`（同一窗口内 set 后需再跑一次命令）
+  - [ ] 参考物：本次运行的 stdout 若重定向到文件，大小应为 60 字节（= 4 字节长度头 0x38000000 + 56 字节 JSON）
 
 ## 1. 密钥录入（每浏览器共用一次）
 
