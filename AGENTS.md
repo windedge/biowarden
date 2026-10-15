@@ -14,6 +14,7 @@ mode (native messaging host, launched by the browser on demand); anything else m
 cmd/biowarden/          dual-mode entry (mode detection, dispatch)
 internal/protocol/      frames, legacy command protocol, SDK IPC (Noise/CBOR/RPC)
 internal/host/          serve loop: dispatch, unlock flow, logging
+internal/hoststate/     per-browser connection history (which browser pulled the host in)
 internal/{hello,secrets,registry}/   platform seams (interfaces + build tags)
 internal/ui/            GUI
 ```

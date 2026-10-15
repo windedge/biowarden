@@ -65,7 +65,7 @@ func TestRealBrowsersRefreshMapsStatus(t *testing.T) {
 	fake.status[registry.Edge] = registry.Status{Registered: true, Path: `C:\official\edge.json`}
 	fake.status[registry.Firefox] = registry.Status{Registered: true, Path: `C:\ours\firefox.json`, IsOurs: true}
 
-	rows, err := newRealBrowsers(fake).refresh()
+	rows, err := newRealBrowsersWith(fake, nil).refresh()
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestRealBrowsersUninstallHijackedRemovesOurManifest(t *testing.T) {
 		Path:          `C:\official\edge.json`,
 		OursInstalled: true,
 	}
-	backend := newRealBrowsers(fake)
+	backend := newRealBrowsersWith(fake, nil)
 
 	row := browserRow{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, state: browserHijacked}
 	if err := backend.uninstall(row); err != nil {
@@ -119,7 +119,7 @@ func TestRealBrowsersUninstallHijackedRemovesOurManifest(t *testing.T) {
 
 func TestRealBrowsersInstallTargetsTheRowBrowser(t *testing.T) {
 	fake := newFakeRegistrar()
-	backend := newRealBrowsers(fake)
+	backend := newRealBrowsersWith(fake, nil)
 
 	rows, err := backend.refresh()
 	if err != nil {
@@ -137,7 +137,7 @@ func TestRealBrowsersInstallTargetsTheRowBrowser(t *testing.T) {
 func TestRealBrowsersInstallPropagatesError(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.installErr = errors.New("access denied")
-	backend := newRealBrowsers(fake)
+	backend := newRealBrowsersWith(fake, nil)
 
 	row := browserRow{browser: registry.Chrome, name: "Chrome", state: browserMissing}
 	if err := backend.install(row); !errors.Is(err, fake.installErr) {
@@ -148,7 +148,7 @@ func TestRealBrowsersInstallPropagatesError(t *testing.T) {
 func TestRealBrowsersUninstallOursDeletes(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.status[registry.Chrome] = registry.Status{Registered: true, Path: `C:\ours\chrome.json`, IsOurs: true}
-	backend := newRealBrowsers(fake)
+	backend := newRealBrowsersWith(fake, nil)
 
 	row := browserRow{browser: registry.Chrome, name: "Chrome", path: `C:\ours\chrome.json`, state: browserOurs}
 	if err := backend.uninstall(row); err != nil {
@@ -165,7 +165,7 @@ func TestRealBrowsersUninstallOursDeletes(t *testing.T) {
 func TestRealBrowsersUninstallForeignIsRefused(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.status[registry.Edge] = registry.Status{Registered: true, Path: `C:\official\edge.json`}
-	backend := newRealBrowsers(fake)
+	backend := newRealBrowsersWith(fake, nil)
 
 	row := browserRow{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, state: browserForeign}
 	err := backend.uninstall(row)
@@ -183,7 +183,7 @@ func TestRealBrowsersUninstallForeignIsRefused(t *testing.T) {
 func TestRealBrowsersRefreshPropagatesError(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.statusErr = errors.New("cannot open key")
-	if _, err := newRealBrowsers(fake).refresh(); !errors.Is(err, fake.statusErr) {
+	if _, err := newRealBrowsersWith(fake, nil).refresh(); !errors.Is(err, fake.statusErr) {
 		t.Fatalf("refresh error = %v, want %v", err, fake.statusErr)
 	}
 }

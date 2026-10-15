@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/hostlog"
+	"github.com/windedge/biowarden/internal/hoststate"
 	"github.com/windedge/biowarden/internal/protocol"
 	"github.com/windedge/biowarden/internal/protocol/sdkipc"
 	"github.com/windedge/biowarden/internal/secrets"
@@ -103,11 +105,19 @@ func newTestLogger(t *testing.T, level hostlog.Level) (*hostlog.Logger, string) 
 
 func startHost(t *testing.T, v hello.Verifier, store secrets.Store, log *hostlog.Logger) (*io.PipeWriter, *io.PipeReader, <-chan error) {
 	t.Helper()
+	// The browser-recording seams default to the real ones, which would write
+	// under the tester's %LOCALAPPDATA%; the plain harness keeps them inert.
+	return startHostWith(t, v, store, log, func() string { return "" }, func(string, time.Time) error { return nil })
+}
+
+func startHostWith(t *testing.T, v hello.Verifier, store secrets.Store, log *hostlog.Logger, detect func() string, record func(string, time.Time) error) (*io.PipeWriter, *io.PipeReader, <-chan error) {
+	t.Helper()
 	stdinR, stdinW := io.Pipe()
 	stdoutR, stdoutW := io.Pipe()
 	done := make(chan error, 1)
 	go func() {
-		err := Run(stdinR, stdoutW, WithVerifier(v), WithStore(store), WithLogger(log))
+		err := Run(stdinR, stdoutW, WithVerifier(v), WithStore(store), WithLogger(log),
+			WithDetectBrowser(detect), WithRecordConnection(record))
 		_ = stdoutW.Close()
 		done <- err
 	}()
@@ -449,6 +459,92 @@ func TestSDKIPCUnlockDeniedNeverReadsKey(t *testing.T) {
 		t.Fatalf("store was read %d times after a refused prompt, want 0", store.getCount())
 	}
 	closeAndWait(t, stdinW, done)
+}
+
+// --- browser connection recording -------------------------------------------
+
+// fakeRecorder captures the host's one connection record without touching the
+// real state directory. The mutex lets the test read fields the host goroutine
+// wrote.
+type fakeRecorder struct {
+	mu      sync.Mutex
+	browser string
+	at      time.Time
+	calls   int
+	err     error
+}
+
+func (f *fakeRecorder) record(browser string, at time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls++
+	f.browser = browser
+	f.at = at
+	return f.err
+}
+
+func (f *fakeRecorder) snapshot() (string, time.Time, int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.browser, f.at, f.calls
+}
+
+func TestHostRecordsLaunchingBrowser(t *testing.T) {
+	logger, _ := newTestLogger(t, hostlog.LevelInfo)
+	recorder := &fakeRecorder{}
+	stdinW, stdoutR, done := startHostWith(t, &fakeVerifier{}, newFakeStore(nil), logger,
+		func() string { return hoststate.BrowserFirefox }, recorder.record)
+	defer stdinW.Close()
+
+	readGreeting(t, stdoutR)
+	closeAndWait(t, stdinW, done)
+
+	browser, at, calls := recorder.snapshot()
+	if calls != 1 {
+		t.Fatalf("record calls = %d, want 1", calls)
+	}
+	if browser != hoststate.BrowserFirefox {
+		t.Fatalf("recorded browser = %q, want %q", browser, hoststate.BrowserFirefox)
+	}
+	if at.IsZero() {
+		t.Fatal("recorded time is zero")
+	}
+}
+
+func TestHostSkipsRecordForUnrecognizedLauncher(t *testing.T) {
+	logger, _ := newTestLogger(t, hostlog.LevelInfo)
+	recorder := &fakeRecorder{}
+	stdinW, stdoutR, done := startHostWith(t, &fakeVerifier{}, newFakeStore(nil), logger,
+		func() string { return "" }, recorder.record)
+	defer stdinW.Close()
+
+	readGreeting(t, stdoutR)
+	closeAndWait(t, stdinW, done)
+
+	if _, _, calls := recorder.snapshot(); calls != 0 {
+		t.Fatalf("record calls = %d for an unknown launcher, want 0", calls)
+	}
+}
+
+// A failing record is a log line, not a served-connection failure: the
+// greeting still goes out and stdin close still returns cleanly.
+func TestHostRecordFailureStillServes(t *testing.T) {
+	logger, path := newTestLogger(t, hostlog.LevelInfo)
+	recorder := &fakeRecorder{err: errors.New("disk full")}
+	stdinW, stdoutR, done := startHostWith(t, &fakeVerifier{}, newFakeStore(nil), logger,
+		func() string { return hoststate.BrowserChrome }, recorder.record)
+	defer stdinW.Close()
+
+	readGreeting(t, stdoutR)
+	closeAndWait(t, stdinW, done)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	if !strings.Contains(string(content), "connection record failed") {
+		t.Fatalf("log does not report the record failure:\n%s", content)
+	}
 }
 
 // --- lifecycle and redaction ------------------------------------------------

@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/windedge/biowarden/internal/registry"
@@ -40,12 +41,10 @@ type browserRow struct {
 	path    string           // manifest path currently registered, "" when none
 	state   int              // browserMissing / browserOurs / browserForeign / browserHijacked
 
-	// connected reports whether this browser's extension has ever reached the
-	// host. It is a placeholder for a data source that does not exist yet:
-	// nothing on the host side records connections, so every backend leaves it
-	// false and the row reads "扩展未连接". Wire it when the host keeps a
-	// per-browser last-seen.
-	connected bool
+	// lastConnectedAt is when this browser's extension last reached the host,
+	// zero when it never has. The host writes it per connection; the row shows
+	// "已连接过 · <relative time>" from it and "扩展未连接" while zero.
+	lastConnectedAt time.Time
 }
 
 func newBrowsersState() browsersState {

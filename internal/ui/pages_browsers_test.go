@@ -1,0 +1,126 @@
+package ui
+
+import (
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/windedge/biowarden/internal/hoststate"
+	"github.com/windedge/biowarden/internal/registry"
+)
+
+func TestRelativeTime(t *testing.T) {
+	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	cases := []struct {
+		at   time.Time
+		want string
+	}{
+		{now, "刚刚"},
+		{now.Add(-30 * time.Second), "刚刚"},
+		{now.Add(-5 * time.Minute), "5 分钟前"},
+		{now.Add(-59 * time.Minute), "59 分钟前"},
+		{now.Add(-2 * time.Hour), "2 小时前"},
+		{now.Add(-23 * time.Hour), "23 小时前"},
+		{now.Add(-25 * time.Hour), "1 天前"},
+		{now.Add(-10 * 24 * time.Hour), "10 天前"},
+		{now.Add(-40 * 24 * time.Hour), "2026-01-29"},
+		// A clock that jumped backwards must not print a negative age.
+		{now.Add(time.Hour), "刚刚"},
+	}
+	for _, tc := range cases {
+		if got := relativeTime(now, tc.at); got != tc.want {
+			t.Errorf("relativeTime(%v) = %q, want %q", tc.at, got, tc.want)
+		}
+	}
+}
+
+func TestConnectionLabel(t *testing.T) {
+	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
+	if got := connectionLabel(now, time.Time{}); got != "扩展未连接" {
+		t.Fatalf("connectionLabel(zero) = %q, want the placeholder", got)
+	}
+	if got := connectionLabel(now, now.Add(-3*time.Hour)); got != "已连接过 · 3 小时前" {
+		t.Fatalf("connectionLabel = %q, want a connected label", got)
+	}
+}
+
+// The Chrome row stands for both chrome.exe and chromium.exe; the other rows
+// map one-to-one.
+func TestBrowserIDs(t *testing.T) {
+	chrome := browserIDs(registry.Chrome)
+	if len(chrome) != 2 {
+		t.Fatalf("browserIDs(Chrome) = %v, want both engines", chrome)
+	}
+	seen := map[string]bool{}
+	for _, id := range chrome {
+		seen[id] = true
+	}
+	if !seen[hoststate.BrowserChrome] || !seen[hoststate.BrowserChromium] {
+		t.Fatalf("browserIDs(Chrome) = %v, want chrome and chromium", chrome)
+	}
+	if got := browserIDs(registry.Edge); len(got) != 1 || got[0] != hoststate.BrowserEdge {
+		t.Fatalf("browserIDs(Edge) = %v, want [edge]", got)
+	}
+	if got := browserIDs(registry.Firefox); len(got) != 1 || got[0] != hoststate.BrowserFirefox {
+		t.Fatalf("browserIDs(Firefox) = %v, want [firefox]", got)
+	}
+}
+
+func TestLastConnectedForTakesNewestID(t *testing.T) {
+	older := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	newer := older.Add(48 * time.Hour)
+	connections := map[string]time.Time{
+		hoststate.BrowserChrome:   older,
+		hoststate.BrowserChromium: newer,
+	}
+	if got := lastConnectedFor(connections, registry.Chrome); !got.Equal(newer) {
+		t.Fatalf("lastConnectedFor = %v, want the newer chromium stamp %v", got, newer)
+	}
+	if got := lastConnectedFor(connections, registry.Firefox); !got.IsZero() {
+		t.Fatalf("lastConnectedFor(Firefox) = %v, want zero", got)
+	}
+	if got := lastConnectedFor(nil, registry.Chrome); !got.IsZero() {
+		t.Fatalf("lastConnectedFor(nil) = %v, want zero", got)
+	}
+}
+
+func TestRealBrowsersRefreshAttachesConnections(t *testing.T) {
+	fake := newFakeRegistrar()
+	fake.status[registry.Firefox] = registry.Status{Registered: true, Path: `C:\ours\firefox.json`, IsOurs: true}
+	at := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
+	connections := func() (map[string]time.Time, error) {
+		return map[string]time.Time{hoststate.BrowserFirefox: at}, nil
+	}
+
+	rows, err := newRealBrowsersWith(fake, connections).refresh()
+	if err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+	if !rows[2].lastConnectedAt.Equal(at) {
+		t.Fatalf("Firefox lastConnectedAt = %v, want %v", rows[2].lastConnectedAt, at)
+	}
+	if !rows[0].lastConnectedAt.IsZero() {
+		t.Fatalf("Chrome lastConnectedAt = %v, want zero", rows[0].lastConnectedAt)
+	}
+}
+
+// A failing state read only loses the indicator; the registry rows must still
+// come back so the page stays usable.
+func TestRealBrowsersRefreshSurvivesConnectionReadError(t *testing.T) {
+	fake := newFakeRegistrar()
+	connections := func() (map[string]time.Time, error) {
+		return nil, errors.New("state dir unreadable")
+	}
+	rows, err := newRealBrowsersWith(fake, connections).refresh()
+	if err != nil {
+		t.Fatalf("refresh returned %v, want the rows with no indicator", err)
+	}
+	if len(rows) != len(registry.Browsers) {
+		t.Fatalf("refresh returned %d rows, want %d", len(rows), len(registry.Browsers))
+	}
+	for _, row := range rows {
+		if !row.lastConnectedAt.IsZero() {
+			t.Fatalf("row %s has a connection time despite the read failure", row.name)
+		}
+	}
+}

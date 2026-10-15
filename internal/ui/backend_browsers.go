@@ -2,7 +2,9 @@ package ui
 
 import (
 	"errors"
+	"time"
 
+	"github.com/windedge/biowarden/internal/hoststate"
 	"github.com/windedge/biowarden/internal/registry"
 )
 
@@ -15,18 +17,33 @@ var errForeignRegistration = errors.New("ui: registration belongs to another cli
 // browser's manifest state and rewrites the ones the human asks for.
 type realBrowsers struct {
 	reg registry.Registrar
+	// connections reads each browser id's last connection time. A read failure
+	// only loses the indicator, so it never fails the rows.
+	connections func() (map[string]time.Time, error)
 }
 
 // newRealBrowsers wraps a registrar; nil selects the real HKCU-backed one, so
 // tests inject an in-memory double through the same constructor.
 func newRealBrowsers(reg registry.Registrar) *realBrowsers {
+	return newRealBrowsersWith(reg, hoststate.LastConnections)
+}
+
+// newRealBrowsersWith injects the connection reader too, so a test never reads
+// the tester's real %LOCALAPPDATA%.
+func newRealBrowsersWith(reg registry.Registrar, connections func() (map[string]time.Time, error)) *realBrowsers {
 	if reg == nil {
 		reg = registry.New()
 	}
-	return &realBrowsers{reg: reg}
+	if connections == nil {
+		connections = func() (map[string]time.Time, error) { return nil, nil }
+	}
+	return &realBrowsers{reg: reg, connections: connections}
 }
 
 func (b *realBrowsers) refresh() ([]browserRow, error) {
+	// A state read failure is not worth failing the page: the row's indicator
+	// just stays at "扩展未连接" until the host has something to say.
+	connections, _ := b.connections()
 	rows := make([]browserRow, 0, len(registry.Browsers))
 	for _, br := range registry.Browsers {
 		st, err := b.reg.Status(br)
@@ -34,13 +51,42 @@ func (b *realBrowsers) refresh() ([]browserRow, error) {
 			return nil, err
 		}
 		rows = append(rows, browserRow{
-			browser: br,
-			name:    br.String(),
-			path:    st.Path,
-			state:   browserStateOf(st),
+			browser:         br,
+			name:            br.String(),
+			path:            st.Path,
+			state:           browserStateOf(st),
+			lastConnectedAt: lastConnectedFor(connections, br),
 		})
 	}
 	return rows, nil
+}
+
+// browserIDs lists the host-side ids that reach one registration row. Chrome
+// covers both chrome.exe and chromium.exe because install writes the Google
+// and Chromium keys together; the recorder still keeps them apart, so this is
+// the one place the two are deliberately merged.
+func browserIDs(b registry.Browser) []string {
+	switch b {
+	case registry.Chrome:
+		return []string{hoststate.BrowserChrome, hoststate.BrowserChromium}
+	case registry.Edge:
+		return []string{hoststate.BrowserEdge}
+	case registry.Firefox:
+		return []string{hoststate.BrowserFirefox}
+	}
+	return nil
+}
+
+// lastConnectedFor is the row's newest connection among its ids, zero when the
+// host has never recorded any of them.
+func lastConnectedFor(connections map[string]time.Time, b registry.Browser) time.Time {
+	var latest time.Time
+	for _, id := range browserIDs(b) {
+		if at := connections[id]; at.After(latest) {
+			latest = at
+		}
+	}
+	return latest
 }
 
 // browserStateOf is the mapping the page renders: no value means missing, our

@@ -10,9 +10,11 @@ import (
 	"io"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/hostlog"
+	"github.com/windedge/biowarden/internal/hoststate"
 	"github.com/windedge/biowarden/internal/protocol"
 	"github.com/windedge/biowarden/internal/protocol/sdkipc"
 	"github.com/windedge/biowarden/internal/secrets"
@@ -34,6 +36,12 @@ type Options struct {
 	Verifier hello.Verifier
 	Store    secrets.Store
 	Log      *hostlog.Logger
+	// DetectBrowser names the browser that launched this process; nil means
+	// hoststate's parent-process detection.
+	DetectBrowser func() string
+	// RecordConnection persists a browser's last connection time; nil means
+	// hoststate's file-backed record under %LOCALAPPDATA%.
+	RecordConnection func(browser string, at time.Time) error
 }
 
 // Option overrides one seam.
@@ -42,6 +50,12 @@ type Option func(*Options)
 func WithVerifier(v hello.Verifier) Option { return func(o *Options) { o.Verifier = v } }
 func WithStore(s secrets.Store) Option     { return func(o *Options) { o.Store = s } }
 func WithLogger(l *hostlog.Logger) Option  { return func(o *Options) { o.Log = l } }
+func WithDetectBrowser(f func() string) Option {
+	return func(o *Options) { o.DetectBrowser = f }
+}
+func WithRecordConnection(f func(string, time.Time) error) Option {
+	return func(o *Options) { o.RecordConnection = f }
+}
 
 // Run serves frames from stdin, answering on stdout, until the browser closes
 // stdin. A clean close returns nil; any other error means the stream is
@@ -59,6 +73,12 @@ func Run(stdin io.Reader, stdout io.Writer, opts ...Option) error {
 	}
 	if options.Log == nil {
 		options.Log = defaultLogger()
+	}
+	if options.DetectBrowser == nil {
+		options.DetectBrowser = hoststate.DetectBrowser
+	}
+	if options.RecordConnection == nil {
+		options.RecordConnection = hoststate.RecordConnection
 	}
 	defer options.Log.Close()
 
@@ -85,6 +105,8 @@ type host struct {
 	verifier hello.Verifier
 	store    secrets.Store
 	log      *hostlog.Logger
+	detect   func() string
+	record   func(browser string, at time.Time) error
 	legacy   *protocol.Session
 	sdk      *sdkipc.Session
 	out      io.Writer
@@ -96,7 +118,14 @@ func newHost(options Options) (*host, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := &host{verifier: options.Verifier, store: options.Store, log: options.Log, legacy: legacy}
+	h := &host{
+		verifier: options.Verifier,
+		store:    options.Store,
+		log:      options.Log,
+		detect:   options.DetectBrowser,
+		record:   options.RecordConnection,
+		legacy:   legacy,
+	}
 	// The SDK channel calls back into the same consent-before-read path as the
 	// legacy channel; only the message shapes differ.
 	h.sdk = &sdkipc.Session{
@@ -111,6 +140,7 @@ func newHost(options Options) (*host, error) {
 func (h *host) serve(stdin io.Reader, stdout io.Writer) error {
 	h.out = stdout
 	h.log.Info(fmt.Sprintf("host started: pid=%d", os.Getpid()))
+	h.recordConnection()
 	if err := h.writeLegacy(protocol.Connected(hostAppID)); err != nil {
 		return err
 	}
@@ -128,6 +158,23 @@ func (h *host) serve(stdin io.Reader, stdout io.Writer) error {
 		if err := h.dispatch(raw); err != nil {
 			h.log.Error("handle message failed: " + err.Error())
 		}
+	}
+}
+
+// recordConnection notes which browser pulled this host in, so the GUI can
+// show a per-row indicator. The browser starts one host process per native
+// messaging connection, so once per process is the natural frequency. Any
+// failure is one log line: tracking is a convenience, answering the
+// extension is the job.
+func (h *host) recordConnection() {
+	browser := h.detect()
+	if browser == "" {
+		h.log.Info("browser connected: launcher not recognized")
+		return
+	}
+	h.log.Info("browser connected: " + browser)
+	if err := h.record(browser, time.Now()); err != nil {
+		h.log.Error("connection record failed: " + err.Error())
 	}
 }
 

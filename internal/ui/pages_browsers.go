@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"github.com/egoist/mygo/ui"
 )
 
@@ -57,8 +59,8 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 			ui.Text(c, b.name).Bold()
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, browserStatusLabel(b.state)).FontSize(11).TextColor(browserStatusColor(t, b.state))
-				ui.Text(c, extensionLabel(b.connected)).FontSize(11).
-					TextColor(extensionColor(t, b.connected))
+				ui.Text(c, connectionLabel(time.Now(), b.lastConnectedAt)).FontSize(11).
+					TextColor(extensionColor(t, b.lastConnectedAt))
 			})
 			ui.Text(c, b.path).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(b.path)
 		})
@@ -150,18 +152,37 @@ func browserStatusColor(t *ui.Theme, state int) ui.Color {
 	}
 }
 
-// extensionLabel is the per-row "has the extension ever connected" indicator.
-// Nothing tracks connections on the host side yet, so the field is always
-// false for now; this is where the real answer will show.
-func extensionLabel(connected bool) string {
-	if connected {
-		return "扩展连接过"
+// connectionLabel is the per-row "has the extension ever connected" indicator.
+// A zero time means no host process has recorded this browser yet, which is
+// the placeholder the page has always shown.
+func connectionLabel(now, at time.Time) string {
+	if at.IsZero() {
+		return "扩展未连接"
 	}
-	return "扩展未连接"
+	return "已连接过 · " + relativeTime(now, at)
 }
 
-func extensionColor(t *ui.Theme, connected bool) ui.Color {
-	if connected {
+// relativeTime renders a past instant as a short phrase. It is pure so the
+// thresholds can be tested without a clock, and it clamps a future stamp (a
+// clock that jumped) to "刚刚" rather than printing a negative age.
+func relativeTime(now, at time.Time) string {
+	d := now.Sub(at)
+	switch {
+	case d < time.Minute:
+		return "刚刚"
+	case d < time.Hour:
+		return itoa(int(d.Minutes())) + " 分钟前"
+	case d < 24*time.Hour:
+		return itoa(int(d.Hours())) + " 小时前"
+	case d < 30*24*time.Hour:
+		return itoa(int(d.Hours()/24)) + " 天前"
+	default:
+		return at.Format("2006-01-02")
+	}
+}
+
+func extensionColor(t *ui.Theme, at time.Time) ui.Color {
+	if !at.IsZero() {
 		return t.Success
 	}
 	return t.TextMuted
