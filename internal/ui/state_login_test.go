@@ -15,6 +15,9 @@ type loginFixture struct {
 	acct   *stubAccount
 	opened int
 	closed int
+	// resizes records the height of each resizeWindow call, so a test can see
+	// the window follow the form's state without a window server.
+	resizes []int
 }
 
 func newLoginFixture(t *testing.T, acct *stubAccount) *loginFixture {
@@ -25,6 +28,7 @@ func newLoginFixture(t *testing.T, acct *stubAccount) *loginFixture {
 	lw := newLoginWindow(&page)
 	lw.openWindow = func() { f.opened++ }
 	lw.closeWindow = func() { f.closed++ }
+	lw.resizeWindow = func(height int) { f.resizes = append(f.resizes, height) }
 	f.login = &lw
 	return f
 }
@@ -632,5 +636,106 @@ func TestLoginWindowEnterDoesNothingForUnsupportedMethods(t *testing.T) {
 	}
 	if acct.submitCalls != 0 {
 		t.Fatalf("submit calls = %d, want 0 for Duo/WebAuthn", acct.submitCalls)
+	}
+}
+
+// The window follows the form: opening Advanced grows it, closing it shrinks it
+// back, and a steady frame does not touch the window server again.
+func TestLoginWindowResizesForTheAdvancedSection(t *testing.T) {
+	f := newLoginFixture(t, &stubAccount{sess: loggedOutSession()})
+	beginLogin(f, "ada@example.com", "secret")
+
+	if len(f.resizes) != 0 {
+		t.Fatalf("opening with Advanced closed resized: %v", f.resizes)
+	}
+
+	f.login.advancedOpen = true
+	f.login.syncHeight()
+	if len(f.resizes) != 1 || f.resizes[0] != loginWindowAdvancedHeight {
+		t.Fatalf("expanded resizes = %v, want [%d]", f.resizes, loginWindowAdvancedHeight)
+	}
+
+	// The view calls syncHeight every frame; a later one must be a no-op.
+	f.login.syncHeight()
+	if len(f.resizes) != 1 {
+		t.Fatalf("a steady frame resized again: %v", f.resizes)
+	}
+
+	f.login.advancedOpen = false
+	f.login.syncHeight()
+	if len(f.resizes) != 2 || f.resizes[1] != loginWindowHeight {
+		t.Fatalf("collapsed resizes = %v, want the opening height back", f.resizes)
+	}
+}
+
+// A refused address opens Advanced, so the resize rides along with it.
+func TestLoginWindowResizesWhenABadAddressOpensAdvanced(t *testing.T) {
+	acct := &stubAccount{
+		sess:     loggedOutSession(),
+		checkErr: errors.New("服务器地址无效"),
+	}
+	f := newLoginFixture(t, acct)
+	beginLogin(f, "ada@example.com", "secret")
+	f.login.serverURL = "http://bad host"
+	f.login.submit()
+	drainLogin(t, f.login)
+
+	if len(f.resizes) != 1 || f.resizes[0] != loginWindowAdvancedHeight {
+		t.Fatalf("resizes after the refused address = %v, want [%d]", f.resizes, loginWindowAdvancedHeight)
+	}
+}
+
+// Each two-factor stage has its own target: a single code method is the
+// smallest, and the rows the challenge adds raise it.
+func TestLoginWindowResizesForTwoFactorStages(t *testing.T) {
+	cases := []struct {
+		name    string
+		methods []twoFactorMethod
+		want    int
+	}{
+		{
+			name:    "single method",
+			methods: []twoFactorMethod{{provider: twoFactorAuthenticator, name: "authenticator", interaction: interactionCode}},
+			want:    loginWindowTwoFactorHeight,
+		},
+		{
+			name:    "email method adds the send row",
+			methods: []twoFactorMethod{{provider: twoFactorEmail, name: "email", interaction: interactionCode}},
+			want:    loginWindowTwoFactorHeight + loginWindowEmailHeight,
+		},
+		{
+			name: "two code methods add the segmented row",
+			methods: []twoFactorMethod{
+				{provider: twoFactorAuthenticator, name: "authenticator", interaction: interactionCode},
+				{provider: twoFactorEmail, name: "email", interaction: interactionCode},
+			},
+			want: loginWindowTwoFactorHeight + loginWindowSegmentHeight,
+		},
+		{
+			name: "an unsupported method adds its line",
+			methods: []twoFactorMethod{
+				{provider: twoFactorAuthenticator, name: "authenticator", interaction: interactionCode},
+				{provider: twoFactorDuo, name: "duo", interaction: interactionBrowser},
+			},
+			want: loginWindowTwoFactorHeight + loginWindowUnsupportedHeight,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			acct := &stubAccount{sess: accountSession{
+				state:     loginNeeds2FA,
+				email:     "ada@example.com",
+				serverURL: defaultServerURL,
+				challenge: &twoFactorPrompt{methods: tc.methods},
+			}}
+			f := newLoginFixture(t, acct)
+			beginLogin(f, "ada@example.com", "secret")
+			f.login.submit()
+			drainLogin(t, f.login)
+
+			if len(f.resizes) != 1 || f.resizes[0] != tc.want {
+				t.Fatalf("resizes = %v, want [%d]", f.resizes, tc.want)
+			}
+		})
 	}
 }

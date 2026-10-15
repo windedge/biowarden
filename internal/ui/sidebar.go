@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -62,8 +61,9 @@ var (
 )
 
 // sidebar draws the left nav: four items with icons and labels, and the
-// version and quit button pinned to the bottom. A click switches app.page
-// through the Sidebar's string selection.
+// version pinned to the bottom. A click switches app.page through the
+// Sidebar's string selection. Quitting lives in the tray menu, which the
+// close-to-tray window makes the deliberate exit.
 func (app *appState) sidebar(c *ui.Context) {
 	t := c.Theme()
 	selected := app.page.navID()
@@ -82,9 +82,6 @@ func (app *appState) sidebar(c *ui.Context) {
 		ui.Divider(c)
 		ui.Column(c).Padding(12, 10).Gap(6).Children(func() {
 			muted(c, appName+" v"+appVersion)
-			// Quitting stays deliberate: the tray keeps the app alive when the
-			// window is closed, so this is the window's only exit.
-			ui.Button(c, "退出").OnClick(mygo.App.Quit)
 		})
 	})
 }

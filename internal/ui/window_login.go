@@ -10,16 +10,27 @@ import (
 // The login window's opening size. It is a modal dialog: narrow, and a child of
 // the main window so it stays above it and blocks it until the attempt settles.
 //
-// The height is the credentials form's own content (16 padding + title rows +
-// two fields + the collapsed Advanced row + the button row + 16 padding, about
-// 270 DIPs) plus the roughly 40 DIPs of frame and caption, rounded up so a font
-// that wraps the hint differently still fits: the form fills the page, with no
-// blank block under the buttons. Opening Advanced or landing on the two-factor
-// prompt makes the form taller, and the scroll view around it takes over rather
-// than clipping the form or leaving the window oversized for the common case.
+// Every height here is an outer size, the convention WindowOptions and
+// Window.SetSize take: the page area plus the frame and caption. The
+// credentials form with Advanced closed measures about 270 DIPs of content, so
+// loginWindowHeight carries the roughly 50 DIPs of frame on top of it; the
+// other targets are that frame plus the measured content of their own state.
 const (
-	loginWindowWidth  = 420
+	loginWindowWidth = 420
+	// loginWindowHeight opens the credentials form with Advanced closed.
 	loginWindowHeight = 320
+	// loginWindowAdvancedHeight covers the expanded disclosure: the server
+	// address field and its hint add about 80 DIPs of content.
+	loginWindowAdvancedHeight = 400
+	// loginWindowTwoFactorHeight is a single-method code prompt, the smallest
+	// target, so MinHeight uses it too.
+	loginWindowTwoFactorHeight = 265
+	// The two-factor rows below are what a code prompt grows by over a single
+	// method: a Segmented control with its label, the email send button and
+	// address line, and the line naming the methods biowarden cannot answer.
+	loginWindowSegmentHeight     = 40
+	loginWindowEmailHeight       = 60
+	loginWindowUnsupportedHeight = 40
 )
 
 // showLoginWindow creates the login window, or brings the one already up to
@@ -40,7 +51,7 @@ func (app *appState) showLoginWindow() {
 		Width:           loginWindowWidth,
 		Height:          loginWindowHeight,
 		MinWidth:        loginWindowWidth,
-		MinHeight:       loginWindowHeight,
+		MinHeight:       loginWindowTwoFactorHeight,
 		DisableMaximize: true,
 		Parent:          app.mainWindow,
 		Modal:           true,
@@ -71,4 +82,14 @@ func (app *appState) hideLoginWindow() {
 	if app.loginWin != nil {
 		app.loginWin.Destroy()
 	}
+}
+
+// resizeLoginWindow applies a target height to the window the login state
+// opened. The width stays fixed; the state machine only decides the height, and
+// only calls here when a form change actually moved its target.
+func (app *appState) resizeLoginWindow(height int) {
+	if app.loginWin == nil {
+		return
+	}
+	app.loginWin.SetSize(loginWindowWidth, height)
 }

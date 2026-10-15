@@ -11,8 +11,13 @@ import (
 // account page opens this window instead of drawing a form of its own.
 func (s *loginWindow) loginView(c *ui.Context) {
 	s.tick(c)
+	// A frame after the Advanced disclosure toggled is where the window learns
+	// its new height; syncHeight keeps a steady form from resizing every frame.
+	s.syncHeight()
 	t := c.Theme()
 	ui.Column(c).Fill().Background(t.Background).Children(func() {
+		// The window follows the form's height (syncHeight above), so the scroll
+		// view only catches the rare hint that wraps past its measured target.
 		ui.Scroll(c).Grow(1).Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {
 				ui.Text(c, "登录 Bitwarden 账号").FontSize(16).Bold()

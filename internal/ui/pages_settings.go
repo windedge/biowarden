@@ -38,7 +38,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 								if app.settings.showTray {
 									app.settings.notice = "已显示托盘图标（仅内存：重启后恢复）"
 								} else {
-									app.settings.notice = "已隐藏托盘图标，退出只能从窗口（仅内存：托盘仍在）"
+									app.settings.notice = "已隐藏托盘图标（仅内存：托盘仍在，可从托盘菜单退出）"
 								}
 								app.settings.noticeOK = true
 							}

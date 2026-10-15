@@ -60,6 +60,7 @@ func newAppState() *appState {
 	app.firstRun = newFirstRunState(newRealFirstRun())
 	app.login.openWindow = app.showLoginWindow
 	app.login.closeWindow = app.hideLoginWindow
+	app.login.resizeWindow = app.resizeLoginWindow
 	return app
 }
 

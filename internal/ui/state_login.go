@@ -53,10 +53,14 @@ type loginWindow struct {
 
 	results chan func(*loginWindow)
 
-	// openWindow and closeWindow are the GUI seams. They are nil in tests,
-	// which drive the same state machine without a window server.
-	openWindow  func()
-	closeWindow func()
+	// openWindow, closeWindow and resizeWindow are the GUI seams. They are nil
+	// in tests, which drive the same state machine without a window server.
+	openWindow   func()
+	closeWindow  func()
+	resizeWindow func(height int)
+	// appliedHeight is the height the window is currently sized to, so a frame
+	// that did not change the form does not resize the window again.
+	appliedHeight int
 }
 
 // newLoginWindow wires the login window onto the account page.
@@ -135,6 +139,47 @@ func (s *loginWindow) begin() {
 	if s.openWindow != nil {
 		s.openWindow()
 	}
+	// The window is created at the credentials height; apply the state's own
+	// target in case Advanced was left open from the last attempt.
+	s.appliedHeight = loginWindowHeight
+	s.syncHeight()
+}
+
+// targetHeight is the outer height the form needs in its current state. The
+// credentials step is the opening or the Advanced height; a two-factor prompt
+// is the single-method height plus the rows its challenge added.
+func (s *loginWindow) targetHeight() int {
+	if s.challenge == nil {
+		if s.advancedOpen {
+			return loginWindowAdvancedHeight
+		}
+		return loginWindowHeight
+	}
+	h := loginWindowTwoFactorHeight
+	if len(s.challenge.codeMethods()) > 1 {
+		h += loginWindowSegmentHeight
+	}
+	if m, ok := s.selectedMethod(); ok && m.provider == twoFactorEmail {
+		h += loginWindowEmailHeight
+	}
+	if len(s.challenge.unsupported()) > 0 {
+		h += loginWindowUnsupportedHeight
+	}
+	return h
+}
+
+// syncHeight resizes the window to the height its current state needs. The
+// view calls it every frame, so the comparison against appliedHeight is what
+// keeps a steady form from calling into the window server on each one.
+func (s *loginWindow) syncHeight() {
+	target := s.targetHeight()
+	if target == s.appliedHeight {
+		return
+	}
+	s.appliedHeight = target
+	if s.resizeWindow != nil {
+		s.resizeWindow(target)
+	}
 }
 
 // submit starts the password login. The server address is checked first, so a
@@ -173,6 +218,7 @@ func (s *loginWindow) failServer(err error) {
 	s.serverErr = err.Error()
 	s.notice = "服务器地址无效，请修改后重试"
 	s.noticeOK = false
+	s.syncHeight()
 }
 
 // applyLogin lands a password-step outcome.
@@ -192,6 +238,7 @@ func (s *loginWindow) applyLogin(serverURL string, sess accountSession, err erro
 		s.emailSent = false
 		s.notice = "服务器要求两步验证，请输入验证码"
 		s.noticeOK = false
+		s.syncHeight()
 	default:
 		s.notice = "正在登录..."
 		s.noticeOK = false
@@ -269,6 +316,7 @@ func (s *loginWindow) applyTwoFactor(sess accountSession, err error) {
 			s.challenge = sess.challenge
 			s.methodIndex = 0
 			s.emailSent = false
+			s.syncHeight()
 		}
 		s.notice = "验证码未被接受，请确认后重试"
 		s.noticeOK = false
