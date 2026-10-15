@@ -122,6 +122,13 @@ func (s *loginWindow) begin() {
 	if s.email == "" {
 		s.email = s.page.session.email
 	}
+	if s.email == "" {
+		// A configured-but-signed-out page has no session email; the stored
+		// account's address is the best prefill for a re-login.
+		if p := s.page.primary(); p != nil {
+			s.email = p.email
+		}
+	}
 	if s.openWindow != nil {
 		s.openWindow()
 	}
@@ -275,8 +282,14 @@ func (s *loginWindow) applyEmailSent(err error) {
 func (s *loginWindow) finishLogin(sess accountSession) {
 	s.page.session = sess
 	s.page.reload()
-	s.page.notice = "已登录 " + sess.email
-	s.page.noticeOK = true
+	if sess.warning != "" {
+		// The login itself succeeded; only keeping the session failed.
+		s.page.notice = sess.warning
+		s.page.noticeOK = false
+	} else {
+		s.page.notice = "已登录 " + sess.email
+		s.page.noticeOK = true
+	}
 	s.clearSecrets()
 	s.showing = false
 	s.close()

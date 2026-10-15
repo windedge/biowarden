@@ -52,6 +52,12 @@ type stubAccount struct {
 	sess accountSession
 	err  error
 
+	// restoreSet lets a test drive the first-load restore independently of the
+	// plain session() answer; without it restoreSession mirrors sess.
+	restoreSet  bool
+	restoreSess accountSession
+	restoreErr  error
+
 	loginCalls   int
 	lastEmail    string
 	lastPassword string
@@ -73,9 +79,23 @@ type stubAccount struct {
 
 	sendErr   error
 	sendCalls int
+
+	sessionCalls int
+	restoreCalls int
 }
 
-func (a *stubAccount) session() (accountSession, error) { return a.sess, nil }
+func (a *stubAccount) session() (accountSession, error) {
+	a.sessionCalls++
+	return a.sess, nil
+}
+
+func (a *stubAccount) restoreSession() (accountSession, error) {
+	a.restoreCalls++
+	if a.restoreSet {
+		return a.restoreSess, a.restoreErr
+	}
+	return a.sess, nil
+}
 
 func (a *stubAccount) checkServer(serverURL string) (string, error) {
 	a.checkCalls++

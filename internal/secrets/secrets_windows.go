@@ -12,9 +12,9 @@ import (
 
 // Credential namespace. Each account is one generic credential named
 // <prefix>/<userId> whose blob is the raw key, plus <prefix>/Index whose blob
-// is the JSON account list.
-const defaultPrefix = "Biowarden"
-
+// is the JSON account list. Persisted logins live under <prefix>/Session/* and
+// are never part of the index.
+//
 // Credential Manager caps Comment at CRED_MAX_STRING_LENGTH (256); a longer
 // value makes CredWrite fail. Metadata that does not fit is dropped and the
 // index rebuild falls back to the target name.
@@ -26,7 +26,7 @@ type windowsStore struct {
 
 // New returns the Credential Manager backed store: Biowarden/<userId> per
 // account plus Biowarden/Index for metadata.
-func New() Store { return &windowsStore{prefix: defaultPrefix} }
+func New() Store { return &windowsStore{prefix: Prefix} }
 
 // newWithPrefix is New under an isolated namespace. Tests use it so their
 // credentials cannot collide with or be listed as a real installation's.
@@ -34,6 +34,16 @@ func newWithPrefix(prefix string) *windowsStore { return &windowsStore{prefix: p
 
 func (s *windowsStore) accountTarget(userID string) string { return s.prefix + "/" + userID }
 func (s *windowsStore) indexTarget() string                { return s.prefix + "/Index" }
+
+// isKeyTarget reports whether a credential in this namespace belongs to the
+// key index. The index entry itself and the persisted-login subtree under
+// <prefix>/Session/ are not accounts, so they never show up in the GUI list.
+func (s *windowsStore) isKeyTarget(target string) bool {
+	if target == s.indexTarget() {
+		return false
+	}
+	return !strings.HasPrefix(target, s.prefix+"/"+SessionSubtree+"/")
+}
 
 func (s *windowsStore) List() ([]Account, error) {
 	accounts, err := s.readIndex()
@@ -116,7 +126,7 @@ func (s *windowsStore) rebuildIndex() ([]Account, error) {
 	}
 	accounts := make([]Account, 0, len(creds))
 	for _, cred := range creds {
-		if cred.TargetName == s.indexTarget() {
+		if !s.isKeyTarget(cred.TargetName) {
 			continue
 		}
 		accounts = append(accounts, accountFromCredential(cred, s.prefix))

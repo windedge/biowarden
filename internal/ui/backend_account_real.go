@@ -68,12 +68,15 @@ type accountAuth interface {
 }
 
 // authStep is one step's outcome: either the flow finished with the account
-// key, or it stopped for a second factor.
+// key, or it stopped for a second factor. refreshToken is the grant's refresh
+// token on a finished login; it is the one secret that outlives the run (in the
+// credential store), and the key write itself still needs Hello.
 type authStep struct {
-	needs2FA  bool
-	challenge *twoFactorPrompt
-	userKey   []byte
-	account   secrets.Account
+	needs2FA     bool
+	challenge    *twoFactorPrompt
+	userKey      []byte
+	account      secrets.Account
+	refreshToken string
 }
 
 // accountAuthFactory builds one login attempt's flow for a server URL.
@@ -88,6 +91,11 @@ type realAccount struct {
 	store    secrets.Store
 	verifier hello.Verifier
 	newFlow  accountAuthFactory
+	// sessions persists the login across restarts; refresh verifies a persisted
+	// refresh token at startup. Both are seams so tests never touch the
+	// credential store or the network.
+	sessions sessionStore
+	refresh  sessionRefresher
 
 	mu   sync.Mutex
 	sess accountSession
@@ -117,9 +125,25 @@ type pendingTwoFactor struct {
 }
 
 func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory) *realAccount {
-	a := &realAccount{store: store, verifier: verifier, newFlow: factory}
+	a := &realAccount{
+		store: store, verifier: verifier, newFlow: factory,
+		sessions: nopSessionStore{},
+		refresh:  newSessionRefresher(),
+	}
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
 	a.lastLoggedIn = a.sess
+	return a
+}
+
+// newRealAccountWith is newRealAccount with the persisted-login seams wired.
+// The production GUI uses it so a restart can verify and restore the login;
+// the tests that do not exercise persistence keep the no-op defaults.
+func newRealAccountWith(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory, sessions sessionStore, refresh sessionRefresher) *realAccount {
+	a := newRealAccount(store, verifier, factory)
+	a.sessions = sessions
+	if refresh != nil {
+		a.refresh = refresh
+	}
 	return a
 }
 
@@ -129,7 +153,9 @@ func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accoun
 func newRealAccountState() accountState {
 	store := secrets.New()
 	verifier := hello.New()
-	return newAccountStateWith(newRealKeysWith(store, verifier), newRealAccount(store, verifier, newAuthFlowFactory()))
+	sessions := newWincredSessionStore(secrets.SessionPrefix)
+	account := newRealAccountWith(store, verifier, newAuthFlowFactory(), sessions, newSessionRefresher())
+	return newAccountStateWith(newRealKeysWith(store, verifier), account)
 }
 
 // newAuthFlowFactory builds real login flows through internal/auth. The
@@ -251,7 +277,11 @@ func stepFromResult(res auth.LoginResult) (authStep, error) {
 	case auth.LoginNeedTwoFactor:
 		return authStep{needs2FA: true, challenge: promptFromChallenge(res.Challenge)}, nil
 	case auth.LoginDone:
-		return authStep{userKey: []byte(res.UserKey), account: res.Account}, nil
+		return authStep{
+			userKey:      []byte(res.UserKey),
+			account:      res.Account,
+			refreshToken: res.Token.RefreshToken,
+		}, nil
 	default:
 		return authStep{}, fmt.Errorf("登录未完成：%s", res.State)
 	}
@@ -373,6 +403,8 @@ func (a *realAccount) parkTwoFactor(flow accountAuth, serverURL, email string, c
 // write, then the session. The order is the point - a refused or failed
 // prompt must leave the store untouched. password is empty when the login
 // finished in the 2FA step, which is why the credentials are not cached then.
+// The session (refresh token + identity) is persisted after the key; a failed
+// session write only warns, because the login itself succeeded.
 func (a *realAccount) completeLogin(step authStep, serverURL, email, password, helloReason string) (accountSession, error) {
 	if err := verifyHello(a.verifier, helloReason); err != nil {
 		return a.stay(serverURL), err
@@ -384,6 +416,12 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, password, h
 	if err := a.store.Put(acc, secrets.Key(step.userKey)); err != nil {
 		return a.stay(serverURL), fmt.Errorf("保存密钥失败：%w", err)
 	}
+	warning := a.persistSession(sessionRecord{
+		UserID:       acc.UserID,
+		Email:        acc.Email,
+		ServerURL:    serverURL,
+		RefreshToken: step.refreshToken,
+	})
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.sess = accountSession{
@@ -391,6 +429,7 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, password, h
 		email:     acc.Email,
 		serverURL: serverURL,
 		userID:    acc.UserID,
+		warning:   warning,
 	}
 	a.lastLoggedIn = a.sess
 	a.pending = nil
@@ -400,6 +439,21 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, password, h
 		a.email, a.pass, a.server = email, password, serverURL
 	}
 	return a.sess, nil
+}
+
+// persistSession writes the login's refresh token and identity to the
+// credential store. An empty refresh token means the server gave nothing to
+// restore with, so there is nothing worth saving. A failure is returned as a
+// human-readable warning and never as an error: the key is already stored and
+// unlocking still works.
+func (a *realAccount) persistSession(rec sessionRecord) string {
+	if rec.RefreshToken == "" {
+		return ""
+	}
+	if err := a.sessions.save(rec); err != nil {
+		return "登录会话无法持久化，下次启动需要重新登录：" + err.Error()
+	}
+	return ""
 }
 
 // stay keeps the previous session but records the server the attempt was
@@ -507,6 +561,7 @@ func (a *realAccount) logout() error {
 	if sess.state == loginLoggedOut && sess.userID == "" {
 		return nil
 	}
+	var clearErr error
 	if sess.userID != "" {
 		if err := verifyHello(a.verifier, "删除 biowarden 密钥"); err != nil {
 			return err
@@ -514,6 +569,9 @@ func (a *realAccount) logout() error {
 		if err := a.store.Remove(sess.userID); err != nil {
 			return fmt.Errorf("删除密钥失败：%w", err)
 		}
+		// The key is gone, so the persisted login for it must go too. A failed
+		// clear is reported but does not keep the session alive in memory.
+		clearErr = a.sessions.clear(sess.userID)
 	}
 	a.mu.Lock()
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
@@ -521,7 +579,69 @@ func (a *realAccount) logout() error {
 	a.email, a.pass, a.server = "", "", ""
 	a.pending = nil
 	a.mu.Unlock()
+	if clearErr != nil {
+		return fmt.Errorf("清除登录会话失败：%w", clearErr)
+	}
 	return nil
+}
+
+// restoreSession re-validates the login persisted in the OS credential store
+// and returns the session to show. The refresh token is the only credential
+// involved: the master password is never stored, so a restored session can
+// prove the sign-in but cannot re-derive the key without a fresh sign-in.
+//
+// Three outcomes:
+//   - valid: the signed-in session is restored (account page: 已登录)
+//   - rejected: the stored session is cleared, the key is kept (已配置)
+//   - unreachable: the stored session is kept, the page stays configured
+func (a *realAccount) restoreSession() (accountSession, error) {
+	rec, err := a.sessions.load()
+	if err != nil {
+		if errors.Is(err, errNoStoredSession) {
+			return a.currentSession(), nil
+		}
+		return a.currentSession(), err
+	}
+	fallback := accountSession{state: loginLoggedOut, serverURL: serverURLOf(rec.ServerURL)}
+	if rec.RefreshToken == "" {
+		a.adoptRestored(fallback)
+		return fallback, nil
+	}
+	tok, err := a.refresh(context.Background(), rec.ServerURL, rec.RefreshToken)
+	if err != nil {
+		if sessionRevoked(err) {
+			_ = a.sessions.clear(rec.UserID)
+			a.adoptRestored(fallback)
+			return fallback, errSessionRevoked
+		}
+		a.adoptRestored(fallback)
+		return fallback, errSessionUnverified
+	}
+	// The server may rotate the refresh token; keep the newest one so the next
+	// restart still verifies.
+	if tok.RefreshToken != "" && tok.RefreshToken != rec.RefreshToken {
+		rec.RefreshToken = tok.RefreshToken
+		_ = a.sessions.save(rec)
+	}
+	sess := accountSession{
+		state:     loginLoggedIn,
+		email:     rec.Email,
+		serverURL: serverURLOf(rec.ServerURL),
+		userID:    rec.UserID,
+	}
+	a.mu.Lock()
+	a.sess = sess
+	a.lastLoggedIn = sess
+	a.mu.Unlock()
+	return sess, nil
+}
+
+// adoptRestored records the configured-but-signed-out session restore fell
+// back to, so every later session() read agrees with what the page shows.
+func (a *realAccount) adoptRestored(sess accountSession) {
+	a.mu.Lock()
+	a.sess = sess
+	a.mu.Unlock()
 }
 
 func (a *realAccount) refreshKey() error {

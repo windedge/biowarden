@@ -7,6 +7,18 @@ import (
 	"time"
 )
 
+// Prefix is the Credential Manager namespace biowarden owns.
+const Prefix = "Biowarden"
+
+// SessionSubtree is the namespace below Prefix that holds persisted logins. It
+// is a sibling of the account keys, and the key index never lists it as an
+// account.
+const SessionSubtree = "Session"
+
+// SessionPrefix is the full Credential Manager prefix for persisted logins,
+// e.g. Biowarden/Session/<userId>.
+const SessionPrefix = Prefix + "/" + SessionSubtree
+
 var (
 	ErrNotImplemented = errors.New("secrets: store not implemented yet")
 	ErrNotFound       = errors.New("secrets: account not found")

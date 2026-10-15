@@ -49,6 +49,25 @@ func sampleAccount(userID string) Account {
 	}
 }
 
+// The key index must not treat the persisted-login subtree as an account, or
+// every saved session would show up as a bogus stored key.
+func TestIsKeyTargetSkipsSessionCredentials(t *testing.T) {
+	s := newWithPrefix("BiowardenTest/example")
+	cases := []struct {
+		target string
+		want   bool
+	}{
+		{s.indexTarget(), false},
+		{s.prefix + "/" + SessionSubtree + "/user-1", false},
+		{s.prefix + "/user-1", true},
+	}
+	for _, tc := range cases {
+		if got := s.isKeyTarget(tc.target); got != tc.want {
+			t.Errorf("isKeyTarget(%q) = %v, want %v", tc.target, got, tc.want)
+		}
+	}
+}
+
 func TestGetMissing(t *testing.T) {
 	s := newTestStore(t)
 	if _, err := s.Get("nobody"); !errors.Is(err, ErrNotFound) {

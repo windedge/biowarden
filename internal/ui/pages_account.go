@@ -30,9 +30,10 @@ func (app *appState) accountPage(c *ui.Context) {
 }
 
 // accountCard is the login state: identity and server when signed in, the
-// button that opens the login window when not. The login window owns the form
-// and the two-factor prompt; the card only mirrors the session the backend
-// reports, so there is one entry point and not two.
+// stored-key "configured" state when a key exists without a live session, and
+// the sign-in guidance with nothing stored. The wording for all three comes
+// from accountCardViewFor; the login window owns the form and the two-factor
+// prompt, so the card only mirrors the session the backend reports.
 func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 	t := c.Theme()
 	groupBox(c, "账号", func() {
@@ -55,16 +56,19 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 					c.Invalidate()
 				}
 			})
-		case loginLoggedIn, loginLoggingIn:
-			a.identityRow(c, t.Success)
-			if a.session.state == loginLoggingIn {
-				ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-					ui.Spinner(c).Label("登录中")
-				})
-			}
+			return
+		}
+
+		v := accountCardViewFor(a.session, a.primary())
+		a.accountIdentity(c, v, t)
+		switch v.state {
+		case cardSignedIn:
 			ui.Row(c).Gap(10).Children(func() {
 				if ui.PrimaryButton(c, "重新登录").Disabled(a.busy).Clicked() {
-					a.relogin()
+					// Re-login re-derives the key, which always needs the master
+					// password (a restored session kept only the refresh token),
+					// so the login window is the one path that always works.
+					login.begin()
 					c.Invalidate()
 				}
 				if ui.Button(c, "退出登录").Disabled(a.busy).Clicked() {
@@ -72,12 +76,13 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 					c.Invalidate()
 				}
 			})
+		case cardConfigured:
+			if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
+				login.begin()
+				c.Invalidate()
+			}
 		default:
-			ui.Column(c).Grow(1).Gap(2).Children(func() {
-				ui.Text(c, "尚未登录").Bold()
-				muted(c, "登录 Bitwarden 账号后，biowarden 会自动取出并保存密钥，无需逐项手动配置。")
-			})
-			if ui.PrimaryButton(c, "登录 Bitwarden 账号").Disabled(a.busy).Clicked() {
+			if ui.PrimaryButton(c, v.loginLabel).Disabled(a.busy).Clicked() {
 				login.begin()
 				c.Invalidate()
 			}
@@ -86,8 +91,35 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 	})
 }
 
-// identityRow is the avatar, email, server and state line shared by the
-// signed-in and 2FA branches.
+// accountIdentity draws the title, the identity/detail line and any hint for
+// one card view. The title color follows the state: green for a verified
+// login, the normal text color for the configured and signed-out states.
+func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.Theme) {
+	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+		if v.identity {
+			ui.Avatar(c, avatarName(a.session.email), nil)
+		}
+		ui.Column(c).Grow(1).Gap(2).Children(func() {
+			color := t.Text
+			if v.state == cardSignedIn {
+				color = t.Success
+			}
+			ui.Text(c, v.title).Bold().TextColor(color)
+			if v.detail != "" {
+				muted(c, v.detail)
+			}
+			if v.hint != "" {
+				muted(c, v.hint)
+			}
+		})
+		if a.session.state == loginLoggingIn {
+			ui.Spinner(c).Label("登录中")
+		}
+	})
+}
+
+// identityRow is the avatar, email, server and state line the 2FA branch
+// draws while it waits for a code.
 func (a *accountState) identityRow(c *ui.Context, stateColor ui.Color) {
 	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 		ui.Avatar(c, avatarName(a.session.email), nil)

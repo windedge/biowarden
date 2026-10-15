@@ -17,6 +17,12 @@ func (fakeAccount) session() (accountSession, error) {
 	return accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil
 }
 
+// restoreSession reports the same logged-out, keyless state the prototype
+// starts in; there is nothing on disk to re-validate yet.
+func (fakeAccount) restoreSession() (accountSession, error) {
+	return accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil
+}
+
 // checkServer accepts any address, because this backend never dials it.
 func (fakeAccount) checkServer(serverURL string) (string, error) {
 	return serverURLOf(serverURL), nil

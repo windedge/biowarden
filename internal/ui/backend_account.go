@@ -144,6 +144,9 @@ type accountSession struct {
 	twoFAMethod string // how the pending 2FA code is delivered, for the prompt
 	// challenge is the pending second factor, nil outside loginNeeds2FA.
 	challenge *twoFactorPrompt
+	// warning is a non-fatal notice about a login that succeeded anyway, e.g.
+	// a session that could not be persisted. Empty when nothing needs saying.
+	warning string
 }
 
 // accountBackend is what the Account page and the login window need from a
@@ -153,6 +156,13 @@ type accountSession struct {
 type accountBackend interface {
 	// session reports the current login state without changing it.
 	session() (accountSession, error)
+	// restoreSession re-validates the login persisted in the OS credential
+	// store (a refresh token, never the master password) and returns the
+	// session to show. The account page calls it once, on the first load. It
+	// reports errSessionRevoked when the server rejected the token (the stored
+	// session is cleared, the key kept) and errSessionUnverified when the
+	// server could not be reached (the stored session is kept).
+	restoreSession() (accountSession, error)
 	// checkServer normalizes a user-entered server address the way login will,
 	// so the login window can report a bad one before any call goes out. The
 	// normalized address is what login should be given.

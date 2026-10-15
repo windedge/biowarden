@@ -26,7 +26,9 @@ so a refused prompt leaves nothing stored. The host and the GUI are separate pro
 same Credential Manager store, so a key saved by a GUI login is the one the host reads at unlock.
 
 Seams: `hello` = Windows Hello consent via pure syscalls; `secrets` = Credential Manager,
-`Biowarden/<userId>` per account plus a `Biowarden/Index` metadata entry; `registry` = HKCU-only
+`Biowarden/<userId>` per account plus a `Biowarden/Index` metadata entry, and
+`Biowarden/Session/<userId>` for the persisted login (refresh token, email, server, never the
+password or userKey); `registry` = HKCU-only
 manifest registration for Chrome/Edge/Firefox, showing an existing value as "possibly the official
 client" and only overwriting after confirmation, plus the `FirstRunCompleted` marker that keeps
 the zero-configuration first-run setup to one automatic registration. v1 implements `windows` only.

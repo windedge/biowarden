@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -39,6 +40,11 @@ type accountState struct {
 	// stays short. scriptOpen keeps the long script closed until asked for.
 	advancedOpen bool
 	scriptOpen   bool
+
+	// revalidated records that the first load already re-checked the persisted
+	// session; later reloads (after a save, logout, ...) only read the
+	// in-memory session and must not hit the network again.
+	revalidated bool
 
 	busy    bool
 	results chan func(*accountState)
@@ -136,10 +142,20 @@ func (s *accountState) selectAccount(userID string) {
 
 func (s *accountState) reload() {
 	keys, account := s.keys, s.account
+	revalidate := !s.revalidated
+	s.revalidated = true
 	s.async(func() func(*accountState) {
+		var sess accountSession
+		var sessErr error
+		if revalidate {
+			// The first load re-checks any persisted login before showing the
+			// page, so a restart does not have to claim the user signed out.
+			sess, sessErr = account.restoreSession()
+		} else {
+			sess, sessErr = account.session()
+		}
 		rows, err := keys.accounts()
 		available, availErr := keys.helloAvailable()
-		sess, sessErr := account.session()
 		return func(st *accountState) {
 			st.applyReload(rows, err, available, availErr, sess, sessErr)
 		}
@@ -154,6 +170,12 @@ func (s *accountState) applyReload(rows []accountRow, err error, available bool,
 	case availErr != nil:
 		s.notice = "检查 Windows Hello 失败：" + availErr.Error()
 		s.noticeOK = false
+	case errors.Is(sessErr, errSessionRevoked):
+		s.notice = "登录会话已失效，已清除本地会话；密钥仍已保存，解锁不受影响。"
+		s.noticeOK = false
+	case errors.Is(sessErr, errSessionUnverified):
+		s.notice = "暂时无法验证登录会话（网络或服务器问题），已保守显示为未登录；密钥仍已保存。"
+		s.noticeOK = false
 	case sessErr != nil:
 		s.notice = "读取登录状态失败：" + sessErr.Error()
 		s.noticeOK = false
@@ -161,7 +183,7 @@ func (s *accountState) applyReload(rows []accountRow, err error, available bool,
 		s.notice = "此电脑未配置 Windows Hello，无法保存或删除密钥。"
 		s.noticeOK = false
 	}
-	if sessErr == nil {
+	if sessErr == nil || errors.Is(sessErr, errSessionRevoked) || errors.Is(sessErr, errSessionUnverified) {
 		s.session = sess
 	}
 	s.accounts = s.accounts[:0]
@@ -290,24 +312,6 @@ func (s *accountState) logout() {
 			// async read, so the order keeps "已退出登录" on screen.
 			st.reload()
 			st.notice = "已退出登录"
-			st.noticeOK = true
-		}
-	})
-}
-
-// relogin runs the whole flow again; the backend owns any prompts it needs.
-func (s *accountState) relogin() {
-	account := s.account
-	s.async(func() func(*accountState) {
-		err := account.relogin()
-		return func(st *accountState) {
-			if err != nil {
-				st.notice = err.Error()
-				st.noticeOK = false
-				return
-			}
-			st.reload()
-			st.notice = "已重新登录"
 			st.noticeOK = true
 		}
 	})

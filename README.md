@@ -60,9 +60,13 @@ threat model you already accept with the official desktop client.
 
 The master password you type in the login window lives in memory only. It is kept for the length
 of the run so **Refresh key** and **Re-login** can re-derive the key after a password or KDF
-change, and it is never written to disk or to a log. The access and refresh tokens are likewise
-memory-only, and the two-factor code is dropped as soon as one attempt settles. A clean **Log out**
-deletes the stored key after a Windows Hello consent.
+change, and it is never written to disk or to a log. The access token is memory-only too. To keep
+you signed in across restarts, biowarden persists the refresh token, your email and your server
+address as a separate `Biowarden/Session/<userId>` entry, encrypted by Windows DPAPI under your
+user account; that entry holds no master password and no account key. The two-factor code is
+dropped as soon as one attempt settles. Because only the refresh token is kept, re-deriving the
+key still requires typing your master password again. A clean **Log out** deletes the stored key
+and the stored session after a Windows Hello consent.
 
 ## Installation
 
