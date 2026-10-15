@@ -7,12 +7,19 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// The login window's opening size. It is a modal dialog: narrow, not resizable
-// taller than its content needs, and a child of the main window so it stays
-// above it and blocks it until the attempt settles.
+// The login window's opening size. It is a modal dialog: narrow, and a child of
+// the main window so it stays above it and blocks it until the attempt settles.
+//
+// The height is the credentials form's own content (16 padding + title rows +
+// two fields + the collapsed Advanced row + the button row + 16 padding, about
+// 270 DIPs) plus the roughly 40 DIPs of frame and caption, rounded up so a font
+// that wraps the hint differently still fits: the form fills the page, with no
+// blank block under the buttons. Opening Advanced or landing on the two-factor
+// prompt makes the form taller, and the scroll view around it takes over rather
+// than clipping the form or leaving the window oversized for the common case.
 const (
 	loginWindowWidth  = 420
-	loginWindowHeight = 440
+	loginWindowHeight = 320
 )
 
 // showLoginWindow creates the login window, or brings the one already up to
@@ -33,7 +40,7 @@ func (app *appState) showLoginWindow() {
 		Width:           loginWindowWidth,
 		Height:          loginWindowHeight,
 		MinWidth:        loginWindowWidth,
-		MinHeight:       320,
+		MinHeight:       loginWindowHeight,
 		DisableMaximize: true,
 		Parent:          app.mainWindow,
 		Modal:           true,
