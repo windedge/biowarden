@@ -19,12 +19,10 @@ type realKeys struct {
 	verifier hello.Verifier
 }
 
-func newRealKeys() *realKeys {
-	return &realKeys{store: secrets.New(), verifier: hello.New()}
-}
-
 // newRealKeysWith injects the two seams so tests can drive consent outcomes
-// without touching the real credential store or prompting a human.
+// without touching the real credential store or prompting a human. The account
+// backend builds it with the same store box it uses, so the key card and the
+// login path share one instance.
 func newRealKeysWith(store secrets.Store, verifier hello.Verifier) *realKeys {
 	return &realKeys{store: store, verifier: verifier}
 }
@@ -76,10 +74,16 @@ func (k *realKeys) helloAvailable() (bool, error) {
 	return k.verifier.Available()
 }
 
-// verify turns a Hello outcome into one line a human can act on. A refused or
-// unusable check must read differently from a broken call.
 func (k *realKeys) verify(reason string) error {
-	result, err := k.verifier.Verify(reason)
+	return verifyHello(k.verifier, reason)
+}
+
+// verifyHello turns a Hello outcome into one line a human can act on. A
+// refused or unusable check must read differently from a broken call. It is
+// shared by the key card and the account backend so both write gates behave
+// and word their failures the same way.
+func verifyHello(verifier hello.Verifier, reason string) error {
+	result, err := verifier.Verify(reason)
 	if err != nil {
 		return fmt.Errorf("Windows Hello 调用失败：%v", err)
 	}

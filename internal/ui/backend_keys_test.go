@@ -10,12 +10,15 @@ import (
 )
 
 // fakeStore is an in-memory secrets.Store, so these tests never touch the
-// real Credential Manager.
+// real Credential Manager. putErr and removeErr let a test drive the store's
+// failure path without a second fake.
 type fakeStore struct {
 	accounts    map[string]secrets.Account
 	keys        map[string][]byte
 	putCalls    int
 	removeCalls int
+	putErr      error
+	removeErr   error
 }
 
 func newFakeStore() *fakeStore {
@@ -40,6 +43,9 @@ func (s *fakeStore) Get(userID string) (secrets.Key, error) {
 
 func (s *fakeStore) Put(acc secrets.Account, key secrets.Key) error {
 	s.putCalls++
+	if s.putErr != nil {
+		return s.putErr
+	}
 	s.accounts[acc.UserID] = acc
 	s.keys[acc.UserID] = append([]byte(nil), key...)
 	return nil
@@ -47,6 +53,9 @@ func (s *fakeStore) Put(acc secrets.Account, key secrets.Key) error {
 
 func (s *fakeStore) Remove(userID string) error {
 	s.removeCalls++
+	if s.removeErr != nil {
+		return s.removeErr
+	}
 	delete(s.accounts, userID)
 	delete(s.keys, userID)
 	return nil

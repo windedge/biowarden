@@ -17,7 +17,7 @@ func (fakeAccount) session() (accountSession, error) {
 	return accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil
 }
 
-func (fakeAccount) login(string, string) (accountSession, error) {
+func (fakeAccount) login(string, string, string) (accountSession, error) {
 	return accountSession{}, errAccountBackend
 }
 

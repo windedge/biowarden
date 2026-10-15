@@ -76,3 +76,53 @@ func TestAccountStateLoginReportsNotImplemented(t *testing.T) {
 		t.Fatalf("noticeOK = true for a not-implemented backend")
 	}
 }
+
+// stubAccount is an accountBackend with a fixed session and error, so the
+// page state machine can be driven without a network or a Hello prompt.
+type stubAccount struct {
+	sess       accountSession
+	err        error
+	loginCalls int
+}
+
+func (a *stubAccount) session() (accountSession, error) { return a.sess, nil }
+func (a *stubAccount) login(string, string, string) (accountSession, error) {
+	a.loginCalls++
+	return a.sess, a.err
+}
+func (a *stubAccount) submit2FA(string) (accountSession, error) { return a.sess, a.err }
+func (a *stubAccount) logout() error                            { return a.err }
+func (a *stubAccount) refreshKey() error                        { return a.err }
+func (a *stubAccount) relogin() error                           { return a.err }
+
+// A successful login must land the session on the page, keep its confirmation
+// line on screen across the reload it triggers, and never leave the login form
+// open.
+func TestAccountStateLoginSuccessShowsSession(t *testing.T) {
+	acct := &stubAccount{sess: accountSession{
+		state:     loginLoggedIn,
+		email:     "ada@example.com",
+		serverURL: defaultServerURL,
+		userID:    "user-1",
+	}}
+	s := newAccountStateWith(fakeKeys{}, acct)
+	drain(t, &s)
+
+	s.loginOpen = true
+	s.email, s.password = "ada@example.com", "secret"
+	s.login()
+	drain(t, &s) // the login result, which starts a store reload
+	if s.session.state != loginLoggedIn || s.session.userID != "user-1" {
+		t.Fatalf("session = %+v, want the logged-in session", s.session)
+	}
+	if s.notice != "已登录 ada@example.com" || !s.noticeOK {
+		t.Fatalf("notice = %q ok=%v, want the success line", s.notice, s.noticeOK)
+	}
+	if s.loginOpen {
+		t.Fatal("login form stayed open after a successful login")
+	}
+	drain(t, &s) // the reload; it must not wipe the success line
+	if s.notice != "已登录 ada@example.com" {
+		t.Fatalf("notice after reload = %q, want the success line", s.notice)
+	}
+}

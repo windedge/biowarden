@@ -30,15 +30,19 @@ func (app *appState) accountPage(c *ui.Context) {
 }
 
 // accountCard is the login state: identity and server when signed in, the
-// login form when not. The form is a UI-only disclosure for now; the fake
-// backend answers its submit with a not-implemented error, so nothing here
-// pretends a login happened.
+// login form when not. The real backend drives it: submit walks the auth flow
+// and stores the key behind a Hello consent. The inline 2FA prompt stays until
+// the login window ticket takes it over, so submit2FA there is still a clear
+// not-implemented.
 func (a *accountState) accountCard(c *ui.Context) {
 	t := c.Theme()
 	groupBox(c, "账号", func() {
 		switch a.session.state {
 		case loginNeeds2FA:
 			a.identityRow(c, t.Warning)
+			if a.session.twoFAMethod != "" {
+				muted(c, "服务器要求的两步验证方式："+a.session.twoFAMethod)
+			}
 			ui.Form(c, func() {
 				ui.Field(c, "验证码", func() {
 					ui.TextInput(c.Key("twofa"), &a.twoFACode).Placeholder("6 位验证码或恢复码")
@@ -100,7 +104,7 @@ func (a *accountState) accountCard(c *ui.Context) {
 					ui.Spinner(c).Label("登录中")
 				}
 			})
-			muted(c, "登录后端将在后续工单接入：这里的按钮只切换界面状态，不会真的登录。")
+			muted(c, "登录会连接到 Bitwarden 身份服务器；写入密钥前需要 Windows Hello 确认。")
 		}
 	})
 }
@@ -246,6 +250,14 @@ func (a *accountState) manualEntry(c *ui.Context) {
 			if ui.Button(c, "测试解锁").Disabled(a.busy).Clicked() {
 				a.testUnlock(acc)
 				c.Invalidate()
+			}
+			// Selecting a row foregrounds it in the key card; it is the
+			// whole of account switching without parallel sessions.
+			if primary := a.primary(); primary == nil || primary.userID != acc.userID {
+				if ui.Button(c, "设为当前").Disabled(a.busy).Clicked() {
+					a.selectAccount(acc.userID)
+					c.Invalidate()
+				}
 			}
 			// Removal runs off the UI thread, so the row is dropped by
 			// a later tick rather than while this list is built.

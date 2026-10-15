@@ -1,7 +1,7 @@
 // Package ui is GUI mode: a tray icon plus one window. The window is a left
 // sidebar of four pages (Account, Browsers, Settings, Log) next to the page's
-// content. The account backend is still a fake, so a human can settle the
-// interactions and the layout before the auth seam behind it is wired up.
+// content. The account page runs the real login, logout and key-refresh flow
+// through internal/auth, with Windows Hello gating every key write.
 package ui
 
 import (

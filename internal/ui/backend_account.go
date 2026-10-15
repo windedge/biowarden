@@ -1,10 +1,11 @@
 package ui
 
 // The account seam is where the Account page meets Bitwarden's account and
-// login machinery. This ticket defines the interface and ships the fake; the
-// auth ticket replaces the fake with an implementation of internal/auth,
-// without the pages changing. The UI must never import internal/auth itself:
-// every account capability travels through this interface.
+// login machinery. The pages talk only to accountBackend and never import
+// internal/auth; backend_account_real.go is the one adapter that drives the
+// real auth.LoginFlow plus the hello and secrets seams, and it does so through
+// the small interfaces its constructor takes, so tests inject fakes and never
+// touch the network, the credential store or a Hello prompt.
 
 // defaultServerURL is the official Bitwarden server, shown until an account
 // (or a later settings ticket) says otherwise.
@@ -35,13 +36,29 @@ func (s loginState) label() string {
 	}
 }
 
+// twoFactorPrompt is the challenge a login that stopped for a second factor
+// hands to the prompt: the offered methods in server order plus the data each
+// one needs. It mirrors auth.TwoFactorChallenge in local terms so the page
+// types stay free of internal/auth.
+type twoFactorPrompt struct {
+	providers   []string // provider names, server order
+	email       string   // where the email code goes (provider 1)
+	duoURL      string   // frameless Duo URL (providers 2 and 6)
+	webAuthnURL string   // web vault connector page (provider 7)
+}
+
 // accountSession is what the Account page shows: the login state and the
 // identity behind it. The key itself never travels through here.
 type accountSession struct {
-	state       loginState
-	email       string
-	serverURL   string
+	state     loginState
+	email     string
+	serverURL string
+	// userID is the signed-in account's Bitwarden id, so logout can delete
+	// exactly that account's stored key.
+	userID      string
 	twoFAMethod string // how the pending 2FA code is delivered, for the prompt
+	// challenge is the pending second factor, nil outside loginNeeds2FA.
+	challenge *twoFactorPrompt
 }
 
 // accountBackend is what the Account page needs from a Bitwarden account.
@@ -51,16 +68,22 @@ type accountSession struct {
 type accountBackend interface {
 	// session reports the current login state without changing it.
 	session() (accountSession, error)
-	// login starts an email/password login. It returns loginNeeds2FA when
-	// the account asks for a code, loginLoggedIn when it is done.
-	login(email, password string) (accountSession, error)
-	// submit2FA finishes a login that is waiting for a two-factor code.
+	// login starts an email/password login against serverURL. It returns
+	// loginNeeds2FA when the account asks for a code, loginLoggedIn when it
+	// is done.
+	login(email, password, serverURL string) (accountSession, error)
+	// submit2FA finishes a login that is waiting for a two-factor code. The
+	// login window ticket owns it; the real backend reports it as not
+	// implemented for now.
 	submit2FA(code string) (accountSession, error)
-	// logout forgets the session, leaving stored keys alone.
+	// logout forgets the session and deletes the signed-in account's stored
+	// key, behind a Hello consent like every other key operation.
 	logout() error
-	// refreshKey re-reads the account key from Bitwarden so the local store
-	// matches the vault.
+	// refreshKey re-derives the account key by logging in again with the
+	// credentials kept in memory, so the local store matches the vault after
+	// a password or KDF change. It needs a Hello consent before the write.
 	refreshKey() error
-	// relogin runs the login flow again from the beginning.
+	// relogin runs the login flow again from the beginning, with the same
+	// in-memory credentials and the same Hello-before-write rule.
 	relogin() error
 }
