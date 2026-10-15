@@ -16,17 +16,20 @@ import (
 // to its owner.
 
 var (
-	procRegisterClassExW = user32.NewProc("RegisterClassExW")
-	procCreateWindowExW  = user32.NewProc("CreateWindowExW")
-	procDefWindowProcW   = user32.NewProc("DefWindowProcW")
-	procGetMessageW      = user32.NewProc("GetMessageW")
-	procTranslateMessage = user32.NewProc("TranslateMessage")
-	procDispatchMessageW = user32.NewProc("DispatchMessageW")
-	procPostMessageW     = user32.NewProc("PostMessageW")
-	procPostQuitMessage  = user32.NewProc("PostQuitMessage")
-	procLoadCursorW      = user32.NewProc("LoadCursorW")
-	procIsWindow         = user32.NewProc("IsWindow")
-	procGetModuleHandleW = kernel32.NewProc("GetModuleHandleW")
+	procRegisterClassExW      = user32.NewProc("RegisterClassExW")
+	procCreateWindowExW       = user32.NewProc("CreateWindowExW")
+	procDefWindowProcW        = user32.NewProc("DefWindowProcW")
+	procGetMessageW           = user32.NewProc("GetMessageW")
+	procTranslateMessage      = user32.NewProc("TranslateMessage")
+	procDispatchMessageW      = user32.NewProc("DispatchMessageW")
+	procPostMessageW          = user32.NewProc("PostMessageW")
+	procPostQuitMessage       = user32.NewProc("PostQuitMessage")
+	procLoadCursorW           = user32.NewProc("LoadCursorW")
+	procIsWindow              = user32.NewProc("IsWindow")
+	procGetModuleHandleW      = kernel32.NewProc("GetModuleHandleW")
+	procSetWindowPos          = user32.NewProc("SetWindowPos")
+	procGetWindowRect         = user32.NewProc("GetWindowRect")
+	procSystemParametersInfoW = user32.NewProc("SystemParametersInfoW")
 )
 
 const (
@@ -36,9 +39,16 @@ const (
 	wmDestroy        = 0x0002
 	wmClose          = 0x0010
 	idcArrow         = 32512
+
+	spiGetWorkArea = 0x0030
+	swpNoSize      = 0x0001
+	swpNoZOrder    = 0x0004
+	swpNoActivate  = 0x0010
 )
 
 type point struct{ X, Y int32 }
+
+type rect struct{ Left, Top, Right, Bottom int32 }
 
 type msg struct {
 	HWnd    uintptr
@@ -122,7 +132,29 @@ func createOwnerWindow() (uintptr, error) {
 	if hwnd == 0 {
 		return 0, fmt.Errorf("hello: CreateWindowExW: %v", err)
 	}
+	centerOwnerWindow(hwnd)
 	return hwnd, nil
+}
+
+// centerOwnerWindow moves the hidden owner to the centre of the primary work
+// area before the pump starts. The consent UI places itself relative to its
+// owner, so an owner left at the default top-left drops the prompt in the
+// corner; centring happens here so it is already in place when
+// RequestVerificationForWindowAsync runs.
+func centerOwnerWindow(hwnd uintptr) {
+	var work rect
+	if r, _, _ := procSystemParametersInfoW.Call(spiGetWorkArea, 0, uintptr(unsafe.Pointer(&work)), 0); r == 0 {
+		return
+	}
+	var wr rect
+	if r, _, _ := procGetWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&wr))); r == 0 {
+		wr.Right, wr.Bottom = wr.Left, wr.Top
+	}
+	width := int(wr.Right - wr.Left)
+	height := int(wr.Bottom - wr.Top)
+	x := int(work.Left) + (int(work.Right-work.Left)-width)/2
+	y := int(work.Top) + (int(work.Bottom-work.Top)-height)/2
+	procSetWindowPos.Call(hwnd, 0, uintptr(x), uintptr(y), 0, 0, swpNoSize|swpNoZOrder|swpNoActivate)
 }
 
 func moduleHandle() uintptr {
