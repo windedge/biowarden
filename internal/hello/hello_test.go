@@ -5,6 +5,7 @@ package hello
 import (
 	"os"
 	"testing"
+	"time"
 )
 
 func TestResultFromConsent(t *testing.T) {
@@ -102,6 +103,63 @@ func TestPromptOwnerWindow(t *testing.T) {
 	}
 	if r, _, _ := procIsWindow.Call(hwnd); r == 0 {
 		t.Fatalf("owner window %#x is not a window", hwnd)
+	}
+	exists, visible, topmost := ownerWindowState(hwnd)
+	if !exists || visible || !topmost {
+		t.Fatalf("owner window state = exists:%t visible:%t topmost:%t, want exists:true visible:false topmost:true",
+			exists, visible, topmost)
+	}
+}
+
+// TestLendForeground exercises the foreground borrow without showing a Hello
+// prompt: on an attended desktop the owner must briefly become the foreground
+// window and the previous window must get it back. It borrows the real
+// foreground, so it is opt-in like TestVerifyProbe. A session with no
+// foreground window (locked or headless) has nothing to borrow, so the test
+// skips the assertion instead of failing.
+func TestLendForeground(t *testing.T) {
+	if os.Getenv("BIOWARDEN_HELLO_PROBE") == "" {
+		t.Skip("set BIOWARDEN_HELLO_PROBE=1 to run the foreground borrow")
+	}
+	hwnd, err := promptOwner()
+	if err != nil {
+		t.Fatalf("promptOwner: %v", err)
+	}
+	before, _, _ := procGetForegroundWindow.Call()
+	lend := lendForeground(hwnd)
+	t.Logf("before=%#x lend=%s", before, lend)
+	if before == 0 {
+		t.Skip("no foreground window in this session")
+	}
+	if !lend.setFg {
+		t.Fatalf("SetForegroundWindow(owner) failed: %s", lend)
+	}
+	if !waitForeground(hwnd, 2*time.Second) {
+		t.Fatalf("owner %#x did not become the foreground window", hwnd)
+	}
+	ok, errno := returnForeground(lend.prevFg, hwnd, lend.shownByUs)
+	t.Logf("returnForeground ok=%t errno=%d", ok, errno)
+	if !waitForeground(before, 2*time.Second) {
+		t.Fatalf("foreground did not return to %#x", before)
+	}
+	if _, visible, topmost := ownerWindowState(hwnd); visible || !topmost {
+		t.Fatalf("owner visible/not topmost after restore: visible=%t topmost=%t", visible, topmost)
+	}
+}
+
+// waitForeground polls GetForegroundWindow until it reports hwnd; the switch is
+// queued by the window manager, so a read immediately after the call can
+// still see the old (or a null) value.
+func waitForeground(hwnd uintptr, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if fg, _, _ := procGetForegroundWindow.Call(); fg == hwnd {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 

@@ -118,6 +118,19 @@ func requestConsent(reason string) (Result, error) {
 	if err != nil {
 		return Unavailable, err
 	}
+	// Borrow the foreground so the prompt can take keyboard focus, and give it
+	// back when the prompt is gone. The topmost owner keeps the prompt above
+	// other windows even if the borrow is refused.
+	lend := lendForeground(hwnd)
+	exists, visible, topmost := ownerWindowState(hwnd)
+	logDebug(fmt.Sprintf("hello: prompt request ownerExists=%t ownerVisible=%t ownerTopmost=%t %s",
+		exists, visible, topmost, lend))
+	defer func() {
+		ok, errno := returnForeground(lend.prevFg, hwnd, lend.shownByUs)
+		exists, visible, topmost = ownerWindowState(hwnd)
+		logDebug(fmt.Sprintf("hello: prompt done restoreFg=%#x restoreOK=%t restoreErr=%d ownerVisible=%t ownerTopmost=%t",
+			lend.prevFg, ok, errno, visible, topmost))
+	}()
 	factory, err := activationFactory(userConsentVerifierClass, &iidConsentInterop)
 	if err != nil {
 		return Unavailable, err

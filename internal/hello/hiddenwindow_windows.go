@@ -44,6 +44,13 @@ const (
 	swpNoSize      = 0x0001
 	swpNoZOrder    = 0x0004
 	swpNoActivate  = 0x0010
+
+	// The owner carries these so the consent prompt it owns lands in the
+	// topmost z-order band: a background process cannot raise its own windows,
+	// so a normal-band prompt can be covered by whatever the user has in front.
+	// WS_EX_TOOLWINDOW keeps the zero-sized, empty-titled window out of Alt+Tab.
+	wsExTopmost    = 0x00000008
+	wsExToolWindow = 0x00000080
 )
 
 type point struct{ X, Y int32 }
@@ -125,7 +132,7 @@ func createOwnerWindow() (uintptr, error) {
 	if r, _, err := procRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc))); r == 0 {
 		return 0, fmt.Errorf("hello: RegisterClassExW: %v", err)
 	}
-	hwnd, _, err := procCreateWindowExW.Call(0,
+	hwnd, _, err := procCreateWindowExW.Call(wsExTopmost|wsExToolWindow,
 		uintptr(unsafe.Pointer(className)), 0, 0,
 		0, 0, 0, 0, 0, 0, moduleHandle(), 0)
 	runtime.KeepAlive(className)
@@ -183,4 +190,17 @@ func pumpMessages() {
 		procTranslateMessage.Call(uintptr(unsafe.Pointer(&m)))
 		procDispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
 	}
+}
+
+// ownerWindowState is the non-sensitive owner-window snapshot written to the
+// debug log: existence, visibility and the topmost bit, never any user data.
+func ownerWindowState(hwnd uintptr) (exists, visible, topmost bool) {
+	if r, _, _ := procIsWindow.Call(hwnd); r == 0 {
+		return false, false, false
+	}
+	if r, _, _ := procIsWindowVisible.Call(hwnd); r != 0 {
+		visible = true
+	}
+	ex, _, _ := procGetWindowLongW.Call(hwnd, gwlExStyle)
+	return true, visible, uint32(ex)&wsExTopmost != 0
 }
