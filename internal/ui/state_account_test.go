@@ -1,9 +1,6 @@
 package ui
 
-import (
-	"errors"
-	"testing"
-)
+import "testing"
 
 // TestNavPageRoundTrip keeps the sidebar's string IDs and the app's page enum
 // in step: a typo in either map would send a click to the wrong page.
@@ -47,55 +44,57 @@ func TestAccountStateStartsLoggedOutWithStoredKeys(t *testing.T) {
 	}
 }
 
-// TestAccountStateBeginLoginIsUIOnly checks the button the task says must not
-// log in: it opens the form and starts no backend call.
-func TestAccountStateBeginLoginIsUIOnly(t *testing.T) {
-	s := newAccountStateWith(fakeKeys{}, fakeAccount{})
-	drain(t, &s)
-
-	s.beginLogin()
-	if !s.loginOpen {
-		t.Fatalf("beginLogin did not open the login form")
-	}
-	if s.busy {
-		t.Fatalf("beginLogin started a backend call")
-	}
-}
-
-func TestAccountStateLoginReportsNotImplemented(t *testing.T) {
-	s := newAccountStateWith(fakeKeys{}, fakeAccount{})
-	drain(t, &s)
-
-	s.email, s.password = "ada@example.com", "secret"
-	s.login()
-	if !s.busy {
-		t.Fatalf("login did not start a backend call")
-	}
-	drain(t, &s)
-	if s.notice != errAccountBackend.Error() {
-		t.Fatalf("notice = %q, want the not-implemented error", s.notice)
-	}
-	if s.noticeOK {
-		t.Fatalf("noticeOK = true for a not-implemented backend")
-	}
-}
-
-// stubAccount is an accountBackend with a fixed session and error, so the
-// page state machine can be driven without a network or a Hello prompt.
+// stubAccount is an accountBackend with fixed answers, so the account page and
+// the login window can be driven without a network or a Hello prompt. Every
+// call is counted, because the tests care about which calls ran, not only
+// about their results.
 type stubAccount struct {
-	sess        accountSession
-	err         error
-	loginCalls  int
+	sess accountSession
+	err  error
+
+	loginCalls   int
+	lastEmail    string
+	lastPassword string
+
+	checkSess  string
+	checkErr   error
+	checkCalls int
+	lastServer string
+
 	cancelSess  accountSession
 	cancelErr   error
 	cancelCalls int
+
+	submitSess   accountSession
+	submitErr    error
+	submitCalls  int
+	lastProvider int
+	lastCode     string
+
+	sendErr   error
+	sendCalls int
 }
 
 func (a *stubAccount) session() (accountSession, error) { return a.sess, nil }
-func (a *stubAccount) login(string, string, string) (accountSession, error) {
+
+func (a *stubAccount) checkServer(serverURL string) (string, error) {
+	a.checkCalls++
+	a.lastServer = serverURL
+	if a.checkErr != nil {
+		return "", a.checkErr
+	}
+	if a.checkSess != "" {
+		return a.checkSess, nil
+	}
+	return serverURLOf(serverURL), nil
+}
+
+func (a *stubAccount) login(email, password, _ string) (accountSession, error) {
 	a.loginCalls++
+	a.lastEmail, a.lastPassword = email, password
 	return a.sess, a.err
 }
+
 func (a *stubAccount) cancelLogin() (accountSession, error) {
 	a.cancelCalls++
 	if a.cancelErr != nil {
@@ -103,105 +102,18 @@ func (a *stubAccount) cancelLogin() (accountSession, error) {
 	}
 	return a.cancelSess, nil
 }
-func (a *stubAccount) submit2FA(string) (accountSession, error) { return a.sess, a.err }
-func (a *stubAccount) logout() error                            { return a.err }
-func (a *stubAccount) refreshKey() error                        { return a.err }
-func (a *stubAccount) relogin() error                           { return a.err }
 
-// A successful login must land the session on the page, keep its confirmation
-// line on screen across the reload it triggers, and never leave the login form
-// open.
-func TestAccountStateLoginSuccessShowsSession(t *testing.T) {
-	acct := &stubAccount{sess: accountSession{
-		state:     loginLoggedIn,
-		email:     "ada@example.com",
-		serverURL: defaultServerURL,
-		userID:    "user-1",
-	}}
-	s := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &s)
-
-	s.loginOpen = true
-	s.email, s.password = "ada@example.com", "secret"
-	s.login()
-	drain(t, &s) // the login result, which starts a store reload
-	if s.session.state != loginLoggedIn || s.session.userID != "user-1" {
-		t.Fatalf("session = %+v, want the logged-in session", s.session)
-	}
-	if s.notice != "已登录 ada@example.com" || !s.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want the success line", s.notice, s.noticeOK)
-	}
-	if s.loginOpen {
-		t.Fatal("login form stayed open after a successful login")
-	}
-	drain(t, &s) // the reload; it must not wipe the success line
-	if s.notice != "已登录 ada@example.com" {
-		t.Fatalf("notice after reload = %q, want the success line", s.notice)
-	}
+func (a *stubAccount) submit2FA(provider int, code string) (accountSession, error) {
+	a.submitCalls++
+	a.lastProvider, a.lastCode = provider, code
+	return a.submitSess, a.submitErr
 }
 
-// Cancelling must close the form, drop the pending 2FA session the backend
-// returned away from, and leave a visible confirmation.
-func TestAccountStateCancelLoginClearsPendingTwoFactor(t *testing.T) {
-	acct := &stubAccount{
-		sess:       accountSession{state: loginLoggedOut, serverURL: defaultServerURL},
-		cancelSess: accountSession{state: loginLoggedOut, serverURL: defaultServerURL},
-	}
-	s := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &s)
-
-	s.session = accountSession{state: loginNeeds2FA, serverURL: defaultServerURL, challenge: &twoFactorPrompt{}}
-	s.loginOpen = true
-	s.email, s.password, s.twoFACode = "ada@example.com", "secret", "123456"
-	s.cancelLogin()
-	if !s.busy {
-		t.Fatal("cancelLogin did not start a backend call")
-	}
-	drain(t, &s)
-
-	if acct.cancelCalls != 1 {
-		t.Fatalf("cancelLogin calls = %d, want 1", acct.cancelCalls)
-	}
-	if s.session.state == loginNeeds2FA {
-		t.Fatalf("session = %+v, want the pending 2FA state gone", s.session)
-	}
-	if s.loginOpen || s.email != "" || s.password != "" || s.twoFACode != "" {
-		t.Fatalf("form not cleared: open=%v email=%q password=%q code=%q", s.loginOpen, s.email, s.password, s.twoFACode)
-	}
-	if s.notice != "已取消登录" || !s.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want the cancellation line", s.notice, s.noticeOK)
-	}
+func (a *stubAccount) sendEmailCode() error {
+	a.sendCalls++
+	return a.sendErr
 }
 
-// A cancel that cannot reach the backend must tell the human instead of
-// silently closing the form.
-func TestAccountStateCancelLoginSurfacesFailure(t *testing.T) {
-	acct := &stubAccount{cancelErr: errors.New("backend down")}
-	s := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &s)
-
-	s.loginOpen = true
-	s.cancelLogin()
-	drain(t, &s)
-
-	if s.notice != "backend down" || s.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want the failure visible", s.notice, s.noticeOK)
-	}
-}
-
-// A cancelled relogin comes back to the signed-in session, not to the 2FA
-// prompt the backend had parked itself in.
-func TestAccountStateCancelLoginRestoresSignedInSession(t *testing.T) {
-	signedIn := accountSession{state: loginLoggedIn, email: "ada@example.com", serverURL: defaultServerURL, userID: "user-1"}
-	acct := &stubAccount{sess: signedIn, cancelSess: signedIn}
-	s := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &s)
-
-	s.session = accountSession{state: loginNeeds2FA, serverURL: defaultServerURL}
-	s.cancelLogin()
-	drain(t, &s)
-
-	if s.session.state != loginLoggedIn || s.session.userID != "user-1" {
-		t.Fatalf("session = %+v, want the previous signed-in session", s.session)
-	}
-}
+func (a *stubAccount) logout() error     { return a.err }
+func (a *stubAccount) refreshKey() error { return a.err }
+func (a *stubAccount) relogin() error    { return a.err }

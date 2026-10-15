@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -32,17 +33,30 @@ type appState struct {
 	account  accountState
 	settings settingsState
 	log      logState
+	// login is the modal login window's state; the account page opens it
+	// instead of drawing a login form of its own.
+	login loginWindow
+	// loginWin is the native window while it is up; nil once it closed.
+	loginWin *mygo.Window
+
+	// mainWindow is the window start creates; the login window is its modal
+	// child, and the login state needs it to open one.
+	mainWindow *mygo.Window
 }
 
 // newAppState wires the pages onto their backend. The prototype's fake
 // backends stay until the page tickets replace them; see backend.go.
 func newAppState() *appState {
-	return &appState{
+	app := &appState{
 		browsers: newBrowsersState(),
-		account:  newAccountState(),
 		settings: newSettingsState(),
 		log:      newLogState(),
 	}
+	app.account = newAccountState()
+	app.login = newLoginWindow(&app.account)
+	app.login.openWindow = app.showLoginWindow
+	app.login.closeWindow = app.hideLoginWindow
+	return app
 }
 
 // tick advances simulated work and asks for the frame that finishes it.
@@ -52,6 +66,9 @@ func (app *appState) tick(c *ui.Context) {
 	app.browsers.tick(c)
 	app.account.tick(c)
 	app.settings.tick(c)
+	// The login state ticks here as well as in its own window: a cancel that
+	// lands while that window closes must still reach the account page.
+	app.login.tick(c)
 }
 
 // notice renders a page's status line: orange for what still needs a human,

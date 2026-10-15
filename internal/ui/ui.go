@@ -63,6 +63,9 @@ func start() {
 		MinHeight: 520,
 		Content:   ui.View(app.view),
 	})
+	// The login window is this window's modal child, so the page that opens it
+	// needs the handle.
+	app.mainWindow = win
 	// Closing the window returns to the tray, as in the reference app; quitting
 	// stays deliberate, through the tray menu. App.Quit must still be able to
 	// close the window, so OnBeforeQuit lets that close pass through.

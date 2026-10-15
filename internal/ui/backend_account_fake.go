@@ -17,6 +17,11 @@ func (fakeAccount) session() (accountSession, error) {
 	return accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil
 }
 
+// checkServer accepts any address, because this backend never dials it.
+func (fakeAccount) checkServer(serverURL string) (string, error) {
+	return serverURLOf(serverURL), nil
+}
+
 func (fakeAccount) login(string, string, string) (accountSession, error) {
 	return accountSession{}, errAccountBackend
 }
@@ -27,9 +32,11 @@ func (fakeAccount) cancelLogin() (accountSession, error) {
 	return accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil
 }
 
-func (fakeAccount) submit2FA(string) (accountSession, error) {
+func (fakeAccount) submit2FA(int, string) (accountSession, error) {
 	return accountSession{}, errAccountBackend
 }
+
+func (fakeAccount) sendEmailCode() error { return errAccountBackend }
 
 func (fakeAccount) logout() error { return errAccountBackend }
 

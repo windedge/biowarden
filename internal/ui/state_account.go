@@ -12,7 +12,8 @@ import (
 // any backend call in flight. Backend calls run off the UI thread because
 // Windows Hello blocks on a human and a real login hits the network, so their
 // results come back through results as closures that only the UI thread
-// applies.
+// applies. The login window drives the same backend through loginWindow, and
+// lands its outcome on this state: the session, the reload and the notice.
 type accountState struct {
 	keys    keysBackend
 	account accountBackend
@@ -20,13 +21,6 @@ type accountState struct {
 	// session mirrors accountBackend.session: the signed-in identity (or the
 	// pending 2FA state) the account card draws.
 	session accountSession
-
-	// The login form is a UI-only disclosure: the button opens it, it does not
-	// start a login by itself.
-	loginOpen bool
-	email     string
-	password  string
-	twoFACode string
 
 	accounts []*accountRow
 	// selectedUserID is the stored account the human picked to foreground; an
@@ -281,59 +275,6 @@ func (s *accountState) applyRemove(id string, err error) {
 	s.noticeOK = true
 }
 
-// beginLogin opens the login form. It is a UI state change only: no call goes
-// out until the form is submitted, and the fake backend answers that call with
-// errAccountBackend until the auth ticket lands.
-func (s *accountState) beginLogin() {
-	s.loginOpen = true
-	s.notice = ""
-}
-
-// cancelLogin abandons a pending login attempt. The backend returns the
-// session that was in force before the attempt (the signed-in account after a
-// cancelled relogin, signed out otherwise) and drops the cached credentials
-// and 2FA challenge; the page clears the form. The call runs off the UI thread
-// like every other backend action, and a failure is shown rather than hidden.
-func (s *accountState) cancelLogin() {
-	account := s.account
-	s.async(func() func(*accountState) {
-		sess, err := account.cancelLogin()
-		return func(st *accountState) { st.applyCancel(sess, err) }
-	})
-}
-
-func (s *accountState) applyCancel(sess accountSession, err error) {
-	if err != nil {
-		s.notice = err.Error()
-		s.noticeOK = false
-		return
-	}
-	s.session = sess
-	s.loginOpen = false
-	s.email, s.password, s.twoFACode = "", "", ""
-	s.notice = "已取消登录"
-	s.noticeOK = true
-}
-
-func (s *accountState) login() {
-	account := s.account
-	email, password := strings.TrimSpace(s.email), s.password
-	serverURL := s.session.serverURL
-	s.async(func() func(*accountState) {
-		sess, err := account.login(email, password, serverURL)
-		return func(st *accountState) { st.applySession(sess, err) }
-	})
-}
-
-func (s *accountState) submit2FA() {
-	account := s.account
-	code := strings.TrimSpace(s.twoFACode)
-	s.async(func() func(*accountState) {
-		sess, err := account.submit2FA(code)
-		return func(st *accountState) { st.applySession(sess, err) }
-	})
-}
-
 func (s *accountState) logout() {
 	account := s.account
 	s.async(func() func(*accountState) {
@@ -345,7 +286,6 @@ func (s *accountState) logout() {
 				return
 			}
 			st.session = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
-			st.loginOpen = false
 			// Reload before the notice: reload clears it while starting its
 			// async read, so the order keeps "已退出登录" on screen.
 			st.reload()
@@ -371,36 +311,6 @@ func (s *accountState) relogin() {
 			st.noticeOK = true
 		}
 	})
-}
-
-// applySession lands a login outcome. A failure keeps the state the page
-// draws and shows the backend's wording; a 2FA stop keeps the challenge so the
-// prompt can render it, and the key is not written until the flow finishes.
-func (s *accountState) applySession(sess accountSession, err error) {
-	if err != nil {
-		s.notice = err.Error()
-		s.noticeOK = false
-		return
-	}
-	s.session = sess
-	switch sess.state {
-	case loginLoggedIn:
-		s.loginOpen = false
-		s.password, s.twoFACode = "", ""
-		// Reload before setting the notice: reload clears it while starting
-		// its async read, so the order keeps the success line on screen.
-		s.reload()
-		s.notice = "已登录 " + sess.email
-		s.noticeOK = true
-	case loginNeeds2FA:
-		s.notice = "需要两步验证码，请输入后继续"
-		s.noticeOK = false
-	case loginLoggingIn:
-		s.notice = "正在登录..."
-		s.noticeOK = false
-	default:
-		s.notice = ""
-	}
 }
 
 // extractSnippet mirrors the reference implementation's script, updated for

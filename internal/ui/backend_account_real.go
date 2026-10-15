@@ -19,24 +19,55 @@ import (
 const deviceID = "biowarden-windows"
 
 // errNeedCredentials reports a refresh or relogin with no cached login in
-// memory, which happens after a restart: the password is never persisted, so
-// the user has to sign in again before the key can be re-derived.
+// memory, which happens after a restart and after a login finished in the 2FA
+// step: passwords are never persisted, so the user has to sign in again before
+// the key can be re-derived.
 var errNeedCredentials = errors.New("需要先登录账号，才能刷新密钥")
 
-// errTwoFactorUnsupported reports the 2FA submit step the login window ticket
-// owns. Until it lands the account page's inline prompt cannot finish, and the
-// advanced fold's extraction script stays the fallback.
-var errTwoFactorUnsupported = errors.New("两步验证提交由登录窗工单实现；可先用高级折叠区里的提取脚本")
+// errTwoFactorUnsupported reports a second factor biowarden has no path for:
+// Duo (providers 2 and 6) and WebAuthn (7) complete through a browser hand-off
+// whose callback the map decision deferred, so the login window points at the
+// account page's extraction script instead. The login window renders this
+// wording, so it stays one source of truth.
+var errTwoFactorUnsupported = errors.New("此方式 biowarden 暂不支持，请在账号页高级选项里用提取脚本录入密钥")
+
+// errTwoFactorNeedsSignIn reports a key refresh or relogin that stopped for a
+// second factor. The login window is where a challenge is answered, so the
+// account page asks for the sign-in there instead of parking itself on a
+// prompt it cannot submit.
+var errTwoFactorNeedsSignIn = errors.New("重新登录需要两步验证，请在「登录 Bitwarden 账号」窗口完成登录")
+
+// errNoTwoFactorChallenge reports a 2FA submission with nothing parked to
+// answer, which a stale window can reach after the attempt was abandoned.
+var errNoTwoFactorChallenge = errors.New("没有等待验证码的登录，请先输入邮箱和主密码")
+
+// errTwoFactorEmptyCode reports a 2FA submission without a code. The window
+// disables its button on an empty field; this is the guard behind it.
+var errTwoFactorEmptyCode = errors.New("请输入两步验证码")
+
+// errEmailCodePending reports that the send-email-login request went out but
+// no code was submitted with it. It is how the "发送验证码" button drives
+// auth's email preparation without a token: the flow keeps the challenge and
+// the answer is nothing to submit yet.
+var errEmailCodePending = errors.New("ui: email code requested")
 
 // accountAuth is the slice of auth.LoginFlow the account backend drives: one
-// start with the email, then one password step. It is defined in local terms
-// so tests (and any future transport) can stand in without a network.
+// start with the email, one password step, then any second factor. It is
+// defined in local terms so tests (and any future transport) can stand in
+// without a network.
 type accountAuth interface {
 	start(ctx context.Context, email string) error
 	password(ctx context.Context, password string) (authStep, error)
+	// solveTwoFactor submits one token for the offered provider and returns
+	// the next step: done with the account key, or a fresh challenge when the
+	// server rejected the token or asks for another method.
+	solveTwoFactor(ctx context.Context, provider int, token string) (authStep, error)
+	// sendTwoFactorEmail runs the email method's preparation request. The
+	// flow keeps the request single-shot, so a repeat call is a no-op.
+	sendTwoFactorEmail(ctx context.Context) error
 }
 
-// authStep is one password outcome: either the flow finished with the account
+// authStep is one step's outcome: either the flow finished with the account
 // key, or it stopped for a second factor.
 type authStep struct {
 	needs2FA  bool
@@ -67,6 +98,22 @@ type realAccount struct {
 	email        string
 	pass         string
 	server       string
+	// pending is the attempt waiting for a second factor. The login window
+	// answers it through submit2FA; cancelLogin and a finished login drop it.
+	pending *pendingTwoFactor
+}
+
+// pendingTwoFactor is a login attempt parked on a challenge. The flow holds
+// the derived master key and the password hash for the retry; the plaintext
+// password is not kept here, so a cancelled attempt leaves nothing behind.
+type pendingTwoFactor struct {
+	auth      accountAuth
+	serverURL string
+	email     string
+	challenge *twoFactorPrompt
+	// emailSent records that the code email already went out, so a second
+	// press of the button does not ask for another one.
+	emailSent bool
 }
 
 func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory) *realAccount {
@@ -95,13 +142,22 @@ func newAuthFlowFactory() accountAuthFactory {
 			return nil, fmt.Errorf("服务器地址无效：%w", err)
 		}
 		client := auth.NewClient(cfg, deviceID)
-		return &authFlowAdapter{flow: auth.NewLoginFlow(client, auth.UnsupportedSolver{}, nil, nil)}, nil
+		return newAuthFlowAdapter(client), nil
 	}
 }
 
 // authFlowAdapter turns auth.LoginFlow into the local accountAuth vocabulary.
 type authFlowAdapter struct {
-	flow *auth.LoginFlow
+	flow   *auth.LoginFlow
+	solver *flowSolver
+}
+
+func newAuthFlowAdapter(client *auth.Client) *authFlowAdapter {
+	solver := &flowSolver{}
+	return &authFlowAdapter{
+		flow:   auth.NewLoginFlow(client, solver, nil, nil),
+		solver: solver,
+	}
 }
 
 func (a *authFlowAdapter) start(ctx context.Context, email string) error {
@@ -120,6 +176,77 @@ func (a *authFlowAdapter) password(ctx context.Context, password string) (authSt
 	if err != nil {
 		return authStep{}, friendlyAuthError(err)
 	}
+	return stepFromResult(res)
+}
+
+// solveTwoFactor hands the flow the token the login window collected.
+// auth's solver interface is written for a caller that blocks on a human; the
+// window already has the answer, so the solver returns it immediately.
+func (a *authFlowAdapter) solveTwoFactor(ctx context.Context, provider int, token string) (authStep, error) {
+	a.solver.set(token, nil)
+	res, err := a.flow.SolveTwoFactor(ctx, auth.TwoFactorProvider(provider))
+	if err != nil {
+		return authStep{}, friendlyAuthError(err)
+	}
+	return stepFromResult(res)
+}
+
+// sendTwoFactorEmail runs the email method's preparation with no code to
+// submit: the request goes out, the flow stays on the challenge, and the
+// pending sentinel says so.
+func (a *authFlowAdapter) sendTwoFactorEmail(ctx context.Context) error {
+	a.solver.set("", errEmailCodePending)
+	if _, err := a.flow.SolveTwoFactor(ctx, auth.TwoFactorEmail); err != nil && !errors.Is(err, errEmailCodePending) {
+		return friendlyAuthError(err)
+	}
+	return nil
+}
+
+// flowSolver answers one SolveTwoFactor call with a token the caller already
+// collected. It is the seam that turns auth's "ask the user" interface into an
+// event-driven UI: the login window reads the code off the human and hands it
+// over, so the solver never waits for input.
+type flowSolver struct {
+	code     string
+	sentinel error
+}
+
+// set arms the next solve with a token, or with a sentinel that stops after
+// the method's preparation step.
+func (s *flowSolver) set(code string, sentinel error) {
+	s.code, s.sentinel = code, sentinel
+}
+
+func (s *flowSolver) TOTP(context.Context) (string, error) { return s.token() }
+
+func (s *flowSolver) YubiKey(context.Context) (string, error) { return s.token() }
+
+func (s *flowSolver) EmailCode(ctx context.Context, send func(context.Context) error) (string, error) {
+	if err := send(ctx); err != nil {
+		return "", err
+	}
+	if s.sentinel != nil {
+		return "", s.sentinel
+	}
+	return s.token()
+}
+
+// OpenBrowser refuses Duo and WebAuthn. The login window never routes those
+// here, and refusing is better than opening a page whose result cannot come
+// back.
+func (s *flowSolver) OpenBrowser(context.Context, string) (string, error) {
+	return "", errTwoFactorUnsupported
+}
+
+func (s *flowSolver) token() (string, error) {
+	if s.code == "" {
+		return "", errTwoFactorEmptyCode
+	}
+	return s.code, nil
+}
+
+// stepFromResult mirrors one auth.LoginResult in local terms.
+func stepFromResult(res auth.LoginResult) (authStep, error) {
 	switch res.State {
 	case auth.LoginNeedTwoFactor:
 		return authStep{needs2FA: true, challenge: promptFromChallenge(res.Challenge)}, nil
@@ -135,9 +262,15 @@ func promptFromChallenge(c *auth.TwoFactorChallenge) *twoFactorPrompt {
 	if c == nil {
 		return nil
 	}
-	p := &twoFactorPrompt{email: c.Email, duoURL: c.DuoURL, webAuthnURL: c.WebAuthnURL}
-	for _, provider := range c.Providers {
-		p.providers = append(p.providers, provider.String())
+	p := &twoFactorPrompt{}
+	for _, m := range c.Methods() {
+		p.methods = append(p.methods, twoFactorMethod{
+			provider:    int(m.Provider),
+			name:        m.Provider.String(),
+			interaction: m.Interaction.String(),
+			email:       m.Email,
+			browserURL:  m.BrowserURL,
+		})
 	}
 	return p
 }
@@ -145,6 +278,8 @@ func promptFromChallenge(c *auth.TwoFactorChallenge) *twoFactorPrompt {
 // friendlyAuthError turns the auth sentinels into one line a human can act on.
 func friendlyAuthError(err error) error {
 	switch {
+	case err == nil:
+		return nil
 	case errors.Is(err, auth.ErrUnauthorized):
 		return errors.New("邮箱或主密码不正确")
 	case errors.Is(err, auth.ErrForbidden):
@@ -157,15 +292,34 @@ func friendlyAuthError(err error) error {
 		return errors.New("服务器返回错误，请稍后重试")
 	case errors.Is(err, auth.ErrTwoFactorRequired):
 		return errors.New("服务器要求两步验证，但没有返回可用的验证方式")
+	case errors.Is(err, auth.ErrTwoFactorUnsupported):
+		return errTwoFactorUnsupported
 	default:
 		return err
 	}
 }
 
 func (a *realAccount) session() (accountSession, error) {
+	return a.currentSession(), nil
+}
+
+// currentSession reads the session without the error channel, for the paths
+// that already hold the lock's answer.
+func (a *realAccount) currentSession() accountSession {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	return a.sess, nil
+	return a.sess
+}
+
+// checkServer normalizes a user-entered address the way login will, so the
+// login window can show a bad one before a network round trip. The login
+// window submits the normalized value, which is what the session records.
+func (a *realAccount) checkServer(serverURL string) (string, error) {
+	cfg, err := auth.NewServerConfig(serverURLOf(serverURL))
+	if err != nil {
+		return "", fmt.Errorf("服务器地址无效：%w", err)
+	}
+	return cfg.URLs().Base, nil
 }
 
 func (a *realAccount) login(email, password, serverURL string) (accountSession, error) {
@@ -174,8 +328,8 @@ func (a *realAccount) login(email, password, serverURL string) (accountSession, 
 
 // runLogin drives one full attempt. On success it asks for Hello consent
 // before writing the key, so a refusal or a failed prompt leaves the store
-// untouched. A 2FA stop is not a success: it returns the needs-2FA session
-// with the challenge and writes nothing.
+// untouched. A 2FA stop is not a success: it parks the flow for submit2FA and
+// returns the needs-2FA session with the challenge.
 func (a *realAccount) runLogin(email, password, serverURL, helloReason string) (accountSession, error) {
 	flow, err := a.newFlow(serverURL)
 	if err != nil {
@@ -190,23 +344,36 @@ func (a *realAccount) runLogin(email, password, serverURL, helloReason string) (
 		return a.stay(serverURL), err
 	}
 	if step.needs2FA {
-		a.mu.Lock()
-		a.sess = accountSession{
-			state:       loginNeeds2FA,
-			email:       email,
-			serverURL:   serverURL,
-			twoFAMethod: firstProvider(step.challenge),
-			challenge:   step.challenge,
-		}
-		// Do not park the password in memory: submit2FA is not implemented
-		// yet, so nothing consumes it while the challenge is pending, and a
-		// cancelled attempt must not leave the master password behind. A
-		// successful login re-caches it for refreshKey and relogin below.
-		a.email, a.pass, a.server = "", "", ""
-		sess := a.sess
-		a.mu.Unlock()
-		return sess, nil
+		a.parkTwoFactor(flow, serverURL, email, step.challenge)
+		return a.currentSession(), nil
 	}
+	return a.completeLogin(step, serverURL, email, password, helloReason)
+}
+
+// parkTwoFactor records the challenge the login window must answer. The
+// plaintext password is not kept while the prompt waits: nothing needs it
+// until the flow finishes, and a cancelled attempt must not leave it behind.
+// A login finished in the 2FA step therefore lands without cached credentials,
+// so a later refreshKey asks for a fresh sign-in.
+func (a *realAccount) parkTwoFactor(flow accountAuth, serverURL, email string, challenge *twoFactorPrompt) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.pending = &pendingTwoFactor{auth: flow, serverURL: serverURL, email: email, challenge: challenge}
+	a.sess = accountSession{
+		state:       loginNeeds2FA,
+		email:       email,
+		serverURL:   serverURL,
+		twoFAMethod: challenge.first(),
+		challenge:   challenge,
+	}
+	a.email, a.pass, a.server = "", "", ""
+}
+
+// completeLogin applies a finished step: Hello consent first, then the key
+// write, then the session. The order is the point - a refused or failed
+// prompt must leave the store untouched. password is empty when the login
+// finished in the 2FA step, which is why the credentials are not cached then.
+func (a *realAccount) completeLogin(step authStep, serverURL, email, password, helloReason string) (accountSession, error) {
 	if err := verifyHello(a.verifier, helloReason); err != nil {
 		return a.stay(serverURL), err
 	}
@@ -218,6 +385,7 @@ func (a *realAccount) runLogin(email, password, serverURL, helloReason string) (
 		return a.stay(serverURL), fmt.Errorf("保存密钥失败：%w", err)
 	}
 	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.sess = accountSession{
 		state:     loginLoggedIn,
 		email:     acc.Email,
@@ -225,10 +393,13 @@ func (a *realAccount) runLogin(email, password, serverURL, helloReason string) (
 		userID:    acc.UserID,
 	}
 	a.lastLoggedIn = a.sess
-	a.email, a.pass, a.server = email, password, serverURL
-	sess := a.sess
-	a.mu.Unlock()
-	return sess, nil
+	a.pending = nil
+	if password == "" {
+		a.email, a.pass, a.server = "", "", ""
+	} else {
+		a.email, a.pass, a.server = email, password, serverURL
+	}
+	return a.sess, nil
 }
 
 // stay keeps the previous session but records the server the attempt was
@@ -242,23 +413,87 @@ func (a *realAccount) stay(serverURL string) accountSession {
 	return a.sess
 }
 
-func (a *realAccount) submit2FA(string) (accountSession, error) {
+// submit2FA finishes a login the server parked on a second factor: the login
+// window collected the token for one offered method and the flow resubmits the
+// grant. Success follows the same order as a password login - Hello consent,
+// then the key write - so a refused prompt never reaches the store, and the
+// code never leaves this call.
+func (a *realAccount) submit2FA(provider int, code string) (accountSession, error) {
 	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.sess, errTwoFactorUnsupported
+	p := a.pending
+	a.mu.Unlock()
+	if p == nil {
+		return a.currentSession(), errNoTwoFactorChallenge
+	}
+	m, ok := p.challenge.method(provider)
+	if !ok {
+		return a.currentSession(), fmt.Errorf("服务器没有提供这种方式（provider %d）", provider)
+	}
+	if !m.takesCode() {
+		// Duo and WebAuthn need a browser round trip biowarden does not have;
+		// never start one from here.
+		return a.currentSession(), errTwoFactorUnsupported
+	}
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return a.currentSession(), errTwoFactorEmptyCode
+	}
+	step, err := p.auth.solveTwoFactor(context.Background(), provider, code)
+	if err != nil {
+		return a.currentSession(), err
+	}
+	if step.needs2FA {
+		// The server rejected the code or asked for another method; keep the
+		// attempt parked so the window can correct it.
+		a.parkTwoFactor(p.auth, p.serverURL, p.email, step.challenge)
+		return a.currentSession(), nil
+	}
+	return a.completeLogin(step, p.serverURL, p.email, "", "保存 biowarden 密钥")
+}
+
+// sendEmailCode asks the server to mail the code for the pending email
+// challenge. The attempt records that the request ran, so the submission that
+// follows sends the code without mailing a second one.
+func (a *realAccount) sendEmailCode() error {
+	a.mu.Lock()
+	p := a.pending
+	a.mu.Unlock()
+	if p == nil {
+		return errNoTwoFactorChallenge
+	}
+	m, ok := p.challenge.method(twoFactorEmail)
+	if !ok || !m.takesCode() {
+		return errors.New("服务器没有提供邮箱验证码方式")
+	}
+	a.mu.Lock()
+	already := p.emailSent
+	a.mu.Unlock()
+	if already {
+		return nil
+	}
+	if err := p.auth.sendTwoFactorEmail(context.Background()); err != nil {
+		return err
+	}
+	a.mu.Lock()
+	if a.pending == p {
+		p.emailSent = true
+	}
+	a.mu.Unlock()
+	return nil
 }
 
 // cancelLogin abandons a pending login attempt: the session falls back to the
-// one before it, and the cached credentials and challenge are dropped. A
-// cancelled relogin therefore returns to the signed-in account, while a
-// cancelled first login lands back on signed out. The password is gone after
-// this, so refreshKey and relogin ask for a fresh sign-in, exactly as after a
-// restart.
+// one before it, and the cached credentials, the parked flow and the challenge
+// are dropped. A cancelled relogin therefore returns to the signed-in account,
+// while a cancelled first login lands back on signed out. The password is gone
+// after this, so refreshKey and relogin ask for a fresh sign-in, exactly as
+// after a restart.
 func (a *realAccount) cancelLogin() (accountSession, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.sess = a.lastLoggedIn
 	a.email, a.pass, a.server = "", "", ""
+	a.pending = nil
 	return a.sess, nil
 }
 
@@ -284,6 +519,7 @@ func (a *realAccount) logout() error {
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
 	a.lastLoggedIn = a.sess
 	a.email, a.pass, a.server = "", "", ""
+	a.pending = nil
 	a.mu.Unlock()
 	return nil
 }
@@ -298,8 +534,10 @@ func (a *realAccount) relogin() error {
 
 // reauthenticate re-runs the login with the credentials kept in memory and
 // rewrites the stored key after a fresh Hello consent. Without a cached login
-// (the app was restarted) it asks the user to sign in again. A stop for 2FA is
-// reported as an error, not as a successful refresh: the key was not rewritten.
+// (the app was restarted, or the sign-in finished in the 2FA step) it asks the
+// user to sign in again. A stop for 2FA is reported as an error, not as a
+// successful refresh: the key was not rewritten, and the challenge belongs to
+// the login window, so nothing is parked here.
 func (a *realAccount) reauthenticate(helloReason string) error {
 	a.mu.Lock()
 	email, password, serverURL := a.email, a.pass, a.server
@@ -312,7 +550,11 @@ func (a *realAccount) reauthenticate(helloReason string) error {
 		return err
 	}
 	if sess.state == loginNeeds2FA {
-		return errTwoFactorUnsupported
+		a.mu.Lock()
+		a.pending = nil
+		a.sess = a.lastLoggedIn
+		a.mu.Unlock()
+		return errTwoFactorNeedsSignIn
 	}
 	return nil
 }
@@ -323,12 +565,4 @@ func serverURLOf(serverURL string) string {
 		return s
 	}
 	return defaultServerURL
-}
-
-// firstProvider names the first offered 2FA method, for the prompt's label.
-func firstProvider(p *twoFactorPrompt) string {
-	if p == nil || len(p.providers) == 0 {
-		return ""
-	}
-	return p.providers[0]
 }

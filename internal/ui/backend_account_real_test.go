@@ -12,15 +12,25 @@ import (
 	"github.com/windedge/biowarden/internal/secrets"
 )
 
-// scriptedAuth is an accountAuth whose one password step is fixed by the test.
-// The same instance is returned for every attempt, so a refresh sees the
-// mutated step.
+// scriptedAuth is an accountAuth whose steps are fixed by the test. The same
+// instance is returned for every attempt, so a refresh sees the mutated step.
 type scriptedAuth struct {
 	startErr  error
 	step      authStep
 	stepErr   error
 	starts    int
 	passwords []string
+
+	// solveStep and solveErr answer solveTwoFactor, and sendErr answers the
+	// email preparation. Both record what they were asked, because the backend
+	// must pass the window's provider and token through unchanged.
+	solveStep  authStep
+	solveErr   error
+	solveCalls int
+	providers  []int
+	tokens     []string
+	sendErr    error
+	sendCalls  int
 }
 
 func (f *scriptedAuth) start(context.Context, string) error {
@@ -31,6 +41,18 @@ func (f *scriptedAuth) start(context.Context, string) error {
 func (f *scriptedAuth) password(_ context.Context, password string) (authStep, error) {
 	f.passwords = append(f.passwords, password)
 	return f.step, f.stepErr
+}
+
+func (f *scriptedAuth) solveTwoFactor(_ context.Context, provider int, token string) (authStep, error) {
+	f.solveCalls++
+	f.providers = append(f.providers, provider)
+	f.tokens = append(f.tokens, token)
+	return f.solveStep, f.solveErr
+}
+
+func (f *scriptedAuth) sendTwoFactorEmail(context.Context) error {
+	f.sendCalls++
+	return f.sendErr
 }
 
 // fixedFlow hands the same scripted flow to every attempt.
@@ -100,7 +122,7 @@ func TestRealAccountLoginTwoFactorDoesNotWrite(t *testing.T) {
 	verifier := &fakeVerifier{result: hello.Verified}
 	flow := &scriptedAuth{step: authStep{
 		needs2FA:  true,
-		challenge: &twoFactorPrompt{providers: []string{"authenticator"}, email: "ada@example.com"},
+		challenge: codeChallenge(twoFactorAuthenticator, "authenticator"),
 	}}
 	a := newRealAccount(store, verifier, fixedFlow(flow))
 
@@ -111,8 +133,11 @@ func TestRealAccountLoginTwoFactorDoesNotWrite(t *testing.T) {
 	if sess.state != loginNeeds2FA {
 		t.Fatalf("state = %v, want needs 2FA", sess.state)
 	}
-	if sess.challenge == nil || len(sess.challenge.providers) != 1 || sess.challenge.providers[0] != "authenticator" {
+	if sess.challenge == nil || len(sess.challenge.methods) != 1 || sess.challenge.methods[0].name != "authenticator" {
 		t.Fatalf("challenge = %+v", sess.challenge)
+	}
+	if sess.challenge.methods[0].provider != twoFactorAuthenticator || !sess.challenge.methods[0].takesCode() {
+		t.Fatalf("method = %+v, want the code method", sess.challenge.methods[0])
 	}
 	if sess.twoFAMethod != "authenticator" {
 		t.Fatalf("twoFAMethod = %q", sess.twoFAMethod)
@@ -285,7 +310,7 @@ func TestRealAccountRefreshWithoutCredentials(t *testing.T) {
 }
 
 // A refresh that stops for 2FA must not report success: the stored key was not
-// rewritten.
+// rewritten, and the challenge belongs to the login window, not to the page.
 func TestRealAccountRefreshTwoFactorIsNotSuccess(t *testing.T) {
 	store := newFakeStore()
 	verifier := &fakeVerifier{result: hello.Verified}
@@ -295,20 +320,241 @@ func TestRealAccountRefreshTwoFactorIsNotSuccess(t *testing.T) {
 	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
 		t.Fatalf("login: %v", err)
 	}
-	flow.step = authStep{needs2FA: true, challenge: &twoFactorPrompt{providers: []string{"authenticator"}}}
-	if err := a.refreshKey(); !errors.Is(err, errTwoFactorUnsupported) {
-		t.Fatalf("refreshKey error = %v, want errTwoFactorUnsupported", err)
+	flow.step = authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")}
+	if err := a.refreshKey(); !errors.Is(err, errTwoFactorNeedsSignIn) {
+		t.Fatalf("refreshKey error = %v, want errTwoFactorNeedsSignIn", err)
 	}
 	if got := store.keys["user-1"]; !bytes.Equal(got, []byte("old-key")) {
 		t.Fatalf("stored key = %q, want the unchanged old-key", got)
 	}
+	// The refresh must leave the account page signed in, not parked on a
+	// prompt it cannot submit.
+	sess, _ := a.session()
+	if sess.state != loginLoggedIn {
+		t.Fatalf("state = %v, want the still signed-in account", sess.state)
+	}
+	// And it must not park a flow the login window could mistake for a live
+	// attempt.
+	if _, err := a.submit2FA(twoFactorAuthenticator, "123456"); !errors.Is(err, errNoTwoFactorChallenge) {
+		t.Fatalf("submit2FA after a failed refresh = %v, want errNoTwoFactorChallenge", err)
+	}
 }
 
-// submit2FA belongs to the login window ticket; it must report that plainly.
-func TestRealAccountSubmit2FAIsNotImplemented(t *testing.T) {
-	a := newRealAccount(newFakeStore(), &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}))
-	if _, err := a.submit2FA("123456"); !errors.Is(err, errTwoFactorUnsupported) {
-		t.Fatalf("submit2FA error = %v, want errTwoFactorUnsupported", err)
+// submit2FA finishes what login parked: the flow resubmits the grant, and the
+// key is written the same way as in a password login, behind the same consent.
+func TestRealAccountSubmit2FAWritesKeyAfterHello(t *testing.T) {
+	store := newFakeStore()
+	verifier := &fakeVerifier{result: hello.Verified}
+	key := []byte{0x10, 0x20, 0x30}
+	flow := &scriptedAuth{
+		step:      authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")},
+		solveStep: doneStep("user-1", "ada@example.com", key),
+	}
+	a := newRealAccount(store, verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	sess, err := a.submit2FA(twoFactorAuthenticator, " 123456 ")
+	if err != nil {
+		t.Fatalf("submit2FA: %v", err)
+	}
+	if sess.state != loginLoggedIn || sess.userID != "user-1" {
+		t.Fatalf("session = %+v, want the logged-in session", sess)
+	}
+	if flow.solveCalls != 1 || flow.providers[0] != twoFactorAuthenticator || flow.tokens[0] != "123456" {
+		t.Fatalf("solve call = (%v, %q) x%d, want the trimmed token", flow.providers, flow.tokens, flow.solveCalls)
+	}
+	if store.putCalls != 1 || !bytes.Equal(store.keys["user-1"], key) {
+		t.Fatalf("Put calls = %d key = %x, want the key stored once", store.putCalls, store.keys["user-1"])
+	}
+	if verifier.calls != 1 {
+		t.Fatalf("Verify calls = %d, want the one write's consent", verifier.calls)
+	}
+	// The parked attempt is gone: a second submission has nothing to answer.
+	if _, err := a.submit2FA(twoFactorAuthenticator, "123456"); !errors.Is(err, errNoTwoFactorChallenge) {
+		t.Fatalf("second submit2FA = %v, want errNoTwoFactorChallenge", err)
+	}
+}
+
+// Refusing the Hello prompt must leave the store untouched, and must keep the
+// challenge parked so the human can answer it again.
+func TestRealAccountSubmit2FAHelloRefusedDoesNotWrite(t *testing.T) {
+	store := newFakeStore()
+	verifier := &fakeVerifier{result: hello.Canceled}
+	flow := &scriptedAuth{
+		step:      authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")},
+		solveStep: doneStep("user-1", "ada@example.com", []byte("key")),
+	}
+	a := newRealAccount(store, verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	sess, err := a.submit2FA(twoFactorAuthenticator, "123456")
+	if err == nil {
+		t.Fatal("submit2FA with a canceled consent = nil, want an error")
+	}
+	if store.putCalls != 0 {
+		t.Fatalf("Put calls = %d, want 0", store.putCalls)
+	}
+	if sess.state != loginNeeds2FA {
+		t.Fatalf("session = %+v, want the challenge still parked", sess)
+	}
+	if _, err := a.submit2FA(twoFactorAuthenticator, "123456"); err == nil {
+		t.Fatal("the parked challenge was dropped by the refused consent")
+	}
+}
+
+// Duo and WebAuthn are refused before the flow is touched: biowarden has no
+// browser path for them, and opening one would leave the answer unreachable.
+func TestRealAccountSubmit2FAUnsupportedMethod(t *testing.T) {
+	store := newFakeStore()
+	verifier := &fakeVerifier{result: hello.Verified}
+	challenge := &twoFactorPrompt{methods: []twoFactorMethod{
+		{provider: twoFactorDuo, name: "duo", interaction: interactionBrowser, browserURL: "https://duo.example/authorize"},
+	}}
+	flow := &scriptedAuth{step: authStep{needs2FA: true, challenge: challenge}}
+	a := newRealAccount(store, verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if _, err := a.submit2FA(twoFactorDuo, "code|state"); !errors.Is(err, errTwoFactorUnsupported) {
+		t.Fatalf("submit2FA(duo) = %v, want errTwoFactorUnsupported", err)
+	}
+	if flow.solveCalls != 0 {
+		t.Fatalf("solve calls = %d, want 0: the browser path must not start", flow.solveCalls)
+	}
+	if store.putCalls != 0 || verifier.calls != 0 {
+		t.Fatalf("Put calls = %d, Verify calls = %d, want 0/0", store.putCalls, verifier.calls)
+	}
+}
+
+// A provider the server never offered, and a submission with nothing parked,
+// must both be refused instead of guessing.
+func TestRealAccountSubmit2FANeedsAnOfferedParkedChallenge(t *testing.T) {
+	a := newRealAccount(newFakeStore(), &fakeVerifier{result: hello.Verified},
+		fixedFlow(&scriptedAuth{step: authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")}}))
+
+	if _, err := a.submit2FA(twoFactorAuthenticator, "123456"); !errors.Is(err, errNoTwoFactorChallenge) {
+		t.Fatalf("submit2FA with nothing parked = %v, want errNoTwoFactorChallenge", err)
+	}
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if _, err := a.submit2FA(twoFactorYubiKey, "otp"); err == nil {
+		t.Fatal("submit2FA with an unoffered provider = nil, want an error")
+	}
+	if _, err := a.submit2FA(twoFactorAuthenticator, "   "); !errors.Is(err, errTwoFactorEmptyCode) {
+		t.Fatalf("submit2FA with a blank code = %v, want errTwoFactorEmptyCode", err)
+	}
+	if _, err := a.submit2FA(twoFactorAuthenticator, "123456"); err != nil {
+		t.Fatalf("the valid submission after the refusals: %v", err)
+	}
+}
+
+// A rejected code comes back as another challenge, so the prompt stays up and
+// a corrected code can finish the login.
+func TestRealAccountSubmit2FARejectedCodeKeepsTheAttempt(t *testing.T) {
+	store := newFakeStore()
+	verifier := &fakeVerifier{result: hello.Verified}
+	flow := &scriptedAuth{
+		step:      authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")},
+		solveStep: authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")},
+	}
+	a := newRealAccount(store, verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	sess, err := a.submit2FA(twoFactorAuthenticator, "000000")
+	if err != nil {
+		t.Fatalf("a rejected code must not be an error: %v", err)
+	}
+	if sess.state != loginNeeds2FA {
+		t.Fatalf("session = %+v, want needs 2FA", sess)
+	}
+	if store.putCalls != 0 || verifier.calls != 0 {
+		t.Fatalf("Put calls = %d, Verify calls = %d, want 0/0", store.putCalls, verifier.calls)
+	}
+
+	flow.solveStep = doneStep("user-1", "ada@example.com", []byte("key"))
+	sess, err = a.submit2FA(twoFactorAuthenticator, "123456")
+	if err != nil {
+		t.Fatalf("corrected submit2FA: %v", err)
+	}
+	if sess.state != loginLoggedIn || store.putCalls != 1 {
+		t.Fatalf("session = %+v Put calls = %d, want the login after the corrected code", sess, store.putCalls)
+	}
+}
+
+// The email code goes out once per challenge: the second request is refused
+// before the flow sees it.
+func TestRealAccountSendEmailCodeGoesOutOnce(t *testing.T) {
+	verifier := &fakeVerifier{result: hello.Verified}
+	flow := &scriptedAuth{step: authStep{needs2FA: true, challenge: emailChallenge("ada@example.com")}}
+	a := newRealAccount(newFakeStore(), verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if err := a.sendEmailCode(); err != nil {
+		t.Fatalf("sendEmailCode: %v", err)
+	}
+	if flow.sendCalls != 1 {
+		t.Fatalf("send calls = %d, want 1", flow.sendCalls)
+	}
+	if err := a.sendEmailCode(); err != nil {
+		t.Fatalf("second sendEmailCode: %v", err)
+	}
+	if flow.sendCalls != 1 {
+		t.Fatalf("send calls after the second press = %d, want 1", flow.sendCalls)
+	}
+	// The challenge is still the pending one, so the code that follows submits.
+	if sess, _ := a.session(); sess.state != loginNeeds2FA {
+		t.Fatalf("state = %v, want needs 2FA", sess.state)
+	}
+}
+
+// The email method is the only one with a preparation request.
+func TestRealAccountSendEmailCodeNeedsTheEmailMethod(t *testing.T) {
+	flow := &scriptedAuth{step: authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")}}
+	a := newRealAccount(newFakeStore(), &fakeVerifier{result: hello.Verified}, fixedFlow(flow))
+
+	if err := a.sendEmailCode(); !errors.Is(err, errNoTwoFactorChallenge) {
+		t.Fatalf("sendEmailCode with nothing parked = %v, want errNoTwoFactorChallenge", err)
+	}
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if err := a.sendEmailCode(); err == nil {
+		t.Fatal("sendEmailCode for a TOTP challenge = nil, want an error")
+	}
+	if flow.sendCalls != 0 {
+		t.Fatalf("send calls = %d, want 0", flow.sendCalls)
+	}
+}
+
+// checkServer is what keeps a bad address from becoming a network error: it
+// normalizes the way the login path will, and refuses what that path refuses.
+func TestRealAccountCheckServer(t *testing.T) {
+	a := newRealAccount(newFakeStore(), &fakeVerifier{result: hello.Verified}, newAuthFlowFactory())
+
+	got, err := a.checkServer("vault.example.com")
+	if err != nil {
+		t.Fatalf("checkServer: %v", err)
+	}
+	if got != "https://vault.example.com" {
+		t.Fatalf("checkServer = %q, want the normalized address", got)
+	}
+	// An empty address means the official cloud, as everywhere else.
+	got, err = a.checkServer("")
+	if err != nil || got != defaultServerURL {
+		t.Fatalf("checkServer(empty) = %q, %v, want the default server", got, err)
+	}
+	if _, err := a.checkServer("http://bad host"); err == nil || !strings.Contains(err.Error(), "服务器地址无效") {
+		t.Fatalf("checkServer(bad) = %v, want the validator's refusal", err)
 	}
 }
 
@@ -368,13 +614,14 @@ func TestAccountStatePrimaryFollowsSelection(t *testing.T) {
 }
 
 // Cancelling a first login must not leave the session parked in the 2FA
-// state, or every later reload would revive a form that can never succeed.
+// state, or every later reload would revive a form that can never succeed,
+// and must drop the flow the window could still submit to.
 func TestRealAccountCancelLoginResetsTwoFactorSession(t *testing.T) {
 	store := newFakeStore()
 	verifier := &fakeVerifier{result: hello.Verified}
 	flow := &scriptedAuth{step: authStep{
 		needs2FA:  true,
-		challenge: &twoFactorPrompt{providers: []string{"authenticator"}},
+		challenge: codeChallenge(twoFactorAuthenticator, "authenticator"),
 	}}
 	a := newRealAccount(store, verifier, fixedFlow(flow))
 
@@ -400,16 +647,21 @@ func TestRealAccountCancelLoginResetsTwoFactorSession(t *testing.T) {
 	if again.state != loginLoggedOut || again.challenge != nil {
 		t.Fatalf("session after cancel = %+v, want signed out", again)
 	}
+	// The parked flow is gone, so a stale window cannot submit into it.
+	if _, err := a.submit2FA(twoFactorAuthenticator, "123456"); !errors.Is(err, errNoTwoFactorChallenge) {
+		t.Fatalf("submit2FA after cancel = %v, want errNoTwoFactorChallenge", err)
+	}
 }
 
 // A 2FA stop is not a login, so the master password must not be parked in
-// memory while the challenge waits on an unimplemented submit.
+// memory while the challenge waits: a cancelled attempt leaves nothing, and a
+// login finished in the 2FA step lands without cached credentials.
 func TestRealAccountTwoFactorStopDoesNotRetainPassword(t *testing.T) {
 	store := newFakeStore()
 	verifier := &fakeVerifier{result: hello.Verified}
 	flow := &scriptedAuth{step: authStep{
 		needs2FA:  true,
-		challenge: &twoFactorPrompt{providers: []string{"authenticator"}},
+		challenge: codeChallenge(twoFactorAuthenticator, "authenticator"),
 	}}
 	a := newRealAccount(store, verifier, fixedFlow(flow))
 
@@ -433,9 +685,9 @@ func TestRealAccountCancelReloginRestoresSignedInSessionAndDropsPassword(t *test
 	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
 		t.Fatalf("login: %v", err)
 	}
-	flow.step = authStep{needs2FA: true, challenge: &twoFactorPrompt{providers: []string{"authenticator"}}}
-	if err := a.relogin(); !errors.Is(err, errTwoFactorUnsupported) {
-		t.Fatalf("relogin error = %v, want errTwoFactorUnsupported", err)
+	flow.step = authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")}
+	if err := a.relogin(); !errors.Is(err, errTwoFactorNeedsSignIn) {
+		t.Fatalf("relogin error = %v, want errTwoFactorNeedsSignIn", err)
 	}
 
 	sess, err := a.cancelLogin()

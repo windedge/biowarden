@@ -21,7 +21,7 @@ func (app *appState) accountPage(c *ui.Context) {
 				muted(c, "登录 Bitwarden 账号后即可用。密钥保存在本机凭据管理器，由 Windows Hello 放行读取；生物识别只放行读取，密钥本身没有被加密。")
 				notice(c, a.notice, a.noticeOK)
 
-				a.accountCard(c)
+				a.accountCard(c, &app.login)
 				a.keyCard(c)
 				a.advanced(c)
 			})
@@ -30,31 +30,28 @@ func (app *appState) accountPage(c *ui.Context) {
 }
 
 // accountCard is the login state: identity and server when signed in, the
-// login form when not. The real backend drives it: submit walks the auth flow
-// and stores the key behind a Hello consent. The inline 2FA prompt stays until
-// the login window ticket takes it over, so submit2FA there is still a clear
-// not-implemented.
-func (a *accountState) accountCard(c *ui.Context) {
+// button that opens the login window when not. The login window owns the form
+// and the two-factor prompt; the card only mirrors the session the backend
+// reports, so there is one entry point and not two.
+func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 	t := c.Theme()
 	groupBox(c, "账号", func() {
 		switch a.session.state {
 		case loginNeeds2FA:
+			// The login window answers challenges; this state means the
+			// attempt is parked with nobody showing the prompt.
 			a.identityRow(c, t.Warning)
 			if a.session.twoFAMethod != "" {
 				muted(c, "服务器要求的两步验证方式："+a.session.twoFAMethod)
 			}
-			ui.Form(c, func() {
-				ui.Field(c, "验证码", func() {
-					ui.TextInput(c.Key("twofa"), &a.twoFACode).Placeholder("6 位验证码或恢复码")
-				})
-			})
-			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-				if ui.PrimaryButton(c, "提交验证码").Disabled(strings.TrimSpace(a.twoFACode) == "" || a.busy).Clicked() {
-					a.submit2FA()
+			muted(c, "两步验证尚未完成。")
+			ui.Row(c).Gap(10).Children(func() {
+				if ui.PrimaryButton(c, "继续登录").Disabled(a.busy).Clicked() {
+					login.begin()
 					c.Invalidate()
 				}
-				if ui.Button(c, "取消").Disabled(a.busy).Clicked() {
-					a.cancelLogin()
+				if ui.Button(c, "取消登录").Disabled(a.busy).Clicked() {
+					login.cancel()
 					c.Invalidate()
 				}
 			})
@@ -80,33 +77,11 @@ func (a *accountState) accountCard(c *ui.Context) {
 				ui.Text(c, "尚未登录").Bold()
 				muted(c, "登录 Bitwarden 账号后，biowarden 会自动取出并保存密钥，无需逐项手动配置。")
 			})
-			if !a.loginOpen {
-				ui.PrimaryButton(c, "登录 Bitwarden 账号").Disabled(a.busy).OnClick(a.beginLogin)
-				return
+			if ui.PrimaryButton(c, "登录 Bitwarden 账号").Disabled(a.busy).Clicked() {
+				login.begin()
+				c.Invalidate()
 			}
-			ui.Form(c, func() {
-				ui.Field(c, "邮箱", func() {
-					ui.TextInput(c.Key("login-email"), &a.email).Placeholder("you@example.com")
-				})
-				ui.Field(c, "主密码", func() {
-					ui.TextInput(c.Key("login-password"), &a.password).Password().Placeholder("master password")
-				})
-			})
-			ready := strings.TrimSpace(a.email) != "" && a.password != ""
-			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-				if ui.PrimaryButton(c, "登录").Disabled(!ready || a.busy).Clicked() {
-					a.login()
-					c.Invalidate()
-				}
-				if ui.Button(c, "取消").Disabled(a.busy).Clicked() {
-					a.cancelLogin()
-					c.Invalidate()
-				}
-				if a.busy {
-					ui.Spinner(c).Label("登录中")
-				}
-			})
-			muted(c, "登录会连接到 Bitwarden 身份服务器；写入密钥前需要 Windows Hello 确认。")
+			muted(c, "登录会在一个独立的登录窗里进行；写入密钥前需要 Windows Hello 确认。")
 		}
 	})
 }
