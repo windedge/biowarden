@@ -1,7 +1,7 @@
-// Package ui is GUI mode: a tray icon plus one window. The window's four pages
-// (Browsers, Keys, Settings, Log) are a clickable prototype built from fake
-// in-memory data, so a human can settle the interactions and the layout before
-// the platform seams behind them are wired up.
+// Package ui is GUI mode: a tray icon plus one window. The window is a left
+// sidebar of four pages (Account, Browsers, Settings, Log) next to the page's
+// content. The account backend is still a fake, so a human can settle the
+// interactions and the layout before the auth seam behind it is wired up.
 package ui
 
 import (
@@ -18,6 +18,9 @@ import (
 
 const appName = "biowarden"
 
+// appVersion is shown in the sidebar's footer and on the Settings page.
+const appVersion = "0.1.0"
+
 // Run blocks until the app quits.
 func Run() error {
 	mygo.App.SetName(appName)
@@ -26,22 +29,25 @@ func Run() error {
 }
 
 // view builds the whole window from the prototype state, rebuilding after
-// every click or switch.
+// every click or switch: a fixed sidebar on the left, the chosen page
+// filling the rest.
 func (app *appState) view(c *ui.Context) {
 	app.tick(c)
 	t := c.Theme()
-	ui.Column(c).Fill().Background(t.Background).Children(func() {
-		ui.Tabs(c, &app.tab, "浏览器", "密钥", "设置", "日志")
-		switch app.tab {
-		case 0:
-			app.browsersPage(c)
-		case 1:
-			app.keysPage(c)
-		case 2:
-			app.settingsPage(c)
-		case 3:
-			app.logPage(c)
-		}
+	ui.Row(c).Fill().Background(t.Background).Children(func() {
+		app.sidebar(c)
+		ui.Column(c).Grow(1).FillHeight().Children(func() {
+			switch app.page {
+			case pageBrowsers:
+				app.browsersPage(c)
+			case pageSettings:
+				app.settingsPage(c)
+			case pageLog:
+				app.logPage(c)
+			default:
+				app.accountPage(c)
+			}
+		})
 	})
 }
 
@@ -49,10 +55,12 @@ func (app *appState) view(c *ui.Context) {
 func start() {
 	app := newAppState()
 	win := mygo.NewWindow(mygo.WindowOptions{
-		Title:   appName,
-		Width:   820,
-		Height:  620,
-		Content: ui.View(app.view),
+		Title:     appName,
+		Width:     960,
+		Height:    640,
+		MinWidth:  800,
+		MinHeight: 520,
+		Content:   ui.View(app.view),
 	})
 	// Closing the window returns to the tray, as in the reference app; quitting
 	// stays deliberate, through the tray menu. App.Quit must still be able to

@@ -21,9 +21,16 @@ func (app *appState) browsersPage(c *ui.Context) {
 		}
 	}
 	ui.Column(c).Grow(1).Padding(16).Gap(10).Children(func() {
-		ui.Text(c, "浏览器 (Browsers)").FontSize(18).Bold()
+		ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, "浏览器 (Browsers)").FontSize(18).Bold()
+			ui.Spacer(c)
+			if ui.PrimaryButton(c, "一键全部安装").Disabled(len(app.browsers.rows) == 0).Clicked() {
+				bs.installAll()
+			}
+		})
 		muted(c, "已配置 "+itoa(configured)+" / "+itoa(len(app.browsers.rows))+" 个浏览器 · 已存 "+
-			itoa(len(app.keys.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生物识别解锁。")
+			itoa(len(app.account.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生物识别解锁。"+
+			"「一键全部安装」只写未安装和属于我们的行，可能属于官方客户端的配置仍需逐行确认。")
 		switch {
 		case bs.confirmCover >= 0:
 			notice(c, "覆盖前确认：该 manifest 可能属于 Bitwarden 官方桌面客户端，覆盖后官方生物解锁会失效。", false)
@@ -48,7 +55,11 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 	ui.Row(c).Key(b.name).Gap(12).Padding(10, 8).AlignItems(ui.Center).Children(func() {
 		ui.Column(c).Grow(1).Gap(2).Children(func() {
 			ui.Text(c, b.name).Bold()
-			ui.Text(c, browserStatusLabel(b.state)).FontSize(11).TextColor(browserStatusColor(t, b.state))
+			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, browserStatusLabel(b.state)).FontSize(11).TextColor(browserStatusColor(t, b.state))
+				ui.Text(c, extensionLabel(b.connected)).FontSize(11).
+					TextColor(extensionColor(t, b.connected))
+			})
 			ui.Text(c, b.path).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(b.path)
 		})
 		// Actions run after the row is built: install/uninstall reload the rows,
@@ -137,4 +148,21 @@ func browserStatusColor(t *ui.Theme, state int) ui.Color {
 	default:
 		return t.TextMuted
 	}
+}
+
+// extensionLabel is the per-row "has the extension ever connected" indicator.
+// Nothing tracks connections on the host side yet, so the field is always
+// false for now; this is where the real answer will show.
+func extensionLabel(connected bool) string {
+	if connected {
+		return "扩展连接过"
+	}
+	return "扩展未连接"
+}
+
+func extensionColor(t *ui.Theme, connected bool) ui.Color {
+	if connected {
+		return t.Success
+	}
+	return t.TextMuted
 }

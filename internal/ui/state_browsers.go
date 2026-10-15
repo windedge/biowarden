@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/egoist/mygo/ui"
 	"github.com/windedge/biowarden/internal/registry"
@@ -38,6 +39,13 @@ type browserRow struct {
 	name    string           // display name, from registry.Browsers
 	path    string           // manifest path currently registered, "" when none
 	state   int              // browserMissing / browserOurs / browserForeign / browserHijacked
+
+	// connected reports whether this browser's extension has ever reached the
+	// host. It is a placeholder for a data source that does not exist yet:
+	// nothing on the host side records connections, so every backend leaves it
+	// false and the row reads "扩展未连接". Wire it when the host keeps a
+	// per-browser last-seen.
+	connected bool
 }
 
 func newBrowsersState() browsersState {
@@ -71,6 +79,39 @@ func (s *browsersState) reload() {
 		return
 	}
 	s.rows = rows
+}
+
+// installAll writes our manifest for every browser we may touch: rows with no
+// registration, and rows already ours (a repair). A foreign or hijacked value
+// is left to the per-row confirmation, because one click should not decide to
+// overwrite another program's registration.
+func (s *browsersState) installAll() {
+	installed, skipped := 0, 0
+	var failed []string
+	for i := range s.rows {
+		switch s.rows[i].state {
+		case browserMissing, browserOurs:
+			if err := s.backend.install(s.rows[i]); err != nil {
+				failed = append(failed, s.rows[i].name)
+				continue
+			}
+			installed++
+		default:
+			skipped++
+		}
+	}
+	s.reload()
+	switch {
+	case len(failed) > 0:
+		s.notice = "已安装 " + itoa(installed) + " 个；写入失败：" + strings.Join(failed, "、")
+		s.noticeOK = false
+	case skipped > 0:
+		s.notice = "已安装 " + itoa(installed) + " 个；" + itoa(skipped) + " 个需要逐行确认（可能属于官方 Bitwarden 客户端）"
+		s.noticeOK = true
+	default:
+		s.notice = "已为 " + itoa(installed) + " 个浏览器写入 manifest"
+		s.noticeOK = true
+	}
 }
 
 // install writes our manifest for the row, replacing whatever was registered.

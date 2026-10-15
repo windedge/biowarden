@@ -18,6 +18,11 @@ func (app *appState) settingsPage(c *ui.Context) {
 			ui.Column(c).Padding(16, 4, 16, 16).Gap(12).Children(func() {
 				notice(c, app.settings.notice, app.settings.noticeOK)
 				ui.Form(c, func() {
+					ui.Fieldset(c, "账号", func() {
+						ui.Field(c, "服务器地址", func() {
+							ui.TextInput(c, &app.account.session.serverURL).ReadOnly(true).FontSize(11)
+						})
+					})
 					ui.Fieldset(c, "入口", func() {
 						ui.Field(c, "登录时自动启动", func() {
 							if ui.Switch(c, &app.settings.launchAtLogin).Changed() {
@@ -68,7 +73,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 					})
 					ui.Fieldset(c, "关于", func() {
 						ui.Field(c, "版本", func() {
-							ui.Text(c, "biowarden 0.1.0")
+							ui.Text(c, "biowarden "+appVersion)
 						})
 						ui.Field(c, "说明", func() {
 							ui.Text(c, "Windows Hello 只是放行对凭据管理器里密钥的读取；密钥本身没有被生物特征加密。").

@@ -10,25 +10,36 @@ import (
 
 func itoa(n int) string { return strconv.Itoa(n) }
 
+// navPage is which page the sidebar has chosen. The Account page is the
+// landing page, as the reference desktop client lands on the vault.
+type navPage int
+
+const (
+	pageAccount navPage = iota
+	pageBrowsers
+	pageSettings
+	pageLog
+)
+
 // appState is the GUI's whole state: which page is showing, that page's
 // working data, and the shared notice lines. Page-specific fields live with
 // their pages, in state_<page>.go, so parallel work on one page does not
 // collide with another.
 type appState struct {
-	tab int
+	page navPage
 
 	browsers browsersState
-	keys     keysState
+	account  accountState
 	settings settingsState
 	log      logState
 }
 
 // newAppState wires the pages onto their backend. The prototype's fake
-// backend stays until the page tickets replace it; see backend.go.
+// backends stay until the page tickets replace them; see backend.go.
 func newAppState() *appState {
 	return &appState{
 		browsers: newBrowsersState(),
-		keys:     newKeysState(),
+		account:  newAccountState(),
 		settings: newSettingsState(),
 		log:      newLogState(),
 	}
@@ -36,10 +47,10 @@ func newAppState() *appState {
 
 // tick advances simulated work and asks for the frame that finishes it.
 // Every page calls it first, so a pending action still settles if the human
-// switches tabs before it ends.
+// switches pages before it ends.
 func (app *appState) tick(c *ui.Context) {
 	app.browsers.tick(c)
-	app.keys.tick(c)
+	app.account.tick(c)
 	app.settings.tick(c)
 }
 
