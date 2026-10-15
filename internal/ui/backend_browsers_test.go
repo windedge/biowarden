@@ -35,18 +35,27 @@ func (f *fakeRegistrar) Install(b registry.Browser) error {
 	}
 	f.installed = append(f.installed, b)
 	f.status[b] = registry.Status{
-		Registered: true,
-		Path:       `C:\biowarden\manifests\` + string(b) + ".json",
-		IsOurs:     true,
+		Registered:    true,
+		Path:          `C:\biowarden\manifests\` + string(b) + ".json",
+		IsOurs:        true,
+		OursInstalled: true,
 	}
 	return nil
 }
 
 func (f *fakeRegistrar) Uninstall(b registry.Browser) error {
-	// Mirrors the real registrar: a value that is not ours is left alone.
-	if st := f.status[b]; st.Registered && st.IsOurs {
+	// Mirrors the real registrar: clear our own value, remove our manifest
+	// file (recorded as OursInstalled), and leave a foreign value in place.
+	st := f.status[b]
+	if st.IsOurs {
 		f.uninstalled = append(f.uninstalled, b)
 		delete(f.status, b)
+		return nil
+	}
+	if st.OursInstalled {
+		f.uninstalled = append(f.uninstalled, b)
+		st.OursInstalled = false
+		f.status[b] = st
 	}
 	return nil
 }
@@ -72,6 +81,39 @@ func TestRealBrowsersRefreshMapsStatus(t *testing.T) {
 		if rows[i] != want[i] {
 			t.Errorf("row %d = %+v, want %+v", i, rows[i], want[i])
 		}
+	}
+}
+
+func TestBrowserStateOfHijacked(t *testing.T) {
+	st := registry.Status{Registered: true, Path: `C:\official\edge.json`, OursInstalled: true}
+	if got := browserStateOf(st); got != browserHijacked {
+		t.Fatalf("browserStateOf = %d, want browserHijacked", got)
+	}
+	// The same foreign value without our leftover manifest is plain foreign.
+	st.OursInstalled = false
+	if got := browserStateOf(st); got != browserForeign {
+		t.Fatalf("browserStateOf = %d, want browserForeign", got)
+	}
+}
+
+func TestRealBrowsersUninstallHijackedRemovesOurManifest(t *testing.T) {
+	fake := newFakeRegistrar()
+	fake.status[registry.Edge] = registry.Status{
+		Registered:    true,
+		Path:          `C:\official\edge.json`,
+		OursInstalled: true,
+	}
+	backend := newRealBrowsers(fake)
+
+	row := browserRow{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, state: browserHijacked}
+	if err := backend.uninstall(row); err != nil {
+		t.Fatalf("uninstall hijacked: %v", err)
+	}
+	if len(fake.uninstalled) != 1 || fake.uninstalled[0] != registry.Edge {
+		t.Fatalf("registrar.Uninstall calls = %v, want [edge]", fake.uninstalled)
+	}
+	if st := fake.status[registry.Edge]; !st.Registered || st.OursInstalled {
+		t.Fatalf("after uninstall status = %+v, want foreign without oursInstalled", st)
 	}
 }
 

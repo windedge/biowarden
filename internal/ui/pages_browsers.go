@@ -11,18 +11,25 @@ import (
 func (app *appState) browsersPage(c *ui.Context) {
 	bs := &app.browsers
 	configured := 0
+	hijacked := 0
 	for _, b := range app.browsers.rows {
 		if b.state != browserMissing {
 			configured++
+		}
+		if b.state == browserHijacked {
+			hijacked++
 		}
 	}
 	ui.Column(c).Grow(1).Padding(16).Gap(10).Children(func() {
 		ui.Text(c, "浏览器 (Browsers)").FontSize(18).Bold()
 		muted(c, "已配置 "+itoa(configured)+" / "+itoa(len(app.browsers.rows))+" 个浏览器 · 已存 "+
 			itoa(len(app.keys.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生物识别解锁。")
-		if bs.confirmCover >= 0 {
+		switch {
+		case bs.confirmCover >= 0:
 			notice(c, "覆盖前确认：该 manifest 可能属于 Bitwarden 官方桌面客户端，覆盖后官方生物解锁会失效。", false)
-		} else {
+		case hijacked > 0:
+			notice(c, "检测到 "+itoa(hijacked)+" 个浏览器的配置被其他程序覆盖（官方桌面端每次启动都会重写注册表）。恢复后建议关闭或卸载官方桌面客户端，否则会再次被覆盖。", false)
+		default:
 			notice(c, bs.notice, bs.noticeOK)
 		}
 		ui.Divider(c)
@@ -51,7 +58,11 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 			// The overwrite needs a second click: the reference only writes
 			// over a foreign manifest after a human confirms.
 			ui.Button(c, "取消").OnClick(func() { bs.confirmCover = -1 })
-			ui.PrimaryButton(c, "确认覆盖").OnClick(func() {
+			confirm := "确认覆盖"
+			if b.state == browserHijacked {
+				confirm = "确认恢复"
+			}
+			ui.PrimaryButton(c, confirm).OnClick(func() {
 				bs.confirmCover = -1
 				bs.install(b)
 			})
@@ -77,6 +88,25 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 				bs.confirmUninstall = i
 				bs.notice = ""
 			})
+		case b.state == browserHijacked:
+			// Recovery is an overwrite of a foreign value, so it gets the same
+			// two-step confirmation as the foreign row.
+			ui.PrimaryButton(c, "恢复安装").OnClick(func() {
+				bs.confirmCover = i
+				bs.notice = ""
+			})
+			if bs.confirmUninstall == i {
+				ui.Button(c, "取消").OnClick(func() { bs.confirmUninstall = -1 })
+				ui.PrimaryButton(c, "确认卸载").OnClick(func() {
+					bs.confirmUninstall = -1
+					bs.uninstall(b)
+				})
+				break
+			}
+			ui.Button(c, "卸载").OnClick(func() {
+				bs.confirmUninstall = i
+				bs.notice = ""
+			})
 		default:
 			ui.Button(c, "安装").OnClick(func() { bs.install(b) })
 		}
@@ -87,6 +117,8 @@ func browserStatusLabel(state int) string {
 	switch state {
 	case browserOurs:
 		return "已安装（biowarden）"
+	case browserHijacked:
+		return "已被其他程序覆盖（可能是官方 Bitwarden 桌面客户端）"
 	case browserForeign:
 		return "已存在（可能是官方 Bitwarden 桌面客户端的配置）"
 	default:
@@ -98,6 +130,8 @@ func browserStatusColor(t *ui.Theme, state int) ui.Color {
 	switch state {
 	case browserOurs:
 		return t.Success
+	case browserHijacked:
+		return t.Danger
 	case browserForeign:
 		return t.Warning
 	default:

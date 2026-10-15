@@ -87,6 +87,11 @@ func (r *registrar) Status(b Browser) (Status, error) {
 		return Status{}, err
 	}
 	ourPath := r.manifestPath(b, dir)
+	// The manifest file outlives a foreign overwrite, so its presence is what
+	// proves biowarden once installed for this browser; a missing file means we
+	// never did, even when a foreign value is registered.
+	_, statErr := os.Stat(ourPath)
+	oursInstalled := statErr == nil
 
 	// Our value in any key wins: when Chrome has two registration points, a
 	// foreign value on one of them must not hide the fact that the browser is
@@ -102,16 +107,16 @@ func (r *registrar) Status(b Browser) (Status, error) {
 			continue
 		}
 		if path == ourPath {
-			return Status{Registered: true, Path: ourPath, IsOurs: true}, nil
+			return Status{Registered: true, Path: ourPath, IsOurs: true, OursInstalled: oursInstalled}, nil
 		}
 		if foreign == "" {
 			foreign = path
 		}
 	}
 	if foreign != "" {
-		return Status{Registered: true, Path: foreign}, nil
+		return Status{Registered: true, Path: foreign, OursInstalled: oursInstalled}, nil
 	}
-	return Status{}, nil
+	return Status{OursInstalled: oursInstalled}, nil
 }
 
 func (r *registrar) Install(b Browser) error {

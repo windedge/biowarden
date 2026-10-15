@@ -40,6 +40,11 @@ type Status struct {
 	// not ours means it may be the official client's, which the GUI shows
 	// before offering to replace it.
 	IsOurs bool
+	// OursInstalled reports whether our manifest file is still on disk. It is
+	// the evidence that biowarden was installed for this browser even after a
+	// foreign client overwrote the registration, which is how a hijack is told
+	// apart from a browser we never touched.
+	OursInstalled bool
 }
 
 // Registrar registers and unregisters biowarden's native messaging host.

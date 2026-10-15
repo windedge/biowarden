@@ -9,9 +9,10 @@ import (
 
 // Manifest states of a browser, as the registry seam reports them.
 const (
-	browserMissing = iota // no manifest registered
-	browserOurs           // our manifest
-	browserForeign        // a manifest we did not write (likely the official client)
+	browserMissing  = iota // no manifest registered
+	browserOurs            // our manifest
+	browserForeign         // a manifest we did not write (likely the official client)
+	browserHijacked        // our manifest file exists, but the key points elsewhere
 )
 
 // browsersState is the Browsers page's working data, backed by the registry
@@ -36,7 +37,7 @@ type browserRow struct {
 	browser registry.Browser // the registration point install/uninstall target
 	name    string           // display name, from registry.Browsers
 	path    string           // manifest path currently registered, "" when none
-	state   int              // browserMissing / browserOurs / browserForeign
+	state   int              // browserMissing / browserOurs / browserForeign / browserHijacked
 }
 
 func newBrowsersState() browsersState {

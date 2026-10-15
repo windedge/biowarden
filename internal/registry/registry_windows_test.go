@@ -293,6 +293,78 @@ func TestForeignRegistration(t *testing.T) {
 	}
 }
 
+// Our manifest file outlives a registration, which is how the GUI tells a
+// browser that once had biowarden from one it never touched.
+func TestStatusOursInstalled(t *testing.T) {
+	t.Run("manifest present and key ours", func(t *testing.T) {
+		env := newTestEnv(t)
+		if err := env.reg.Install(Chrome); err != nil {
+			t.Fatalf("Install: %v", err)
+		}
+		st, err := env.reg.Status(Chrome)
+		if err != nil {
+			t.Fatalf("Status: %v", err)
+		}
+		if !st.IsOurs || !st.OursInstalled {
+			t.Fatalf("Status = %+v, want ours and oursInstalled", st)
+		}
+	})
+
+	t.Run("manifest present but key foreign", func(t *testing.T) {
+		env := newTestEnv(t)
+		manifest := filepath.Join(env.dir, "chrome.json")
+		if err := os.WriteFile(manifest, []byte("{}"), 0o600); err != nil {
+			t.Fatalf("write manifest: %v", err)
+		}
+		foreign := filepath.Join(env.dir, "official-client.json")
+		writeValue(t, env.root, browserKeyPaths[Chrome][0], foreign)
+
+		st, err := env.reg.Status(Chrome)
+		if err != nil {
+			t.Fatalf("Status: %v", err)
+		}
+		if st.IsOurs || !st.OursInstalled {
+			t.Fatalf("Status = %+v, want foreign with oursInstalled", st)
+		}
+	})
+
+	t.Run("manifest absent and key foreign", func(t *testing.T) {
+		env := newTestEnv(t)
+		foreign := filepath.Join(env.dir, "official-client.json")
+		writeValue(t, env.root, browserKeyPaths[Chrome][0], foreign)
+
+		st, err := env.reg.Status(Chrome)
+		if err != nil {
+			t.Fatalf("Status: %v", err)
+		}
+		if st.IsOurs || st.OursInstalled {
+			t.Fatalf("Status = %+v, want foreign without oursInstalled", st)
+		}
+	})
+}
+
+// A hijacked browser has our manifest file on disk while the key points at
+// another client: Uninstall must drop our file and leave the foreign value.
+func TestUninstallHijackedKeepsForeignRemovesManifest(t *testing.T) {
+	env := newTestEnv(t)
+	manifest := filepath.Join(env.dir, "chrome.json")
+	if err := os.WriteFile(manifest, []byte("{}"), 0o600); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	foreign := filepath.Join(env.dir, "official-client.json")
+	writeValue(t, env.root, browserKeyPaths[Chrome][0], foreign)
+
+	if err := env.reg.Uninstall(Chrome); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if _, err := os.Stat(manifest); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("our manifest still present: %v", err)
+	}
+	if got, _ := readValue(t, env.root, browserKeyPaths[Chrome][0]); got != foreign {
+		t.Fatalf("foreign value = %q, want untouched %q", got, foreign)
+	}
+}
+
 func TestUninstall(t *testing.T) {
 	env := newTestEnv(t)
 	if err := env.reg.Install(Edge); err != nil {

@@ -43,15 +43,17 @@ func (b *realBrowsers) refresh() ([]browserRow, error) {
 	return rows, nil
 }
 
-// browserStateOf is the three-way mapping the page renders: no value means
-// missing, our own manifest is ours, any other value is foreign and likely the
-// official desktop client's.
+// browserStateOf is the mapping the page renders: no value means missing, our
+// own manifest is ours, a foreign value with our file still on disk means the
+// official client overwrote us, and any other value is plain foreign.
 func browserStateOf(st registry.Status) int {
 	switch {
 	case !st.Registered:
 		return browserMissing
 	case st.IsOurs:
 		return browserOurs
+	case st.OursInstalled:
+		return browserHijacked
 	default:
 		return browserForeign
 	}
@@ -65,12 +67,14 @@ func (b *realBrowsers) install(row browserRow) error {
 
 func (b *realBrowsers) uninstall(row browserRow) error {
 	// Registrar.Uninstall only clears its own value, so a foreign one has to
-	// be refused before the call for the page to say "left in place".
+	// be refused before the call for the page to say "left in place". A
+	// hijacked row still has our leftover manifest file to remove, so it is
+	// allowed through: the foreign key survives, our file does not.
 	st, err := b.reg.Status(row.browser)
 	if err != nil {
 		return err
 	}
-	if st.Registered && !st.IsOurs {
+	if st.Registered && !st.IsOurs && !st.OursInstalled {
 		return errForeignRegistration
 	}
 	return b.reg.Uninstall(row.browser)
