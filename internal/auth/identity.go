@@ -262,6 +262,10 @@ func (c *Client) Login(ctx context.Context, req TokenRequest) (TokenResponse, er
 	body, err := c.postFormBody(ctx, c.identityURL("/connect/token"), form)
 	if err != nil {
 		if errors.Is(err, ErrTwoFactorRequired) {
+			// Structural, value-free diagnostic: which fields the reply
+			// carried and which provider numbers it offered. Written to the
+			// shared host log only when BIOWARDEN_LOG=debug.
+			logTwoFactorShape(body)
 			challenge := parseTwoFactorChallenge(body)
 			if challenge == nil {
 				// The server's message classified as 2FA but the body carried no

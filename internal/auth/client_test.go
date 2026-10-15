@@ -169,6 +169,14 @@ func TestClassifyResponse(t *testing.T) {
 		{"forbidden with body", http.StatusForbidden, `{"error":"forbidden"}`, ErrForbidden},
 		{"invalid grant", http.StatusBadRequest, `{"error":"invalid_grant"}`, ErrUnauthorized},
 		{"two factor required", http.StatusBadRequest, `{"TwoFactorProviders2":{"0":{"challenge":"x"}}}`, ErrTwoFactorRequired},
+		// The identity server's real 400: string array plus map, error
+		// invalid_grant (login.strategy.spec.ts:357-363).
+		{"two factor server shape", http.StatusBadRequest, `{"error":"invalid_grant","error_description":"Two factor required.","TwoFactorProviders":["0"],"TwoFactorProviders2":{"0":null}}`, ErrTwoFactorRequired},
+		// The array alone still classifies (some servers/tests).
+		{"two factor array only", http.StatusBadRequest, `{"TwoFactorProviders":["1"]}`, ErrTwoFactorRequired},
+		// "Two factor required." has a space; before normalization this fell
+		// through to the invalid_grant branch and looked like a bad password.
+		{"two factor message", http.StatusBadRequest, `{"error":"invalid_grant","error_description":"Two factor required."}`, ErrTwoFactorRequired},
 		{"captcha message", http.StatusBadRequest, `{"ErrorModel":{"Message":"Captcha required."}}`, ErrCaptchaRequired},
 		{"captcha field", http.StatusBadRequest, `{"CaptchaRequired":true}`, ErrCaptchaRequired},
 		{"server error", http.StatusInternalServerError, ``, ErrServer},

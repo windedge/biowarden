@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -300,6 +301,76 @@ func TestLoginTwoFactorChallengeFromMapOnly(t *testing.T) {
 	}
 	if resp.Challenge.Providers[0] != TwoFactorAuthenticator || resp.Challenge.Providers[1] != TwoFactorWebAuthn {
 		t.Errorf("Providers = %v, want numeric order [authenticator webauthn]", resp.Challenge.Providers)
+	}
+}
+
+// The identity server sends TwoFactorProviders as a JSON string array and
+// TwoFactorProviders2 as an object keyed by the provider number, both on a 400
+// whose error is invalid_grant. These bodies are the official client's own
+// fixtures:
+//
+//	bitwarden-clients libs/auth/src/common/login-strategies/login.strategy.spec.ts:357-363 (TOTP)
+//	bitwarden-clients libs/auth/src/common/login-strategies/login.strategy.spec.ts:392-399 (email)
+//
+// TwoFactorProviders2 is the field the official client keys its 2FA branch on
+// (libs/common/src/services/api.service.ts:204-209). Before the fix the string
+// array failed to decode into []int, the whole body was rejected, and Login
+// returned "two-factor required" with a nil Challenge.
+func TestLoginTwoFactorChallengeFromServerShape(t *testing.T) {
+	cases := []struct {
+		name      string
+		body      string
+		providers []TwoFactorProvider
+		email     string
+	}{
+		{
+			name: "totp string array",
+			body: `{
+				"error":"invalid_grant",
+				"error_description":"Two factor required.",
+				"TwoFactorProviders":["0"],
+				"TwoFactorProviders2":{"0":null}
+			}`,
+			providers: []TwoFactorProvider{TwoFactorAuthenticator},
+		},
+		{
+			name: "email string array with masked payload",
+			body: `{
+				"error":"invalid_grant",
+				"error_description":"Two factor required.",
+				"TwoFactorProviders":["1"],
+				"TwoFactorProviders2":{"1":{"Email":"k***@bitwarden.com"}},
+				"Email":"kyle@bitwarden.com"
+			}`,
+			providers: []TwoFactorProvider{TwoFactorEmail},
+			email:     "kyle@bitwarden.com",
+		},
+		{
+			name:      "number array still accepted",
+			body:      `{"TwoFactorProviders":[0,2],"TwoFactorProviders2":{"0":{},"2":{"AuthUrl":"https://duo.example/auth"}}}`,
+			providers: []TwoFactorProvider{TwoFactorAuthenticator, TwoFactorDuo},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(tc.body))
+			})
+			resp, err := client.Login(context.Background(), TokenRequest{Email: "ada@example.com", MasterPasswordHash: "hash"})
+			if !errors.Is(err, ErrTwoFactorRequired) {
+				t.Fatalf("Login error = %v, want ErrTwoFactorRequired", err)
+			}
+			if resp.Challenge == nil {
+				t.Fatal("Challenge = nil, want a populated challenge")
+			}
+			if !reflect.DeepEqual(resp.Challenge.Providers, tc.providers) {
+				t.Errorf("Providers = %v, want %v", resp.Challenge.Providers, tc.providers)
+			}
+			if resp.Challenge.Email != tc.email {
+				t.Errorf("Email = %q, want %q", resp.Challenge.Email, tc.email)
+			}
+		})
 	}
 }
 

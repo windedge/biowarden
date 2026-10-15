@@ -225,11 +225,23 @@ type errorResponse struct {
 	ErrorModel       struct {
 		Message string `json:"Message"`
 	} `json:"ErrorModel"`
-	// TwoFactorProviders2 is present, keyed by provider number, on the 400
-	// that asks for a second factor.
+	// TwoFactorProviders (string array) and TwoFactorProviders2 (object keyed
+	// by provider number) are both present on the 400 that asks for a second
+	// factor (libs/common/src/auth/models/response/identity-two-factor.response.ts:8-19).
+	// The array alone is checked because it is enough to classify the reply
+	// even if a server omits the map.
+	TwoFactorProviders  []json.RawMessage          `json:"TwoFactorProviders"`
 	TwoFactorProviders2 map[string]json.RawMessage `json:"TwoFactorProviders2"`
 	// CaptchaRequired is sometimes a dedicated field.
 	CaptchaRequired bool `json:"CaptchaRequired"`
+}
+
+// isTwoFactorMessage reports whether an error message names two-factor auth.
+// The identity server writes "Two factor required." (with a space) and other
+// servers write "twoFactorRequired"; stripping spaces and hyphens matches both.
+func isTwoFactorMessage(message string) bool {
+	normalized := strings.NewReplacer(" ", "", "-", "").Replace(message)
+	return strings.Contains(normalized, "twofactor")
 }
 
 // classifyResponse maps an HTTP status and body onto the sentinel errors.
@@ -247,7 +259,7 @@ func classifyResponse(resp *http.Response, body []byte) error {
 	if strings.Contains(message, "captcha") || er.CaptchaRequired {
 		return fmt.Errorf("%w: %s", ErrCaptchaRequired, statusDetail(resp))
 	}
-	if len(er.TwoFactorProviders2) > 0 || strings.Contains(message, "twofactor") {
+	if len(er.TwoFactorProviders2) > 0 || len(er.TwoFactorProviders) > 0 || isTwoFactorMessage(message) {
 		return fmt.Errorf("%w: %s", ErrTwoFactorRequired, statusDetail(resp))
 	}
 	switch {

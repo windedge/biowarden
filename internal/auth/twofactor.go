@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 // TwoFactorProvider is the numbered second-factor method in the Bitwarden
@@ -252,10 +253,57 @@ type providerPayload struct {
 	Email   string `json:"Email"`
 }
 
+// providerNumbers decodes the TwoFactorProviders array. The Bitwarden identity
+// server serializes the provider enum as a JSON *string* array, not numbers:
+// the official client's fixtures pin ["0"] / ["1"]
+// (bitwarden-clients libs/auth/src/common/login-strategies/login.strategy.spec.ts:359,394
+// and password-login.strategy.spec.ts:496,523). Decoding those straight into
+// []int made the whole body unmarshal fail, so parseTwoFactorChallenge returned
+// nil and the login dead-ended on "two-factor required" with no provider list.
+// Numbers are still accepted because older responses and fixtures use them.
+type providerNumbers []TwoFactorProvider
+
+// UnmarshalJSON accepts provider numbers as JSON strings or numbers and drops
+// entries that are neither, so one unknown entry cannot sink the reply.
+func (p *providerNumbers) UnmarshalJSON(data []byte) error {
+	var items []json.RawMessage
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+	out := make([]TwoFactorProvider, 0, len(items))
+	for _, item := range items {
+		if n, ok := providerNumber(item); ok {
+			out = append(out, n)
+		}
+	}
+	*p = out
+	return nil
+}
+
+// providerNumber parses one TwoFactorProviders element, a JSON string ("0") or
+// number (0).
+func providerNumber(raw json.RawMessage) (TwoFactorProvider, bool) {
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		n, err := strconv.Atoi(strings.TrimSpace(s))
+		if err != nil {
+			return 0, false
+		}
+		return TwoFactorProvider(n), true
+	}
+	var n int
+	if err := json.Unmarshal(raw, &n); err != nil {
+		return 0, false
+	}
+	return TwoFactorProvider(n), true
+}
+
 // twoFactorErrorResponse is the 400 body login returns when it wants a second
-// factor (identity-two-factor.response.ts).
+// factor (identity-two-factor.response.ts). The real server sends
+// TwoFactorProviders as a string array and TwoFactorProviders2 as an object
+// keyed by the provider number.
 type twoFactorErrorResponse struct {
-	TwoFactorProviders  []int                      `json:"TwoFactorProviders"`
+	TwoFactorProviders  providerNumbers            `json:"TwoFactorProviders"`
 	TwoFactorProviders2 map[string]json.RawMessage `json:"TwoFactorProviders2"`
 	Email               string                     `json:"Email"`
 }
@@ -267,9 +315,10 @@ type twoFactorErrorResponse struct {
 // numerically.
 func parseTwoFactorChallenge(body []byte) *TwoFactorChallenge {
 	var raw twoFactorErrorResponse
-	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil
-	}
+	// Decode best-effort: an unrecognized sibling field must not hide the
+	// provider list the caller needs. Provider presence below decides whether
+	// this is a challenge.
+	_ = json.Unmarshal(body, &raw)
 	challenge := &TwoFactorChallenge{Email: raw.Email}
 	seen := make(map[TwoFactorProvider]bool)
 	for _, p := range raw.TwoFactorProviders {
