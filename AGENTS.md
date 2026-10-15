@@ -34,6 +34,8 @@ the zero-configuration first-run setup to one automatic registration. v1 impleme
 ## Rules
 
 - No cgo: `CGO_ENABLED=0` must always build.
+- Tests must never write the real registry: inject a private root key (the registry tests load
+  an app hive) instead of touching HKCU/HKLM.
 - Logs redact long secrets.
 - Biometrics gate *access* to a key stored in the OS credential store; they encrypt nothing. Never
   word the model stronger than that.

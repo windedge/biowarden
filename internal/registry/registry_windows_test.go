@@ -1,8 +1,6 @@
 package registry
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -13,9 +11,9 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-// The registry is machine state, so the tests only ever write under a fresh
-// HKCU\Software\Biowarden\Test\<random> key and a temp manifest dir; the real
-// browser keys are never read, written or deleted.
+// The registry is machine state, so the tests write only under a private app
+// hive (newTestRoot) and a temp manifest dir; the real HKCU and the browser
+// keys are never read, written or deleted.
 type testEnv struct {
 	reg  Registrar
 	root registry.Key
@@ -24,20 +22,7 @@ type testEnv struct {
 
 func newTestEnv(t *testing.T) testEnv {
 	t.Helper()
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		t.Fatalf("rand: %v", err)
-	}
-	rootPath := `Software\Biowarden\Test\` + hex.EncodeToString(b[:])
-	root, _, err := registry.CreateKey(registry.CURRENT_USER, rootPath, registry.ALL_ACCESS)
-	if err != nil {
-		t.Fatalf("create test key %s: %v", rootPath, err)
-	}
-	t.Cleanup(func() {
-		root.Close()
-		deleteTree(registry.CURRENT_USER, rootPath)
-	})
-
+	root := newTestRoot(t)
 	dir := t.TempDir()
 	return testEnv{
 		reg: NewWithOptions(Options{
@@ -75,22 +60,6 @@ func readValue(t *testing.T, root registry.Key, keyPath string) (string, bool) {
 		return "", false
 	}
 	return value, true
-}
-
-func deleteTree(root registry.Key, path string) {
-	key, err := registry.OpenKey(root, path, registry.ALL_ACCESS)
-	if err != nil {
-		return
-	}
-	names, err := key.ReadSubKeyNames(-1)
-	key.Close()
-	if err != nil {
-		return
-	}
-	for _, name := range names {
-		deleteTree(root, path+`\`+name)
-	}
-	registry.DeleteKey(root, path)
 }
 
 func TestStatusUnregistered(t *testing.T) {

@@ -7,8 +7,7 @@ import (
 )
 
 // The marker writes to the injected root, which newTestEnv already points at a
-// fresh HKCU\Software\Biowarden\Test\<random> key: the real HKCU never sees a
-// first-run value from a test.
+// private app hive: the real HKCU never sees a first-run value from a test.
 func TestMarkerRoundTrip(t *testing.T) {
 	env := newTestEnv(t)
 	marker := NewMarkerWithRoot(env.root)

@@ -43,8 +43,8 @@ var browserKeyPaths = map[Browser][]string{
 // user's HKCU, %LOCALAPPDATA%\biowarden\manifests and this executable.
 type Options struct {
 	// Root is the key the registration keys live under; the zero Key means
-	// HKCU. Tests pass a scratch subkey so they never read or write a real
-	// browser's registration.
+	// HKCU. Tests pass a private app hive (RegLoadAppKey) so they never read
+	// or write a real browser's registration.
 	Root registry.Key
 	// ManifestDir is where the manifest JSON files are written; empty means
 	// %LOCALAPPDATA%\biowarden\manifests.
