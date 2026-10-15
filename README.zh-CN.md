@@ -115,3 +115,24 @@ internal/ui/            GUI（托盘 + 浏览器/密钥/设置/日志四页）
 ```
 
 参考实现：WardenBio（macOS/Swift）、bw-bio-handler、goldwarden。
+
+## 致谢
+
+biowarden 基于他人的工作构建：
+
+- [goldwarden](https://github.com/quexten/goldwarden) - MIT，Copyright (c) 2023 Bernd Schoolmann。
+  登录、KDF 与加密实现参考并移植了其中部分代码。
+- [WardenBio](https://github.com/xVanTuring/WardenBio) - biowarden 移植的 macOS/Swift 实现。
+- [bw-bio-handler](https://github.com/quexten/bw-bio-handler) - 旧命令协议。
+
+依赖及其许可证：
+
+- [github.com/danieljoos/wincred](https://github.com/danieljoos/wincred) v1.2.3 - MIT
+- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.4.8 - MIT
+- [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.48.0 - BSD-3-Clause
+- [github.com/ebitengine/purego](https://github.com/ebitengine/purego) v0.11.1 - Apache-2.0
+- [github.com/go-text/typesetting](https://github.com/go-text/typesetting) v0.3.5 - Unlicense 或
+  BSD-3-Clause
+- [golang.org/x/image](https://cs.opensource.google/go/x/image) v0.46.0 - BSD-3-Clause
+
+完整许可证文本与版权行见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。

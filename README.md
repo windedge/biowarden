@@ -135,3 +135,25 @@ internal/ui/            GUI (tray + browsers / keys / settings / log pages)
 ```
 
 Reference implementations: WardenBio (macOS/Swift), bw-bio-handler, goldwarden.
+
+## Credits
+
+biowarden stands on the work of others:
+
+- [goldwarden](https://github.com/quexten/goldwarden) - MIT, Copyright (c) 2023 Bernd Schoolmann.
+  The login, KDF and encryption implementation is referenced and partly ported from it.
+- [WardenBio](https://github.com/xVanTuring/WardenBio) - the macOS/Swift implementation biowarden
+  is a Windows port of.
+- [bw-bio-handler](https://github.com/quexten/bw-bio-handler) - the legacy command protocol.
+
+Dependencies and their licenses:
+
+- [github.com/danieljoos/wincred](https://github.com/danieljoos/wincred) v1.2.3 - MIT
+- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.4.8 - MIT
+- [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.48.0 - BSD-3-Clause
+- [github.com/ebitengine/purego](https://github.com/ebitengine/purego) v0.11.1 - Apache-2.0
+- [github.com/go-text/typesetting](https://github.com/go-text/typesetting) v0.3.5 - Unlicense OR
+  BSD-3-Clause
+- [golang.org/x/image](https://cs.opensource.google/go/x/image) v0.46.0 - BSD-3-Clause
+
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for full license texts and copyright lines.
