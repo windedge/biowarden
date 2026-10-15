@@ -181,19 +181,26 @@ func (s *keysState) applyRemove(id string, err error) {
 	s.noticeOK = true
 }
 
-// extractSnippet is the reference implementation's extraction script verbatim:
-// read the extension's session storage for the user key entry and print
-// userId and keyB64 as JSON. If a future extension update changes the
-// storage layout, this is the first thing to re-check.
-const extractSnippet = `// biowarden: extract the user key from the unlocked extension
-chrome.storage.session.get(null, d => {
-  for (const [k, v] of Object.entries(d)) {
-    const m = k.match(/^user_([^_]+)_crypto_userKey$/);
-    if (m) {
-      const inner = JSON.parse(v.value ?? "{}");
-      const entry = inner[""] ?? Object.values(inner)[0];
-      console.log(JSON.stringify({ userId: m[1], keyB64: entry.keyB64 }));
-    }
+// extractSnippet mirrors the reference implementation's script, updated for
+// the 2026.8.x extension: state values are wrapped as {__json__,value}, the
+// key may sit in session (unlocked) or in local under <userId>_user_auto
+// ("never lock" policy), and a miss must tell the user why instead of
+// printing nothing.
+const extractSnippet = `// biowarden: 从已解锁的扩展里取出账号密钥（配合 GUI 密钥页录入）
+// 前提：扩展处于已解锁状态。找不到时会打印原因。
+(async () => {
+  const uw = (v) => v && v.__json__ ? JSON.parse(v.value) : v;
+  const found = [];
+  for (const [k, v] of Object.entries(await chrome.storage.session.get(null))) {
+    const m = k.match(/^user_(.+)_crypto_userKey$/);
+    if (m) { const val = uw(v); found.push({ userId: m[1], keyB64: val.keyB64 ?? val }); }
   }
-});
+  if (!found.length)
+    for (const [k, v] of Object.entries(await chrome.storage.local.get(null))) {
+      const m = k.match(/^(.+)_user_auto$/);
+      if (m) found.push({ userId: m[1], keyB64: uw(v) });
+    }
+  if (found.length) console.table(found);
+  else console.log("未找到 userKey：扩展可能处于锁定状态（session 无记录），或未开启「从不锁定」策略（local 无 _user_auto 记录）。");
+})();
 `

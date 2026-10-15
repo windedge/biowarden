@@ -30,6 +30,7 @@
 - [ ] Chrome/Edge：`chrome://extensions` → 开发者模式 → Bitwarden → 「服务工作进程」打开控制台
 - [ ] Firefox：`about:debugging#/runtime/this-firefox` → Bitwarden → 「检查」
 - [ ] 密钥页「复制提取脚本」→ 粘贴到控制台回车 → 输出 `{userId, keyB64}`
+- [ ] 注意：扩展需处于已解锁状态；Bitwarden 2026.8.x 的键在 chrome.storage.session（{__json__} 包装）或 local（「从不锁定」时 <userId>_user_auto），脚本已兼容；2026.1.x 及更早版本的旧键名脚本找不到属正常
 - [ ] 粘贴两个值 → 「保存并验证」→ 弹出 Windows Hello → 刷脸/指纹通过 → 账户进列表，notice 绿色
 - [ ] 「测试解锁」→ 再弹一次 Hello → 通过
 - [ ] 列表行显示 userId（截断+悬停全文）与创建时间
@@ -57,6 +58,7 @@
 - [ ] 每格：Hello **通过** → 扩展解锁成功，能进密码库
 - [ ] 每格：Hello **取消**（Esc/关窗）→ 扩展保持锁定，弹窗不转圈（转圈 = 协议应答形状错，立即停记现象）
 - [ ] 拒绝后立刻重试 → 仍能再弹 Hello
+- [ ] Hello 通过后焦点归还浏览器（官方桌面端有 restore_focus；若弹窗后浏览器无法继续输入/自动填充，记录现象）
 - [ ] 三浏览器各自 host.log（`%LOCALAPPDATA%\biowarden\host.log`）有完整记录且**搜不到 keyB64 明文**（脱敏断言）
 - [ ] 录入的账户在 GUI 删除（需 Hello 确认）→ 扩展再解锁应失败（密钥已删）
 
