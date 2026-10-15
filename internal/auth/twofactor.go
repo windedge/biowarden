@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"sort"
 	"strconv"
 )
@@ -224,7 +225,9 @@ type sendEmailLoginRequest struct {
 
 // SendEmailLogin triggers POST {api}/two-factor/send-email-login, which mails
 // the 2FA code for provider 1. masterPasswordHash may be required by the
-// server and is the same value as in the token request.
+// server and is the same value as in the token request. The request carries
+// the base64url Auth-Email header, which goldwarden also sends
+// (cli/agent/bitwarden/http.go:54).
 func (c *Client) SendEmailLogin(ctx context.Context, email, masterPasswordHash string) error {
 	if email == "" {
 		return errors.New("auth: send email login: empty email")
@@ -234,5 +237,7 @@ func (c *Client) SendEmailLogin(ctx context.Context, email, masterPasswordHash s
 		MasterPasswordHash: masterPasswordHash,
 		DeviceIdentifier:   c.deviceID,
 	}
-	return c.postJSON(ctx, c.apiURL("/two-factor/send-email-login"), body, nil)
+	return c.postJSON(ctx, c.apiURL("/two-factor/send-email-login"), body, nil, func(req *http.Request) {
+		setAuthEmail(req, email)
+	})
 }

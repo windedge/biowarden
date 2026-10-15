@@ -143,8 +143,10 @@ func (c *Client) postForm(ctx context.Context, rawurl string, form url.Values, o
 	return decodeJSON(body, out)
 }
 
-// postJSON sends a JSON body and decodes a JSON response into out.
-func (c *Client) postJSON(ctx context.Context, rawurl string, in any, out any) error {
+// postJSON sends a JSON body and decodes a JSON response into out. decorate,
+// when non-nil, runs after the desktop identity headers so a caller can add
+// endpoint-specific headers (for example Auth-Email).
+func (c *Client) postJSON(ctx context.Context, rawurl string, in any, out any, decorate ...func(*http.Request)) error {
 	buf := new(bytes.Buffer)
 	if err := json.NewEncoder(buf).Encode(in); err != nil {
 		return fmt.Errorf("%w: encode request: %v", ErrServer, err)
@@ -155,6 +157,9 @@ func (c *Client) postJSON(ctx context.Context, rawurl string, in any, out any) e
 	}
 	req.Header.Set("Content-Type", "application/json")
 	c.applyHeaders(req)
+	for _, d := range decorate {
+		d(req)
+	}
 	return c.decode(req, out)
 }
 

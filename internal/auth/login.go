@@ -203,7 +203,10 @@ func (f *LoginFlow) sendPasswordGrant(ctx context.Context, submission TwoFactorS
 		Remember:           submission.Remember,
 	}
 	resp, err := f.client.Login(ctx, req)
-	if errors.Is(err, ErrTwoFactorRequired) {
+	// A two-factor error without a challenge cannot be answered or retried;
+	// fall through so the caller receives the error instead of a dead-end
+	// NeedTwoFactor state.
+	if errors.Is(err, ErrTwoFactorRequired) && resp.Challenge != nil {
 		f.state = LoginNeedTwoFactor
 		f.challenge = resp.Challenge
 		return LoginResult{State: LoginNeedTwoFactor, Challenge: resp.Challenge}, nil

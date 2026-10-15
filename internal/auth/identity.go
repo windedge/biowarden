@@ -189,16 +189,39 @@ func (c *Client) preloginLegacy(ctx context.Context, email string) (KdfParams, e
 	return params, nil
 }
 
-// validate rejects KDF parameters that cannot produce a key.
+// Prelogin KDF minimums, copied from the official client's
+// validateKdfConfigForPrelogin:
+//   - PBKDF2 iterations >= 5000
+//     (libs/legacy-crypto/src/models/kdf-config.ts:19,46-52)
+//   - Argon2id iterations >= 2, memory >= 16 MiB, parallelism >= 1
+//     (libs/legacy-crypto/src/models/kdf-config.ts:75-77,126-144)
+//
+// A server advertising less may be mounting a pre-login downgrade: the client
+// would derive a weak master key from the real master password.
+const (
+	preloginPBKDF2IterationsMin  uint32 = 5000
+	preloginArgon2IterationsMin  uint32 = 2
+	preloginArgon2MemoryMin      uint32 = 16
+	preloginArgon2ParallelismMin uint8  = 1
+)
+
+// validate rejects KDF parameters that cannot produce a key, or that fall
+// below the prelogin minimums the official client enforces.
 func (p KdfParams) validate() error {
 	switch p.Type {
 	case KdfPBKDF2SHA256:
-		if p.Iterations == 0 {
-			return errors.New("prelogin response has zero PBKDF2 iterations")
+		if p.Iterations < preloginPBKDF2IterationsMin {
+			return fmt.Errorf("prelogin response has %d PBKDF2 iterations, want at least %d (possible pre-login downgrade attack)", p.Iterations, preloginPBKDF2IterationsMin)
 		}
 	case KdfArgon2id:
-		if p.Iterations == 0 || p.Memory == 0 || p.Parallelism == 0 {
-			return errors.New("prelogin response has an incomplete Argon2id configuration")
+		if p.Iterations < preloginArgon2IterationsMin {
+			return fmt.Errorf("prelogin response has %d Argon2id iterations, want at least %d (possible pre-login downgrade attack)", p.Iterations, preloginArgon2IterationsMin)
+		}
+		if p.Memory < preloginArgon2MemoryMin {
+			return fmt.Errorf("prelogin response has %d MiB Argon2id memory, want at least %d (possible pre-login downgrade attack)", p.Memory, preloginArgon2MemoryMin)
+		}
+		if p.Parallelism < preloginArgon2ParallelismMin {
+			return fmt.Errorf("prelogin response has %d Argon2id parallelism, want at least %d (possible pre-login downgrade attack)", p.Parallelism, preloginArgon2ParallelismMin)
 		}
 	default:
 		return fmt.Errorf("unsupported KDF type %d", p.Type)
@@ -239,7 +262,15 @@ func (c *Client) Login(ctx context.Context, req TokenRequest) (TokenResponse, er
 	body, err := c.postFormBody(ctx, c.identityURL("/connect/token"), form)
 	if err != nil {
 		if errors.Is(err, ErrTwoFactorRequired) {
-			return TokenResponse{Challenge: parseTwoFactorChallenge(body)}, err
+			challenge := parseTwoFactorChallenge(body)
+			if challenge == nil {
+				// The server's message classified as 2FA but the body carried no
+				// provider list. Returning a challenge-less response would leave
+				// the caller in a state it can neither answer nor retry, so keep
+				// the error and make the cause explicit.
+				return TokenResponse{}, fmt.Errorf("%w: the response has no two-factor provider list", err)
+			}
+			return TokenResponse{Challenge: challenge}, err
 		}
 		return TokenResponse{}, err
 	}

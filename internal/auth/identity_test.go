@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -137,6 +138,63 @@ func TestPreloginRejectsBadResponses(t *testing.T) {
 	}
 }
 
+func TestKdfParamsValidateMinimums(t *testing.T) {
+	cases := []struct {
+		name    string
+		params  KdfParams
+		wantErr bool
+	}{
+		// PBKDF2 lower bound: 5000 (kdf-config.ts:19,46-52).
+		{"pbkdf2 at the 5000 minimum", KdfParams{Type: KdfPBKDF2SHA256, Iterations: 5000}, false},
+		{"pbkdf2 one below the 5000 minimum", KdfParams{Type: KdfPBKDF2SHA256, Iterations: 4999}, true},
+		{"pbkdf2 zero iterations", KdfParams{Type: KdfPBKDF2SHA256, Iterations: 0}, true},
+		// Argon2id lower bounds: iterations 2, memory 16 MiB, parallelism 1
+		// (kdf-config.ts:75-77,126-144).
+		{"argon2id at every minimum", KdfParams{Type: KdfArgon2id, Iterations: 2, Memory: 16, Parallelism: 1}, false},
+		{"argon2id one iteration below", KdfParams{Type: KdfArgon2id, Iterations: 1, Memory: 16, Parallelism: 1}, true},
+		{"argon2id one MiB below", KdfParams{Type: KdfArgon2id, Iterations: 2, Memory: 15, Parallelism: 1}, true},
+		{"argon2id one lane below", KdfParams{Type: KdfArgon2id, Iterations: 2, Memory: 16, Parallelism: 0}, true},
+		{"unsupported kdf type", KdfParams{Type: KdfType(9), Iterations: 5000}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.params.validate()
+			if tc.wantErr && err == nil {
+				t.Fatal("validate() = nil error, want a rejection")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("validate() = %v, want nil", err)
+			}
+		})
+	}
+}
+
+func TestPreloginRejectsDowngradedKdf(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"pbkdf2 below the minimum", `{"KdfSettings":{"KdfType":0,"Iterations":4999},"Salt":"s"}`},
+		{"argon2id below the iteration minimum", `{"KdfSettings":{"KdfType":1,"Iterations":1,"Memory":16,"Parallelism":1},"Salt":"s"}`},
+		{"argon2id below the memory minimum", `{"KdfSettings":{"KdfType":1,"Iterations":2,"Memory":15,"Parallelism":1},"Salt":"s"}`},
+		{"argon2id below the parallelism minimum", `{"KdfSettings":{"KdfType":1,"Iterations":2,"Memory":16,"Parallelism":0},"Salt":"s"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/identity/accounts/prelogin/password" {
+					_, _ = w.Write([]byte(tc.body))
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			})
+			if _, err := client.Prelogin(context.Background(), "ada@example.com"); err == nil {
+				t.Fatal("Prelogin() = nil error, want a downgrade rejection")
+			}
+		})
+	}
+}
+
 func TestLoginSuccess(t *testing.T) {
 	var gotForm map[string]string
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -242,6 +300,26 @@ func TestLoginTwoFactorChallengeFromMapOnly(t *testing.T) {
 	}
 	if resp.Challenge.Providers[0] != TwoFactorAuthenticator || resp.Challenge.Providers[1] != TwoFactorWebAuthn {
 		t.Errorf("Providers = %v, want numeric order [authenticator webauthn]", resp.Challenge.Providers)
+	}
+}
+
+// A 400 whose message classifies as a 2FA error but whose body has no provider
+// list cannot produce a challenge. Login must keep the error so the flow is
+// not stranded in NeedTwoFactor with Challenge == nil.
+func TestLoginTwoFactorWithoutProvidersKeepsError(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"twoFactorRequired"}`))
+	})
+	resp, err := client.Login(context.Background(), TokenRequest{Email: "ada@example.com", MasterPasswordHash: "hash"})
+	if err == nil {
+		t.Fatal("Login() = nil error, want the two-factor error kept")
+	}
+	if !errors.Is(err, ErrTwoFactorRequired) {
+		t.Fatalf("Login error = %v, want ErrTwoFactorRequired", err)
+	}
+	if resp.Challenge != nil {
+		t.Errorf("Challenge = %+v, want nil without a provider list", resp.Challenge)
 	}
 }
 
@@ -389,8 +467,10 @@ func TestProfileSendsBearerToken(t *testing.T) {
 func TestSendEmailLogin(t *testing.T) {
 	var gotPath string
 	var gotBody map[string]string
+	var gotAuthEmail string
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
+		gotAuthEmail = r.Header.Get(authEmailHeader)
 		_ = json.NewDecoder(r.Body).Decode(&gotBody)
 		_, _ = w.Write([]byte(`{}`))
 	})
@@ -399,6 +479,10 @@ func TestSendEmailLogin(t *testing.T) {
 	}
 	if gotPath != "/api/two-factor/send-email-login" {
 		t.Errorf("path = %q", gotPath)
+	}
+	wantAuthEmail := base64.RawURLEncoding.EncodeToString([]byte("ada@example.com"))
+	if gotAuthEmail != wantAuthEmail {
+		t.Errorf("%s = %q, want %q", authEmailHeader, gotAuthEmail, wantAuthEmail)
 	}
 	want := map[string]string{
 		"email":              "ada@example.com",

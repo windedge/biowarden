@@ -112,6 +112,39 @@ func TestLoginFlowTwoFactor(t *testing.T) {
 	}
 }
 
+// A two-factor 400 without a provider list must surface as a failure instead
+// of a dead-end NeedTwoFactor state with a nil challenge.
+func TestLoginFlowTwoFactorWithoutProvidersFails(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/identity/accounts/prelogin/password":
+			_, _ = w.Write([]byte(`{"KdfSettings":{"KdfType":0,"Iterations":5000},"Salt":"user@example.com"}`))
+		case "/identity/connect/token":
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"twoFactorRequired"}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+	})
+	flow := NewLoginFlow(client, nil, nil, nil)
+	if _, err := flow.Start(context.Background(), "user@example.com"); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	result, err := flow.Continue(context.Background(), LoginInput{Password: "password"})
+	if err == nil {
+		t.Fatal("Continue() = nil error, want the challenge-less two-factor error kept")
+	}
+	if !errors.Is(err, ErrTwoFactorRequired) {
+		t.Errorf("Continue error = %v, want ErrTwoFactorRequired in the chain", err)
+	}
+	if result.State != LoginFailed {
+		t.Errorf("state = %s, want failed", result.State)
+	}
+	if result.Challenge != nil {
+		t.Errorf("Challenge = %+v, want nil", result.Challenge)
+	}
+}
+
 func TestLoginFlowRejectsEmptyEmail(t *testing.T) {
 	flow := NewLoginFlow(loginServer(t, false), nil, nil, nil)
 	if _, err := flow.Start(context.Background(), "   "); err == nil {
