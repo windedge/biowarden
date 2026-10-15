@@ -54,6 +54,14 @@ type LoginInput struct {
 	TwoFactor *TwoFactorSubmission
 }
 
+// UserKey is the account's 64-byte symmetric key, the secret every vault item
+// is encrypted with. It is a named type rather than a bare []byte so a stray
+// %v prints the redacted String below instead of the raw key, like MasterKey.
+type UserKey []byte
+
+// String redacts the key so it cannot reach a log through %v.
+func (UserKey) String() string { return "auth.UserKey(<redacted>)" }
+
 // LoginResult is the outcome of one step.
 type LoginResult struct {
 	// State is the next state to act on.
@@ -64,7 +72,7 @@ type LoginResult struct {
 	Token TokenResponse
 	// UserKey is the 64-byte account key when State is LoginDone. It is
 	// secret: never log it, and never persist it outside secrets.Store.
-	UserKey []byte
+	UserKey UserKey
 	// Account is the account metadata for the stored key, taken from the
 	// profile once the token is valid.
 	Account secrets.Account

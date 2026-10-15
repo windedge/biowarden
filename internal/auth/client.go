@@ -34,6 +34,15 @@ const (
 	// UserAgent is the desktop User-Agent. The official desktop sends an
 	// Electron UA; this is its stable, identifying part.
 	UserAgent = "Bitwarden/desktop v" + ClientVersion + " (Windows)"
+	// PackageType is the Bitwarden-Package-Type header value. The official
+	// desktop sends it on every request through applyPlatformHeaders
+	// (libs/common/src/services/api.service.ts:1330-1332). packageType()
+	// returns "WindowsStore" for the Store build and "WindowsUnknown" for a
+	// non-Store Windows desktop install
+	// (apps/desktop/src/platform/services/electron-platform-utils.service.ts:162-163
+	// and :170-171). biowarden is a non-Store Windows desktop, so it sends
+	// WindowsUnknown.
+	PackageType = "WindowsUnknown"
 )
 
 // authEmailHeader carries the base64url email on identity requests that need
@@ -47,8 +56,16 @@ var (
 	// these stubs.
 	ErrNotImplemented = errors.New("auth: not implemented yet")
 	// ErrUnauthorized is a rejected credential: HTTP 401, or a prelogin /
-	// token request the server refused.
+	// token request the server refused. A wrong password arrives as HTTP 400
+	// invalid_grant and is mapped here too.
 	ErrUnauthorized = errors.New("auth: unauthorized")
+	// ErrForbidden is an authenticated-but-refused request: HTTP 403. The
+	// official identity answers a wrong password with 400 invalid_grant, so a
+	// 403 is not a bad credential but a blocked account or an expired
+	// session; folding it into ErrUnauthorized would tell the user to re-enter
+	// the password. It stays distinct from ErrServer so callers can still tell
+	// a policy refusal from a transport or server fault.
+	ErrForbidden = errors.New("auth: forbidden")
 	// ErrTwoFactorRequired means the token endpoint wants a second factor;
 	// the response carries the offered providers.
 	ErrTwoFactorRequired = errors.New("auth: two-factor required")
@@ -101,6 +118,7 @@ func (c *Client) applyHeaders(req *http.Request) {
 	req.Header.Set("Device-Type", DeviceType)
 	req.Header.Set("Bitwarden-Client-Name", ClientType)
 	req.Header.Set("Bitwarden-Client-Version", ClientVersion)
+	req.Header.Set("Bitwarden-Package-Type", PackageType)
 }
 
 // setAuthEmail adds the base64url-encoded email header some 2FA endpoints
@@ -218,8 +236,10 @@ func classifyResponse(resp *http.Response, body []byte) error {
 		return fmt.Errorf("%w: %s", ErrTwoFactorRequired, statusDetail(resp))
 	}
 	switch {
-	case resp.StatusCode == http.StatusUnauthorized, resp.StatusCode == http.StatusForbidden:
+	case resp.StatusCode == http.StatusUnauthorized:
 		return fmt.Errorf("%w: %s", ErrUnauthorized, statusDetail(resp))
+	case resp.StatusCode == http.StatusForbidden:
+		return fmt.Errorf("%w: %s", ErrForbidden, statusDetail(resp))
 	case resp.StatusCode >= 500:
 		return fmt.Errorf("%w: %s", ErrServer, statusDetail(resp))
 	default:

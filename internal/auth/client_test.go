@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -33,8 +35,10 @@ func TestClientSendsDesktopIdentityHeaders(t *testing.T) {
 	var gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got = r.Header.Clone()
-		body := make([]byte, r.ContentLength)
-		_, _ = r.Body.Read(body)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read request body: %v", err)
+		}
 		gotBody = string(body)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"ok":true}`))
@@ -63,6 +67,7 @@ func TestClientSendsDesktopIdentityHeaders(t *testing.T) {
 		"Device-Type":              DeviceType,
 		"Bitwarden-Client-Name":    ClientType,
 		"Bitwarden-Client-Version": ClientVersion,
+		"Bitwarden-Package-Type":   PackageType,
 		"Accept":                   "application/json",
 		"Content-Type":             "application/x-www-form-urlencoded; charset=utf-8",
 	}
@@ -91,6 +96,44 @@ func TestClientIdentityConstantsMatchContract(t *testing.T) {
 	}
 	if DeviceName != "windows" {
 		t.Errorf("DeviceName = %q, want windows", DeviceName)
+	}
+	if PackageType != "WindowsUnknown" {
+		t.Errorf("PackageType = %q, want WindowsUnknown (non-Store Windows desktop)", PackageType)
+	}
+}
+
+func TestTokenResponseRedactsSecrets(t *testing.T) {
+	const accessToken = "access-token-value-4321"
+	const refreshToken = "refresh-token-value-8765"
+	const twoFactorToken = "two-factor-token-value-1234"
+	resp := TokenResponse{
+		AccessToken:    accessToken,
+		RefreshToken:   refreshToken,
+		TwoFactorToken: twoFactorToken,
+	}
+	printed := fmt.Sprintf("%v", resp)
+	if want := "auth.TokenResponse(<redacted>)"; printed != want {
+		t.Errorf("TokenResponse String() = %q, want %q", printed, want)
+	}
+	for _, secret := range []string{accessToken, refreshToken, twoFactorToken} {
+		if strings.Contains(printed, secret) {
+			t.Errorf("TokenResponse %q leaks %q", printed, secret)
+		}
+	}
+}
+
+func TestUserKeyRedactsBytes(t *testing.T) {
+	key := UserKey([]byte("0123456789abcdef0123456789abcdef"))
+	printed := fmt.Sprintf("%v", key)
+	if want := "auth.UserKey(<redacted>)"; printed != want {
+		t.Errorf("UserKey String() = %q, want %q", printed, want)
+	}
+	if strings.Contains(printed, "0123456789abcdef") {
+		t.Errorf("UserKey %q leaks the raw key", printed)
+	}
+	result := fmt.Sprintf("%v", LoginResult{UserKey: key})
+	if strings.Contains(result, "0123456789abcdef") {
+		t.Errorf("LoginResult %q leaks the raw user key", result)
 	}
 }
 
@@ -122,7 +165,8 @@ func TestClassifyResponse(t *testing.T) {
 		{"ok", http.StatusOK, `{}`, nil},
 		{"created", http.StatusCreated, `{}`, nil},
 		{"unauthorized", http.StatusUnauthorized, ``, ErrUnauthorized},
-		{"forbidden", http.StatusForbidden, ``, ErrUnauthorized},
+		{"forbidden", http.StatusForbidden, ``, ErrForbidden},
+		{"forbidden with body", http.StatusForbidden, `{"error":"forbidden"}`, ErrForbidden},
 		{"invalid grant", http.StatusBadRequest, `{"error":"invalid_grant"}`, ErrUnauthorized},
 		{"two factor required", http.StatusBadRequest, `{"TwoFactorProviders2":{"0":{"challenge":"x"}}}`, ErrTwoFactorRequired},
 		{"captcha message", http.StatusBadRequest, `{"ErrorModel":{"Message":"Captcha required."}}`, ErrCaptchaRequired},

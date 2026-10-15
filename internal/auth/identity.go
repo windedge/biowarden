@@ -53,6 +53,10 @@ type TokenResponse struct {
 	Challenge *TwoFactorChallenge
 }
 
+// String redacts the bearer tokens and the wrapped key material so they
+// cannot reach a log through %v or fmt.Sprintf.
+func (TokenResponse) String() string { return "auth.TokenResponse(<redacted>)" }
+
 // Profile is the subset of {api}/accounts/profile the login flow uses.
 type Profile struct {
 	ID    string `json:"Id"`
