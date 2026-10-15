@@ -1,0 +1,253 @@
+package auth
+
+import (
+	"context"
+	"encoding/base64"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+)
+
+func TestClientEndpointURLs(t *testing.T) {
+	cfg, err := NewServerConfig("https://vault.example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := NewClient(cfg, "device-123")
+	if got := c.identityURL("/connect/token"); got != "https://vault.example.com/identity/connect/token" {
+		t.Errorf("identityURL() = %q", got)
+	}
+	if got := c.apiURL("/accounts/profile"); got != "https://vault.example.com/api/accounts/profile" {
+		t.Errorf("apiURL() = %q", got)
+	}
+	if got := c.DeviceID(); got != "device-123" {
+		t.Errorf("DeviceID() = %q", got)
+	}
+}
+
+func TestClientSendsDesktopIdentityHeaders(t *testing.T) {
+	var got http.Header
+	var gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.Header.Clone()
+		body := make([]byte, r.ContentLength)
+		_, _ = r.Body.Read(body)
+		gotBody = string(body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	cfg, err := NewServerConfig(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := NewClient(cfg, "device-123")
+	var out struct {
+		OK bool `json:"ok"`
+	}
+	if err := c.postForm(context.Background(), c.identityURL("/connect/token"), url.Values{
+		"client_id":  {ClientID},
+		"grant_type": {"password"},
+	}, &out); err != nil {
+		t.Fatalf("postForm: %v", err)
+	}
+	if !out.OK {
+		t.Error("response not decoded into out")
+	}
+
+	checks := map[string]string{
+		"Device-Type":              DeviceType,
+		"Bitwarden-Client-Name":    ClientType,
+		"Bitwarden-Client-Version": ClientVersion,
+		"Accept":                   "application/json",
+		"Content-Type":             "application/x-www-form-urlencoded; charset=utf-8",
+	}
+	for header, want := range checks {
+		if gotValue := got.Get(header); gotValue != want {
+			t.Errorf("header %s = %q, want %q", header, gotValue, want)
+		}
+	}
+	if ua := got.Get("User-Agent"); !strings.Contains(ua, "desktop") {
+		t.Errorf("User-Agent = %q, want a desktop UA", ua)
+	}
+	if !strings.Contains(gotBody, "client_id=desktop") {
+		t.Errorf("form body = %q, want client_id=desktop", gotBody)
+	}
+}
+
+func TestClientIdentityConstantsMatchContract(t *testing.T) {
+	if ClientID != "desktop" {
+		t.Errorf("ClientID = %q, want desktop", ClientID)
+	}
+	if ClientType != "desktop" {
+		t.Errorf("ClientType = %q, want desktop", ClientType)
+	}
+	if DeviceType != "6" {
+		t.Errorf("DeviceType = %q, want 6 (WindowsDesktop)", DeviceType)
+	}
+	if DeviceName != "windows" {
+		t.Errorf("DeviceName = %q, want windows", DeviceName)
+	}
+}
+
+func TestSetAuthEmailHeaderIsBase64URL(t *testing.T) {
+	req, err := http.NewRequest(http.MethodPost, "https://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	setAuthEmail(req, "ada@example.com")
+	want := base64.RawURLEncoding.EncodeToString([]byte("ada@example.com"))
+	if got := req.Header.Get(authEmailHeader); got != want {
+		t.Errorf("%s = %q, want %q", authEmailHeader, got, want)
+	}
+
+	empty, _ := http.NewRequest(http.MethodPost, "https://example.com", nil)
+	setAuthEmail(empty, "")
+	if got := empty.Header.Get(authEmailHeader); got != "" {
+		t.Errorf("%s = %q, want empty", authEmailHeader, got)
+	}
+}
+
+func TestClassifyResponse(t *testing.T) {
+	cases := []struct {
+		name   string
+		status int
+		body   string
+		want   error
+	}{
+		{"ok", http.StatusOK, `{}`, nil},
+		{"created", http.StatusCreated, `{}`, nil},
+		{"unauthorized", http.StatusUnauthorized, ``, ErrUnauthorized},
+		{"forbidden", http.StatusForbidden, ``, ErrUnauthorized},
+		{"invalid grant", http.StatusBadRequest, `{"error":"invalid_grant"}`, ErrUnauthorized},
+		{"two factor required", http.StatusBadRequest, `{"TwoFactorProviders2":{"0":{"challenge":"x"}}}`, ErrTwoFactorRequired},
+		{"captcha message", http.StatusBadRequest, `{"ErrorModel":{"Message":"Captcha required."}}`, ErrCaptchaRequired},
+		{"captcha field", http.StatusBadRequest, `{"CaptchaRequired":true}`, ErrCaptchaRequired},
+		{"server error", http.StatusInternalServerError, ``, ErrServer},
+		{"bad request", http.StatusBadRequest, `{"ErrorModel":{"Message":"nope"}}`, ErrServer},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := &http.Response{StatusCode: tc.status, Status: http.StatusText(tc.status)}
+			got := classifyResponse(resp, []byte(tc.body))
+			if tc.want == nil {
+				if got != nil {
+					t.Fatalf("classifyResponse() = %v, want nil", got)
+				}
+				return
+			}
+			if !errors.Is(got, tc.want) {
+				t.Fatalf("classifyResponse() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestClientMapsErrorStatusToSentinel(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+
+	cfg, err := NewServerConfig(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := NewClient(cfg, "device-123")
+	err = c.getJSON(context.Background(), c.apiURL("/accounts/profile"), nil)
+	if !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("getJSON error = %v, want ErrUnauthorized", err)
+	}
+}
+
+func TestClientMapsTransportFailureToNetworkError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	cfg, err := NewServerConfig(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv.Close()
+
+	c := NewClient(cfg, "device-123")
+	err = c.getJSON(context.Background(), c.apiURL("/accounts/profile"), nil)
+	if !errors.Is(err, ErrNetwork) {
+		t.Fatalf("getJSON error = %v, want ErrNetwork", err)
+	}
+}
+
+func TestStubsReturnNotImplemented(t *testing.T) {
+	cfg := DefaultServerConfig()
+	c := NewClient(cfg, "device-123")
+	ctx := context.Background()
+
+	if _, err := c.Prelogin(ctx, "ada@example.com"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("Prelogin() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := c.Login(ctx, TokenRequest{}); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("Login() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := c.Refresh(ctx, "refresh"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("Refresh() = %v, want ErrNotImplemented", err)
+	}
+	if err := c.Logout(ctx, "token"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("Logout() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := c.Profile(ctx, "token"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("Profile() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := DeriveMasterKey(KdfParams{}, "pw"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("DeriveMasterKey() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := MasterPasswordHash(nil, "pw"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("MasterPasswordHash() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := StretchMasterKey(nil); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("StretchMasterKey() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := DecodeEncString("2.iv|ct|mac"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("DecodeEncString() = %v, want ErrNotImplemented", err)
+	}
+	if _, err := UnlockUserKey(nil, EncString{}); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("UnlockUserKey() = %v, want ErrNotImplemented", err)
+	}
+	if err := c.SendEmailLogin(ctx, "ada@example.com", "hash"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("SendEmailLogin() = %v, want ErrNotImplemented", err)
+	}
+}
+
+func TestTwoFactorProvidersMatchContract(t *testing.T) {
+	cases := map[TwoFactorProvider]int{
+		TwoFactorAuthenticator:   0,
+		TwoFactorEmail:           1,
+		TwoFactorDuo:             2,
+		TwoFactorYubiKey:         3,
+		TwoFactorRemember:        5,
+		TwoFactorOrganizationDuo: 6,
+		TwoFactorWebAuthn:        7,
+		TwoFactorRecoveryCode:    8,
+	}
+	for provider, want := range cases {
+		if int(provider) != want {
+			t.Errorf("provider %s = %d, want %d", provider, int(provider), want)
+		}
+	}
+}
+
+func TestTwoFactorChallengeHas(t *testing.T) {
+	ch := &TwoFactorChallenge{Providers: []TwoFactorProvider{TwoFactorAuthenticator, TwoFactorEmail}}
+	if !ch.Has(TwoFactorAuthenticator) || !ch.Has(TwoFactorEmail) {
+		t.Error("Has() false for an offered provider")
+	}
+	if ch.Has(TwoFactorWebAuthn) {
+		t.Error("Has() true for a provider that was not offered")
+	}
+	var nilChallenge *TwoFactorChallenge
+	if nilChallenge.Has(TwoFactorEmail) {
+		t.Error("Has() true on a nil challenge")
+	}
+}
