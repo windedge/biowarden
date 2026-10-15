@@ -1,6 +1,14 @@
 package auth
 
-import "context"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+)
 
 // TokenRequest is the password grant body sent to {identity}/connect/token.
 // The field names are the wire form names: token requests are
@@ -64,6 +72,38 @@ type Profile struct {
 	Name  string `json:"Name"`
 }
 
+// preloginRequest is the JSON body both prelogin variants accept.
+type preloginRequest struct {
+	Email string `json:"email"`
+}
+
+// kdfSettingsResponse is the KDF block of the new password prelogin response.
+// Pointers distinguish a missing field from a legitimate zero.
+type kdfSettingsResponse struct {
+	KdfType     *int    `json:"KdfType"`
+	Iterations  *uint32 `json:"Iterations"`
+	Memory      *uint32 `json:"Memory"`
+	Parallelism *uint8  `json:"Parallelism"`
+}
+
+// passwordPreloginResponse is
+// POST {identity}/accounts/prelogin/password.
+type passwordPreloginResponse struct {
+	KdfSettings kdfSettingsResponse `json:"KdfSettings"`
+	Salt        string              `json:"Salt"`
+}
+
+// legacyPreloginResponse is POST {identity}/accounts/prelogin. It has no
+// salt; the email supplies it. encoding/json matches the field names
+// case-insensitively, so both the PascalCase cloud response and the
+// all-caps curl examples decode.
+type legacyPreloginResponse struct {
+	Kdf            *int    `json:"Kdf"`
+	KdfIterations  *uint32 `json:"KdfIterations"`
+	KdfMemory      *uint32 `json:"KdfMemory"`
+	KdfParallelism *uint8  `json:"KdfParallelism"`
+}
+
 // Prelogin fetches the KDF parameters for email before a master key can be
 // derived.
 //
@@ -74,59 +114,209 @@ type Profile struct {
 // POST {identity}/accounts/prelogin, which returns KDF/KDFIterations/
 // KDFMemory/KDFParallelism and no salt; the salt is then the trimmed,
 // lowercased email.
-//
-// Contract only: returns ErrNotImplemented today.
 func (c *Client) Prelogin(ctx context.Context, email string) (KdfParams, error) {
-	_ = c
-	_ = ctx
-	_ = email
-	return KdfParams{}, ErrNotImplemented
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return KdfParams{}, errors.New("auth: prelogin: empty email")
+	}
+	params, err := c.preloginPassword(ctx, email)
+	if err == nil {
+		return params, nil
+	}
+	legacy, legacyErr := c.preloginLegacy(ctx, email)
+	if legacyErr != nil {
+		return KdfParams{}, fmt.Errorf("auth: prelogin: %w", legacyErr)
+	}
+	return legacy, nil
+}
+
+// preloginPassword reads the new password prelogin variant.
+func (c *Client) preloginPassword(ctx context.Context, email string) (KdfParams, error) {
+	var resp passwordPreloginResponse
+	if err := c.postJSON(ctx, c.identityURL("/accounts/prelogin/password"), preloginRequest{Email: email}, &resp); err != nil {
+		return KdfParams{}, err
+	}
+	if resp.KdfSettings.KdfType == nil || resp.KdfSettings.Iterations == nil {
+		return KdfParams{}, errors.New("prelogin response has no KDF settings")
+	}
+	params := KdfParams{
+		Type:       KdfType(*resp.KdfSettings.KdfType),
+		Iterations: *resp.KdfSettings.Iterations,
+		Salt:       resp.Salt,
+	}
+	if params.Type == KdfArgon2id {
+		if resp.KdfSettings.Memory == nil || resp.KdfSettings.Parallelism == nil {
+			return KdfParams{}, errors.New("prelogin argon2id response is missing memory or parallelism")
+		}
+		params.Memory = *resp.KdfSettings.Memory
+		params.Parallelism = *resp.KdfSettings.Parallelism
+	}
+	if err := params.validate(); err != nil {
+		return KdfParams{}, err
+	}
+	if params.Salt == "" {
+		return KdfParams{}, errors.New("prelogin password response has no salt")
+	}
+	return params, nil
+}
+
+// preloginLegacy reads the old prelogin variant, where the email is the salt.
+func (c *Client) preloginLegacy(ctx context.Context, email string) (KdfParams, error) {
+	var resp legacyPreloginResponse
+	if err := c.postJSON(ctx, c.identityURL("/accounts/prelogin"), preloginRequest{Email: email}, &resp); err != nil {
+		return KdfParams{}, err
+	}
+	if resp.Kdf == nil || resp.KdfIterations == nil {
+		return KdfParams{}, errors.New("prelogin response has no KDF settings")
+	}
+	params := KdfParams{
+		Type:       KdfType(*resp.Kdf),
+		Iterations: *resp.KdfIterations,
+		// The legacy variant has no salt, so it is the email trimmed and
+		// lowercased (legacy-compat-key.service.ts makeMasterKey).
+		Salt: strings.TrimSpace(strings.ToLower(email)),
+	}
+	if params.Type == KdfArgon2id {
+		if resp.KdfMemory == nil || resp.KdfParallelism == nil {
+			return KdfParams{}, errors.New("prelogin argon2id response is missing memory or parallelism")
+		}
+		params.Memory = *resp.KdfMemory
+		params.Parallelism = *resp.KdfParallelism
+	}
+	if err := params.validate(); err != nil {
+		return KdfParams{}, err
+	}
+	return params, nil
+}
+
+// validate rejects KDF parameters that cannot produce a key.
+func (p KdfParams) validate() error {
+	switch p.Type {
+	case KdfPBKDF2SHA256:
+		if p.Iterations == 0 {
+			return errors.New("prelogin response has zero PBKDF2 iterations")
+		}
+	case KdfArgon2id:
+		if p.Iterations == 0 || p.Memory == 0 || p.Parallelism == 0 {
+			return errors.New("prelogin response has an incomplete Argon2id configuration")
+		}
+	default:
+		return fmt.Errorf("unsupported KDF type %d", p.Type)
+	}
+	return nil
 }
 
 // Login posts the password grant to {identity}/connect/token.
 //
-// It must send client_id=desktop, deviceType=6, deviceName=windows,
+// It sends client_id=desktop, deviceType=6, deviceName=windows,
 // scope="api offline_access", grant_type="password" and the desktop identity
-// headers, and it must report a 400 carrying TwoFactorProviders2 as
-// ErrTwoFactorRequired with TokenResponse.Challenge filled in.
-//
-// Contract only: returns ErrNotImplemented today.
+// headers. A 400 carrying TwoFactorProviders2 is reported as
+// ErrTwoFactorRequired and the returned TokenResponse has Challenge filled in.
 func (c *Client) Login(ctx context.Context, req TokenRequest) (TokenResponse, error) {
-	_ = c
-	_ = ctx
-	_ = req
-	return TokenResponse{}, ErrNotImplemented
+	form := url.Values{
+		"scope":      {"api offline_access"},
+		"client_id":  {ClientID},
+		"deviceType": {DeviceType},
+		"deviceName": {DeviceName},
+		"grant_type": {"password"},
+		"username":   {req.Email},
+		"password":   {req.MasterPasswordHash},
+	}
+	deviceID := req.DeviceID
+	if deviceID == "" {
+		deviceID = c.deviceID
+	}
+	form.Set("deviceIdentifier", deviceID)
+	if req.TwoFactorToken != "" || req.TwoFactorProvider != 0 {
+		form.Set("twoFactorProvider", strconv.Itoa(int(req.TwoFactorProvider)))
+		form.Set("twoFactorToken", req.TwoFactorToken)
+		form.Set("twoFactorRemember", boolFormValue(req.Remember))
+	}
+	if req.NewDeviceOTP != "" {
+		form.Set("newDeviceOtp", req.NewDeviceOTP)
+	}
+
+	body, err := c.postFormBody(ctx, c.identityURL("/connect/token"), form)
+	if err != nil {
+		if errors.Is(err, ErrTwoFactorRequired) {
+			return TokenResponse{Challenge: parseTwoFactorChallenge(body)}, err
+		}
+		return TokenResponse{}, err
+	}
+	var out TokenResponse
+	if err := decodeJSON(body, &out); err != nil {
+		return TokenResponse{}, err
+	}
+	return out, nil
+}
+
+// postFormBody sends a form body and returns the raw response body even when
+// the server answered non-2xx, so Login can read a structured 2FA challenge.
+func (c *Client) postFormBody(ctx context.Context, rawurl string, form url.Values) ([]byte, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, rawurl, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrNetwork, err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	c.applyHeaders(httpReq)
+	return c.do(httpReq)
 }
 
 // Refresh exchanges a refresh token at the same {identity}/connect/token
-// endpoint with grant_type=refresh_token.
-//
-// Contract only: returns ErrNotImplemented today.
+// endpoint with grant_type=refresh_token. The official client refreshes with
+// the client_id decoded from the access token (api.service.ts
+// refreshAccessToken); biowarden always logs in as the desktop client, so it
+// reuses ClientID.
 func (c *Client) Refresh(ctx context.Context, refreshToken string) (TokenResponse, error) {
-	_ = c
-	_ = ctx
-	_ = refreshToken
-	return TokenResponse{}, ErrNotImplemented
+	if refreshToken == "" {
+		return TokenResponse{}, errors.New("auth: refresh: empty refresh token")
+	}
+	form := url.Values{
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {refreshToken},
+		"client_id":     {ClientID},
+	}
+	var out TokenResponse
+	if err := c.postForm(ctx, c.identityURL("/connect/token"), form, &out); err != nil {
+		return TokenResponse{}, err
+	}
+	return out, nil
 }
 
-// Logout clears the session. The official clients drop local state and do not
-// call a revocation endpoint; this is the seam for that local cleanup.
-//
-// Contract only: returns ErrNotImplemented today.
+// Logout clears the session. There is no endpoint to call: the official
+// clients drop local tokens and vault state on logout and never hit
+// {identity}/connect/revocation, and goldwarden likewise only purges its local
+// config. This method exists as the seam for local cleanup; the caller clears
+// the stored key through secrets.Store.Remove.
 func (c *Client) Logout(ctx context.Context, accessToken string) error {
-	_ = c
 	_ = ctx
 	_ = accessToken
-	return ErrNotImplemented
+	return nil
 }
 
 // Profile reads GET {api}/accounts/profile with a bearer token, to confirm
 // the account and obtain the user id.
-//
-// Contract only: returns ErrNotImplemented today.
 func (c *Client) Profile(ctx context.Context, accessToken string) (Profile, error) {
-	_ = c
-	_ = ctx
-	_ = accessToken
-	return Profile{}, ErrNotImplemented
+	if accessToken == "" {
+		return Profile{}, errors.New("auth: profile: empty access token")
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apiURL("/accounts/profile"), nil)
+	if err != nil {
+		return Profile{}, fmt.Errorf("%w: %v", ErrNetwork, err)
+	}
+	c.applyHeaders(httpReq)
+	httpReq.Header.Set("Authorization", "Bearer "+accessToken)
+	var out Profile
+	if err := c.decode(httpReq, &out); err != nil {
+		return Profile{}, err
+	}
+	return out, nil
+}
+
+// boolFormValue renders a form flag the way the identity server expects.
+func boolFormValue(v bool) string {
+	if v {
+		return "1"
+	}
+	return "0"
 }

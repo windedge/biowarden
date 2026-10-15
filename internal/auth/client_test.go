@@ -224,43 +224,20 @@ func TestClientMapsTransportFailureToNetworkError(t *testing.T) {
 	}
 }
 
-func TestStubsReturnNotImplemented(t *testing.T) {
-	cfg := DefaultServerConfig()
-	c := NewClient(cfg, "device-123")
+func TestUnsupportedSolverReturnsNotImplemented(t *testing.T) {
+	var solver UnsupportedSolver
 	ctx := context.Background()
-
-	if _, err := c.Prelogin(ctx, "ada@example.com"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("Prelogin() = %v, want ErrNotImplemented", err)
+	if _, err := solver.TOTP(ctx); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("TOTP() = %v, want ErrNotImplemented", err)
 	}
-	if _, err := c.Login(ctx, TokenRequest{}); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("Login() = %v, want ErrNotImplemented", err)
+	if _, err := solver.EmailCode(ctx, func(context.Context) error { return nil }); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("EmailCode() = %v, want ErrNotImplemented", err)
 	}
-	if _, err := c.Refresh(ctx, "refresh"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("Refresh() = %v, want ErrNotImplemented", err)
+	if _, err := solver.OpenBrowser(ctx, "https://example.com"); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("OpenBrowser() = %v, want ErrNotImplemented", err)
 	}
-	if err := c.Logout(ctx, "token"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("Logout() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := c.Profile(ctx, "token"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("Profile() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := DeriveMasterKey(KdfParams{}, "pw"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("DeriveMasterKey() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := MasterPasswordHash(nil, "pw"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("MasterPasswordHash() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := StretchMasterKey(nil); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("StretchMasterKey() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := DecodeEncString("2.iv|ct|mac"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("DecodeEncString() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := UnlockUserKey(nil, EncString{}); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("UnlockUserKey() = %v, want ErrNotImplemented", err)
-	}
-	if err := c.SendEmailLogin(ctx, "ada@example.com", "hash"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("SendEmailLogin() = %v, want ErrNotImplemented", err)
+	if _, err := solver.YubiKey(ctx); !errors.Is(err, ErrNotImplemented) {
+		t.Errorf("YubiKey() = %v, want ErrNotImplemented", err)
 	}
 }
 

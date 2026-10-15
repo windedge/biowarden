@@ -16,10 +16,10 @@
 // logs of its own and every type that carries key material redacts itself
 // under %v so a stray log line cannot leak a password or a key.
 //
-// Current ticket scope. This is the interface skeleton only: server URL
-// derivation and the HTTP/header layer are real, while identity, KDF and key
-// unlocking return ErrNotImplemented and are filled in by the core login
-// ticket. The contracts (endpoints, headers, KDF semantics, EncString type 2,
-// 2FA provider numbers) are fixed here so the implementation has one place to
-// look.
+// Current scope. The core password chain is real: server URL derivation, the
+// HTTP/header layer, prelogin (both variants), the KDF (PBKDF2-SHA256 and
+// Argon2id), EncString type 2 decoding and userKey unlocking, the token
+// request, refresh and profile. Two-factor answering is not wired to a UI
+// yet: the flow stops at LoginNeedTwoFactor and hands the challenge back.
+// ErrNotImplemented remains only on UnsupportedSolver.
 package auth

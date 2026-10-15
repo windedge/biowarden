@@ -2,6 +2,10 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/secrets"
@@ -93,21 +97,21 @@ type LoginResult struct {
 //
 // auth does not call either seam itself and holds only their interfaces, so
 // the GUI stays in charge of when consent is asked and when the key is
-// written. The two fields below exist so a later ticket can offer the same
-// wiring from inside the flow without changing this interface.
-//
-// Everything up to LoginDone is stubbed in this skeleton: Start and Continue
-// return ErrNotImplemented.
+// written. The verifier and store fields are unused until that wiring ticket;
+// they exist so the same interface keeps working.
 type LoginFlow struct {
 	client   *Client
 	solver   TwoFactorSolver
 	verifier hello.Verifier
 	store    secrets.Store
 
-	email     string
-	masterKey MasterKey
-	token     TokenResponse
-	challenge *TwoFactorChallenge
+	state              LoginState
+	email              string
+	params             KdfParams
+	masterKey          MasterKey
+	masterPasswordHash string
+	token              TokenResponse
+	challenge          *TwoFactorChallenge
 }
 
 // NewLoginFlow wires a flow's collaborators. client is required; solver
@@ -117,28 +121,127 @@ func NewLoginFlow(client *Client, solver TwoFactorSolver, verifier hello.Verifie
 	return &LoginFlow{client: client, solver: solver, verifier: verifier, store: store}
 }
 
-// Start begins a login for email. It returns a result in LoginNeedPassword.
-//
-// The real sequence is: Prelogin(email) -> DeriveMasterKey ->
-// MasterPasswordHash -> Login -> either LoginNeedTwoFactor or, on success,
-// UnlockUserKey -> Profile -> LoginDone.
-//
-// Contract only: returns ErrNotImplemented today.
+// Start begins a login for email and returns a result in LoginNeedPassword.
+// It fetches the KDF parameters now, so Continue can derive the master key
+// from the password without another round trip.
 func (f *LoginFlow) Start(ctx context.Context, email string) (LoginResult, error) {
-	_ = f
-	_ = ctx
-	_ = email
-	return LoginResult{State: LoginFailed}, ErrNotImplemented
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return LoginResult{State: LoginFailed}, errors.New("auth: login: empty email")
+	}
+	if f.client == nil {
+		return LoginResult{State: LoginFailed}, errors.New("auth: login: no client")
+	}
+	params, err := f.client.Prelogin(ctx, email)
+	if err != nil {
+		f.state = LoginFailed
+		return LoginResult{State: LoginFailed}, err
+	}
+	f.state = LoginNeedPassword
+	f.email = email
+	f.params = params
+	f.masterKey = nil
+	f.masterPasswordHash = ""
+	f.token = TokenResponse{}
+	f.challenge = nil
+	return LoginResult{State: LoginNeedPassword}, nil
 }
 
 // Continue advances the flow, either with the master password
 // (LoginNeedPassword) or with a 2FA answer (LoginNeedTwoFactor). It returns
 // LoginNeedTwoFactor, LoginDone or LoginFailed.
-//
-// Contract only: returns ErrNotImplemented today.
 func (f *LoginFlow) Continue(ctx context.Context, in LoginInput) (LoginResult, error) {
-	_ = f
-	_ = ctx
-	_ = in
-	return LoginResult{State: LoginFailed}, ErrNotImplemented
+	switch f.state {
+	case LoginNeedPassword:
+		return f.continuePassword(ctx, in.Password)
+	case LoginNeedTwoFactor:
+		return f.continueTwoFactor(ctx, in.TwoFactor)
+	default:
+		return LoginResult{State: LoginFailed}, fmt.Errorf("auth: login: cannot continue from state %s", f.state)
+	}
+}
+
+// continuePassword derives the master key, hashes it and sends the password
+// grant.
+func (f *LoginFlow) continuePassword(ctx context.Context, password string) (LoginResult, error) {
+	if password == "" {
+		return LoginResult{State: LoginFailed}, errors.New("auth: login: empty master password")
+	}
+	masterKey, err := DeriveMasterKey(f.params, password)
+	if err != nil {
+		f.state = LoginFailed
+		return LoginResult{State: LoginFailed}, err
+	}
+	hash, err := MasterPasswordHash(masterKey, password)
+	if err != nil {
+		f.state = LoginFailed
+		return LoginResult{State: LoginFailed}, err
+	}
+	f.masterKey = masterKey
+	f.masterPasswordHash = hash
+	return f.sendPasswordGrant(ctx, TwoFactorSubmission{})
+}
+
+// continueTwoFactor resends the password grant with the user's second factor.
+func (f *LoginFlow) continueTwoFactor(ctx context.Context, submission *TwoFactorSubmission) (LoginResult, error) {
+	if submission == nil {
+		return LoginResult{State: LoginFailed}, errors.New("auth: login: missing two-factor submission")
+	}
+	return f.sendPasswordGrant(ctx, *submission)
+}
+
+// sendPasswordGrant posts the token request and routes the outcome. The
+// password hash is the one computed in continuePassword, reused for the 2FA
+// retry so the password never has to be held.
+func (f *LoginFlow) sendPasswordGrant(ctx context.Context, submission TwoFactorSubmission) (LoginResult, error) {
+	req := TokenRequest{
+		Email:              f.email,
+		MasterPasswordHash: f.masterPasswordHash,
+		DeviceID:           f.client.DeviceID(),
+		TwoFactorProvider:  submission.Provider,
+		TwoFactorToken:     submission.Token,
+		Remember:           submission.Remember,
+	}
+	resp, err := f.client.Login(ctx, req)
+	if errors.Is(err, ErrTwoFactorRequired) {
+		f.state = LoginNeedTwoFactor
+		f.challenge = resp.Challenge
+		return LoginResult{State: LoginNeedTwoFactor, Challenge: resp.Challenge}, nil
+	}
+	if err != nil {
+		f.state = LoginFailed
+		return LoginResult{State: LoginFailed}, err
+	}
+	return f.finish(ctx, resp)
+}
+
+// finish unwraps the userKey from the grant and reads the account profile.
+func (f *LoginFlow) finish(ctx context.Context, resp TokenResponse) (LoginResult, error) {
+	if resp.Key.isZero() {
+		f.state = LoginFailed
+		return LoginResult{State: LoginFailed}, errors.New("auth: login: token response has no wrapped user key (passwordless or key-migration account)")
+	}
+	userKey, err := UnlockUserKey(f.masterKey, resp.Key)
+	if err != nil {
+		f.state = LoginFailed
+		return LoginResult{State: LoginFailed}, err
+	}
+	profile, err := f.client.Profile(ctx, resp.AccessToken)
+	if err != nil {
+		f.state = LoginFailed
+		return LoginResult{State: LoginFailed}, err
+	}
+	f.state = LoginDone
+	f.token = resp
+	return LoginResult{
+		State:   LoginDone,
+		Token:   resp,
+		UserKey: UserKey(userKey),
+		Account: secrets.Account{
+			UserID:    profile.ID,
+			Email:     profile.Email,
+			Name:      profile.Name,
+			CreatedAt: time.Now(),
+		},
+	}, nil
 }

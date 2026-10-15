@@ -1,6 +1,12 @@
 package auth
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"sort"
+	"strconv"
+)
 
 // TwoFactorProvider is the numbered second-factor method in the Bitwarden
 // protocol. The numbers match the official TwoFactorProviderType enum and are
@@ -138,15 +144,95 @@ func (UnsupportedSolver) OpenBrowser(context.Context, string) (string, error) {
 // YubiKey implements TwoFactorSolver.
 func (UnsupportedSolver) YubiKey(context.Context) (string, error) { return "", ErrNotImplemented }
 
+// providerPayload is the per-provider data map of TwoFactorProviders2. Only
+// the fields the challenge surfaces are decoded here.
+type providerPayload struct {
+	AuthURL string `json:"AuthUrl"`
+	Email   string `json:"Email"`
+}
+
+// twoFactorErrorResponse is the 400 body login returns when it wants a second
+// factor (identity-two-factor.response.ts).
+type twoFactorErrorResponse struct {
+	TwoFactorProviders  []int                      `json:"TwoFactorProviders"`
+	TwoFactorProviders2 map[string]json.RawMessage `json:"TwoFactorProviders2"`
+	Email               string                     `json:"Email"`
+}
+
+// parseTwoFactorChallenge turns the 2FA 400 body into a TwoFactorChallenge.
+// It returns nil when the body carries no provider list, so a plain error is
+// not mistaken for a challenge. TwoFactorProviders (the array) is
+// authoritative for ordering; when it is absent the map keys are sorted
+// numerically.
+func parseTwoFactorChallenge(body []byte) *TwoFactorChallenge {
+	var raw twoFactorErrorResponse
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil
+	}
+	challenge := &TwoFactorChallenge{Email: raw.Email}
+	seen := make(map[TwoFactorProvider]bool)
+	for _, p := range raw.TwoFactorProviders {
+		provider := TwoFactorProvider(p)
+		if !seen[provider] {
+			challenge.Providers = append(challenge.Providers, provider)
+			seen[provider] = true
+		}
+	}
+	if len(challenge.Providers) == 0 {
+		keys := make([]int, 0, len(raw.TwoFactorProviders2))
+		for key := range raw.TwoFactorProviders2 {
+			if n, err := strconv.Atoi(key); err == nil {
+				keys = append(keys, n)
+			}
+		}
+		sort.Ints(keys)
+		for _, n := range keys {
+			challenge.Providers = append(challenge.Providers, TwoFactorProvider(n))
+		}
+	}
+	if len(challenge.Providers) == 0 {
+		return nil
+	}
+	for key, payload := range raw.TwoFactorProviders2 {
+		n, err := strconv.Atoi(key)
+		if err != nil {
+			continue
+		}
+		var data providerPayload
+		_ = json.Unmarshal(payload, &data)
+		switch TwoFactorProvider(n) {
+		case TwoFactorEmail:
+			if challenge.Email == "" {
+				challenge.Email = data.Email
+			}
+		case TwoFactorDuo, TwoFactorOrganizationDuo:
+			if challenge.DuoURL == "" && data.AuthURL != "" {
+				challenge.DuoURL = data.AuthURL
+			}
+		}
+	}
+	return challenge
+}
+
+// sendEmailLoginRequest is POST {api}/two-factor/send-email-login, the JSON
+// body the official client posts (two-factor-email-login.request.ts).
+type sendEmailLoginRequest struct {
+	Email              string `json:"email"`
+	MasterPasswordHash string `json:"masterPasswordHash"`
+	DeviceIdentifier   string `json:"deviceIdentifier"`
+}
+
 // SendEmailLogin triggers POST {api}/two-factor/send-email-login, which mails
 // the 2FA code for provider 1. masterPasswordHash may be required by the
 // server and is the same value as in the token request.
-//
-// Contract only: returns ErrNotImplemented today.
 func (c *Client) SendEmailLogin(ctx context.Context, email, masterPasswordHash string) error {
-	_ = c
-	_ = ctx
-	_ = email
-	_ = masterPasswordHash
-	return ErrNotImplemented
+	if email == "" {
+		return errors.New("auth: send email login: empty email")
+	}
+	body := sendEmailLoginRequest{
+		Email:              email,
+		MasterPasswordHash: masterPasswordHash,
+		DeviceIdentifier:   c.deviceID,
+	}
+	return c.postJSON(ctx, c.apiURL("/two-factor/send-email-login"), body, nil)
 }

@@ -52,8 +52,8 @@ const authEmailHeader = "Auth-Email"
 // Sentinel errors. Every failure the login flow cares about is one of these,
 // so callers can branch without parsing strings.
 var (
-	// ErrNotImplemented marks the skeleton: the core login ticket replaces
-	// these stubs.
+	// ErrNotImplemented is returned only by UnsupportedSolver, the
+	// placeholder 2FA solver installed before the UI wires a real one.
 	ErrNotImplemented = errors.New("auth: not implemented yet")
 	// ErrUnauthorized is a rejected credential: HTTP 401, or a prelogin /
 	// token request the server refused. A wrong password arrives as HTTP 400
@@ -133,14 +133,14 @@ func setAuthEmail(req *http.Request, email string) {
 // postForm sends an application/x-www-form-urlencoded body and decodes a JSON
 // response into out.
 func (c *Client) postForm(ctx context.Context, rawurl string, form url.Values, out any) error {
-	body := strings.NewReader(form.Encode())
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawurl, body)
+	body, err := c.postFormBody(ctx, rawurl, form)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrNetwork, err)
+		return err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
-	c.applyHeaders(req)
-	return c.decode(req, out)
+	if out == nil {
+		return nil
+	}
+	return decodeJSON(body, out)
 }
 
 // postJSON sends a JSON body and decodes a JSON response into out.
@@ -179,6 +179,12 @@ func (c *Client) decode(req *http.Request, out any) error {
 	if out == nil {
 		return nil
 	}
+	return decodeJSON(body, out)
+}
+
+// decodeJSON unmarshals a response body into out and wraps a failure in
+// ErrServer. It is shared with callers that already hold the raw body.
+func decodeJSON(body []byte, out any) error {
 	if err := json.Unmarshal(body, out); err != nil {
 		return fmt.Errorf("%w: decode response: %v", ErrServer, err)
 	}

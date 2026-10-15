@@ -1,5 +1,29 @@
 package auth
 
+import (
+	"crypto/sha256"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"io"
+
+	"golang.org/x/crypto/argon2"
+	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/pbkdf2"
+)
+
+// Key sizes fixed by the Bitwarden protocol.
+const (
+	// masterKeyLen is the master key size: 256 bits.
+	masterKeyLen = 32
+	// stretchedMasterKeyLen is the expanded master key: enc (32) || mac (32).
+	stretchedMasterKeyLen = 64
+	// userKeyLen is the account userKey size: enc (32) || mac (32).
+	userKeyLen = 64
+	// passwordHashLen is the master password hash size.
+	passwordHashLen = 32
+)
+
 // KdfType is the key derivation function the account uses. The numbers are
 // the wire values from Bitwarden's KdfType enum and must not change.
 type KdfType int
@@ -44,16 +68,32 @@ func (MasterKey) String() string { return "auth.MasterKey(<redacted>)" }
 // DeriveMasterKey turns the master password and the server's KDF parameters
 // into the 32-byte master key.
 //
-// The salt is params.Salt when the server supplied one, otherwise the email
-// trimmed and lowercased. Argon2id must convert Memory from MiB to KiB before
-// calling argon2.IDKey.
-//
-// Contract only: the core login ticket implements this. It returns
-// ErrNotImplemented today.
+// The salt is params.Salt, which Prelogin fills either with the server's Salt
+// or, on the legacy prelogin variant, with the email trimmed and lowercased.
+// Argon2id converts Memory from MiB to KiB and hashes the salt with SHA-256,
+// matching the official SDK's derive_kdf_material; PBKDF2 uses the salt bytes
+// directly.
 func DeriveMasterKey(params KdfParams, password string) (MasterKey, error) {
-	_ = params
-	_ = password
-	return nil, ErrNotImplemented
+	if params.Salt == "" {
+		return nil, errors.New("auth: derive master key: missing KDF salt")
+	}
+	if params.Iterations == 0 {
+		return nil, errors.New("auth: derive master key: zero iterations")
+	}
+	switch params.Type {
+	case KdfPBKDF2SHA256:
+		key := pbkdf2.Key([]byte(password), []byte(params.Salt), int(params.Iterations), masterKeyLen, sha256.New)
+		return MasterKey(key), nil
+	case KdfArgon2id:
+		if params.Memory == 0 || params.Parallelism == 0 {
+			return nil, errors.New("auth: derive master key: argon2id requires memory and parallelism")
+		}
+		salt := sha256.Sum256([]byte(params.Salt))
+		key := argon2.IDKey([]byte(password), salt[:], params.Iterations, params.Memory*1024, params.Parallelism, masterKeyLen)
+		return MasterKey(key), nil
+	default:
+		return nil, fmt.Errorf("auth: derive master key: unsupported KDF type %d", params.Type)
+	}
 }
 
 // MasterPasswordHash produces the value sent as the "password" form field of
@@ -61,20 +101,29 @@ func DeriveMasterKey(params KdfParams, password string) (MasterKey, error) {
 // PBKDF2-HMAC-SHA256(masterKey, password, iterations=1, 32) base64-encoded.
 // Note the argument order: the master key is the PBKDF2 password and the
 // plaintext master password is the salt.
-//
-// Contract only: returns ErrNotImplemented today.
 func MasterPasswordHash(masterKey MasterKey, password string) (string, error) {
-	_ = masterKey
-	_ = password
-	return "", ErrNotImplemented
+	if len(masterKey) != masterKeyLen {
+		return "", fmt.Errorf("auth: master password hash: master key is %d bytes, want %d", len(masterKey), masterKeyLen)
+	}
+	hash := pbkdf2.Key(masterKey, []byte(password), 1, passwordHashLen, sha256.New)
+	return base64.StdEncoding.EncodeToString(hash), nil
 }
 
 // StretchMasterKey expands the 32-byte master key into the 64-byte
 // enc||mac key that wraps the userKey: HKDF-Expand-SHA256(masterKey,
 // info="enc", 32) followed by HKDF-Expand-SHA256(masterKey, info="mac", 32).
-//
-// Contract only: returns ErrNotImplemented today.
 func StretchMasterKey(masterKey MasterKey) ([]byte, error) {
-	_ = masterKey
-	return nil, ErrNotImplemented
+	if len(masterKey) != masterKeyLen {
+		return nil, fmt.Errorf("auth: stretch master key: key is %d bytes, want %d", len(masterKey), masterKeyLen)
+	}
+	out := make([]byte, stretchedMasterKeyLen)
+	enc := hkdf.Expand(sha256.New, masterKey, []byte("enc"))
+	if _, err := io.ReadFull(enc, out[:masterKeyLen]); err != nil {
+		return nil, fmt.Errorf("auth: stretch master key enc: %w", err)
+	}
+	mac := hkdf.Expand(sha256.New, masterKey, []byte("mac"))
+	if _, err := io.ReadFull(mac, out[masterKeyLen:]); err != nil {
+		return nil, fmt.Errorf("auth: stretch master key mac: %w", err)
+	}
+	return out, nil
 }
