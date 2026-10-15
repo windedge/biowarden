@@ -21,6 +21,12 @@ func (fakeAccount) login(string, string, string) (accountSession, error) {
 	return accountSession{}, errAccountBackend
 }
 
+// cancelLogin is the one account action the prototype can honour: it has no
+// pending attempt to abandon, so it simply reports the signed-out state.
+func (fakeAccount) cancelLogin() (accountSession, error) {
+	return accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil
+}
+
 func (fakeAccount) submit2FA(string) (accountSession, error) {
 	return accountSession{}, errAccountBackend
 }

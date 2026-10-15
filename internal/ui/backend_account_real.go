@@ -58,16 +58,21 @@ type realAccount struct {
 	verifier hello.Verifier
 	newFlow  accountAuthFactory
 
-	mu     sync.Mutex
-	sess   accountSession
-	email  string
-	pass   string
-	server string
+	mu   sync.Mutex
+	sess accountSession
+	// lastLoggedIn is the session to fall back to when a pending login is
+	// abandoned: cancelling a relogin returns to the account that was already
+	// signed in, cancelling a first login lands back on signed out.
+	lastLoggedIn accountSession
+	email        string
+	pass         string
+	server       string
 }
 
 func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory) *realAccount {
 	a := &realAccount{store: store, verifier: verifier, newFlow: factory}
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
+	a.lastLoggedIn = a.sess
 	return a
 }
 
@@ -193,9 +198,11 @@ func (a *realAccount) runLogin(email, password, serverURL, helloReason string) (
 			twoFAMethod: firstProvider(step.challenge),
 			challenge:   step.challenge,
 		}
-		// Keep the password in memory only, so the login window ticket can
-		// answer the challenge without asking the user to retype it.
-		a.email, a.pass, a.server = email, password, serverURL
+		// Do not park the password in memory: submit2FA is not implemented
+		// yet, so nothing consumes it while the challenge is pending, and a
+		// cancelled attempt must not leave the master password behind. A
+		// successful login re-caches it for refreshKey and relogin below.
+		a.email, a.pass, a.server = "", "", ""
 		sess := a.sess
 		a.mu.Unlock()
 		return sess, nil
@@ -217,6 +224,7 @@ func (a *realAccount) runLogin(email, password, serverURL, helloReason string) (
 		serverURL: serverURL,
 		userID:    acc.UserID,
 	}
+	a.lastLoggedIn = a.sess
 	a.email, a.pass, a.server = email, password, serverURL
 	sess := a.sess
 	a.mu.Unlock()
@@ -240,6 +248,20 @@ func (a *realAccount) submit2FA(string) (accountSession, error) {
 	return a.sess, errTwoFactorUnsupported
 }
 
+// cancelLogin abandons a pending login attempt: the session falls back to the
+// one before it, and the cached credentials and challenge are dropped. A
+// cancelled relogin therefore returns to the signed-in account, while a
+// cancelled first login lands back on signed out. The password is gone after
+// this, so refreshKey and relogin ask for a fresh sign-in, exactly as after a
+// restart.
+func (a *realAccount) cancelLogin() (accountSession, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.sess = a.lastLoggedIn
+	a.email, a.pass, a.server = "", "", ""
+	return a.sess, nil
+}
+
 // logout deletes the signed-in account's key behind a Hello consent and
 // clears the in-memory session and token. It is idempotent: logging out when
 // already logged out does nothing and asks for nothing.
@@ -260,6 +282,7 @@ func (a *realAccount) logout() error {
 	}
 	a.mu.Lock()
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
+	a.lastLoggedIn = a.sess
 	a.email, a.pass, a.server = "", "", ""
 	a.mu.Unlock()
 	return nil

@@ -55,6 +55,7 @@ func (a *accountState) accountCard(c *ui.Context) {
 				}
 				if ui.Button(c, "取消").Disabled(a.busy).Clicked() {
 					a.cancelLogin()
+					c.Invalidate()
 				}
 			})
 		case loginLoggedIn, loginLoggingIn:
@@ -99,6 +100,7 @@ func (a *accountState) accountCard(c *ui.Context) {
 				}
 				if ui.Button(c, "取消").Disabled(a.busy).Clicked() {
 					a.cancelLogin()
+					c.Invalidate()
 				}
 				if a.busy {
 					ui.Spinner(c).Label("登录中")

@@ -72,6 +72,12 @@ type accountBackend interface {
 	// loginNeeds2FA when the account asks for a code, loginLoggedIn when it
 	// is done.
 	login(email, password, serverURL string) (accountSession, error)
+	// cancelLogin abandons a pending login attempt. The session returns to
+	// the one in force before the attempt: the signed-in account when a
+	// relogin was under way, signed out otherwise. The in-memory credentials
+	// and the pending 2FA challenge are dropped, so a later reload cannot
+	// revive the attempt.
+	cancelLogin() (accountSession, error)
 	// submit2FA finishes a login that is waiting for a two-factor code. The
 	// login window ticket owns it; the real backend reports it as not
 	// implemented for now.

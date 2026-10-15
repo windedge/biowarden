@@ -289,9 +289,30 @@ func (s *accountState) beginLogin() {
 	s.notice = ""
 }
 
+// cancelLogin abandons a pending login attempt. The backend returns the
+// session that was in force before the attempt (the signed-in account after a
+// cancelled relogin, signed out otherwise) and drops the cached credentials
+// and 2FA challenge; the page clears the form. The call runs off the UI thread
+// like every other backend action, and a failure is shown rather than hidden.
 func (s *accountState) cancelLogin() {
+	account := s.account
+	s.async(func() func(*accountState) {
+		sess, err := account.cancelLogin()
+		return func(st *accountState) { st.applyCancel(sess, err) }
+	})
+}
+
+func (s *accountState) applyCancel(sess accountSession, err error) {
+	if err != nil {
+		s.notice = err.Error()
+		s.noticeOK = false
+		return
+	}
+	s.session = sess
 	s.loginOpen = false
 	s.email, s.password, s.twoFACode = "", "", ""
+	s.notice = "已取消登录"
+	s.noticeOK = true
 }
 
 func (s *accountState) login() {

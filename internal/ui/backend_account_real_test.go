@@ -366,3 +366,89 @@ func TestAccountStatePrimaryFollowsSelection(t *testing.T) {
 		t.Fatalf("selectedUserID = %q, want cleared", s.selectedUserID)
 	}
 }
+
+// Cancelling a first login must not leave the session parked in the 2FA
+// state, or every later reload would revive a form that can never succeed.
+func TestRealAccountCancelLoginResetsTwoFactorSession(t *testing.T) {
+	store := newFakeStore()
+	verifier := &fakeVerifier{result: hello.Verified}
+	flow := &scriptedAuth{step: authStep{
+		needs2FA:  true,
+		challenge: &twoFactorPrompt{providers: []string{"authenticator"}},
+	}}
+	a := newRealAccount(store, verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if sess, _ := a.session(); sess.state != loginNeeds2FA {
+		t.Fatalf("state before cancel = %v, want needs 2FA", sess.state)
+	}
+
+	sess, err := a.cancelLogin()
+	if err != nil {
+		t.Fatalf("cancelLogin: %v", err)
+	}
+	if sess.state != loginLoggedOut || sess.challenge != nil {
+		t.Fatalf("cancelled session = %+v, want signed out with no challenge", sess)
+	}
+	// session() backs every reload; it must stay off the 2FA state.
+	again, err := a.session()
+	if err != nil {
+		t.Fatalf("session: %v", err)
+	}
+	if again.state != loginLoggedOut || again.challenge != nil {
+		t.Fatalf("session after cancel = %+v, want signed out", again)
+	}
+}
+
+// A 2FA stop is not a login, so the master password must not be parked in
+// memory while the challenge waits on an unimplemented submit.
+func TestRealAccountTwoFactorStopDoesNotRetainPassword(t *testing.T) {
+	store := newFakeStore()
+	verifier := &fakeVerifier{result: hello.Verified}
+	flow := &scriptedAuth{step: authStep{
+		needs2FA:  true,
+		challenge: &twoFactorPrompt{providers: []string{"authenticator"}},
+	}}
+	a := newRealAccount(store, verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if err := a.refreshKey(); !errors.Is(err, errNeedCredentials) {
+		t.Fatalf("refreshKey = %v, want errNeedCredentials (no cached password)", err)
+	}
+}
+
+// Cancelling a relogin returns to the signed-in session but drops the cached
+// credentials, so refreshKey asks for a fresh sign-in instead of reusing the
+// abandoned attempt's password.
+func TestRealAccountCancelReloginRestoresSignedInSessionAndDropsPassword(t *testing.T) {
+	store := newFakeStore()
+	verifier := &fakeVerifier{result: hello.Verified}
+	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("key"))}
+	a := newRealAccount(store, verifier, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	flow.step = authStep{needs2FA: true, challenge: &twoFactorPrompt{providers: []string{"authenticator"}}}
+	if err := a.relogin(); !errors.Is(err, errTwoFactorUnsupported) {
+		t.Fatalf("relogin error = %v, want errTwoFactorUnsupported", err)
+	}
+
+	sess, err := a.cancelLogin()
+	if err != nil {
+		t.Fatalf("cancelLogin: %v", err)
+	}
+	if sess.state != loginLoggedIn || sess.userID != "user-1" || sess.email != "ada@example.com" {
+		t.Fatalf("session = %+v, want the previous signed-in session", sess)
+	}
+	if store.removeCalls != 0 {
+		t.Fatalf("Remove calls = %d, want 0: cancelling must not touch the store", store.removeCalls)
+	}
+	if err := a.refreshKey(); !errors.Is(err, errNeedCredentials) {
+		t.Fatalf("refreshKey after cancel = %v, want errNeedCredentials (password dropped)", err)
+	}
+}
