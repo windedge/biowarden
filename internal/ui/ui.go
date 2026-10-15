@@ -97,6 +97,10 @@ func start() {
 		mygo.App.OnWillQuit(func(*mygo.QuitEvent) { tray.Destroy() })
 	}
 	win.Show()
+	// Zero-configuration first launch: register the browsers this machine has,
+	// then ask the human to log in. It runs after the window is up because the
+	// login window is that window's modal child.
+	app.runFirstRun()
 }
 
 // trayIcon draws a ring, blue so it stays visible on light and dark taskbars.

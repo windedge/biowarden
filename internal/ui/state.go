@@ -36,6 +36,9 @@ type appState struct {
 	// login is the modal login window's state; the account page opens it
 	// instead of drawing a login form of its own.
 	login loginWindow
+	// firstRun is the launch-time zero-configuration setup: it registers what
+	// it can and opens the login window once.
+	firstRun firstRunState
 	// loginWin is the native window while it is up; nil once it closed.
 	loginWin *mygo.Window
 
@@ -54,6 +57,7 @@ func newAppState() *appState {
 	}
 	app.account = newAccountState()
 	app.login = newLoginWindow(&app.account)
+	app.firstRun = newFirstRunState(newRealFirstRun())
 	app.login.openWindow = app.showLoginWindow
 	app.login.closeWindow = app.hideLoginWindow
 	return app
