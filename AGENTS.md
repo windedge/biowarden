@@ -12,17 +12,24 @@ mode (native messaging host, launched by the browser on demand); anything else m
 
 ```
 cmd/biowarden/          dual-mode entry (mode detection, dispatch)
+internal/auth/          Bitwarden login link (prelogin/KDF/token/userKey, TOTP/email/YubiKey 2FA)
 internal/protocol/      frames, legacy command protocol, SDK IPC (Noise/CBOR/RPC)
 internal/host/          serve loop: dispatch, unlock flow, logging
 internal/hoststate/     per-browser connection history (which browser pulled the host in)
 internal/{hello,secrets,registry}/   platform seams (interfaces + build tags)
-internal/ui/            GUI
+internal/ui/            GUI: pages, login window, first-run setup, account backends
 ```
+
+Data flow: `internal/ui` logs the user in through `internal/auth` (prelogin/KDF/token, then 2FA),
+and the resulting userKey is written to `internal/secrets` only after a `internal/hello` consent,
+so a refused prompt leaves nothing stored. The host and the GUI are separate processes sharing the
+same Credential Manager store, so a key saved by a GUI login is the one the host reads at unlock.
 
 Seams: `hello` = Windows Hello consent via pure syscalls; `secrets` = Credential Manager,
 `Biowarden/<userId>` per account plus a `Biowarden/Index` metadata entry; `registry` = HKCU-only
 manifest registration for Chrome/Edge/Firefox, showing an existing value as "possibly the official
-client" and only overwriting after confirmation. v1 implements `windows` only.
+client" and only overwriting after confirmation, plus the `FirstRunCompleted` marker that keeps
+the zero-configuration first-run setup to one automatic registration. v1 implements `windows` only.
 
 ## Rules
 
