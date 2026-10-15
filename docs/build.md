@@ -17,6 +17,33 @@ pwsh scripts/build.ps1 -platform windows/amd64,windows/arm64
 
 The CLI defaults to `CGO_ENABLED=0`, which the rules of the repo require.
 
+## The running host locks the executable
+
+Once the browser extension enables "Unlock with biometrics", Chromium keeps a
+native messaging channel open and respawns `biowarden.exe` host processes on
+demand. Windows lets a running executable be renamed but not overwritten, so a
+plain `go tool mygo build` fails at its final rename of `build/windows-amd64/`
+with "The process cannot access the file because it is being used by another
+process". Killing the host does not help on its own: the extension reconnects
+immediately and a new process takes the lock again.
+
+`scripts/build.ps1` handles this. It builds into `build/.staging`, stops the
+running `biowarden` processes (GUI and host), renames the current executable to
+`biowarden.exe.old`, copies the staged files into place, then removes the
+staging directory and the `.old` file. Stopping the GUI closes any open
+biowarden window, and Chromium uses the new build the next time it connects.
+On a machine where nothing is running (CI, a fresh checkout) the script skips
+the swap and just copies.
+
+Building by hand still works, but either stop the biowarden GUI and quit the
+browser (or `Stop-Process -Name biowarden -Force`) first, or pass `-o` to write
+somewhere else:
+
+```sh
+go tool mygo build -o build/manual
+go tool mygo build -platform windows/arm64
+```
+
 ## Output
 
 `mygo build` writes `build/<os>-<arch>/` (`out` in `mygo.json`). For the
