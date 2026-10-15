@@ -113,6 +113,9 @@ func (s *loginWindow) begin() {
 	s.password = ""
 	s.code = ""
 	s.emailSent = false
+	// Prefill the address so a re-login to a self-hosted server does not start
+	// from the official cloud and fail on a typo the human has to retype.
+	s.serverURL = s.page.effectiveServerURL()
 	if sess := s.page.session; sess.state == loginNeeds2FA && sess.challenge != nil {
 		s.challenge = sess.challenge
 		s.methodIndex = 0
@@ -149,6 +152,18 @@ func (s *loginWindow) submit() {
 		sess, err := backend.login(email, password, normalized)
 		return func(st *loginWindow) { st.applyLogin(normalized, sess, err) }
 	})
+}
+
+// submitOnEnter starts the password login when Enter was pressed in one of the
+// credential fields and the form is ready. The guard mirrors the primary
+// button's, so Enter cannot bypass a disabled Login (an empty form, or a call
+// already in flight) and Cancel is untouched.
+func (s *loginWindow) submitOnEnter(entered bool) bool {
+	if !entered || s.busy || strings.TrimSpace(s.email) == "" || s.password == "" {
+		return false
+	}
+	s.submit()
+	return true
 }
 
 // failServer shows a rejected address on the field that produced it, opened so
@@ -205,6 +220,20 @@ func (s *loginWindow) submit2FA() {
 		sess, err := backend.submit2FA(m.provider, code)
 		return func(st *loginWindow) { st.applyTwoFactor(sess, err) }
 	})
+}
+
+// submitTwoFactorOnEnter answers the challenge when Enter was pressed in the
+// code field and a code is present. The unsupported-method panel has no code
+// field, so Enter there does nothing at all.
+func (s *loginWindow) submitTwoFactorOnEnter(entered bool) bool {
+	if !entered || s.busy || strings.TrimSpace(s.code) == "" {
+		return false
+	}
+	if _, ok := s.selectedMethod(); !ok {
+		return false
+	}
+	s.submit2FA()
+	return true
 }
 
 // selectedMethod is the code method the form is offering, of the challenge's

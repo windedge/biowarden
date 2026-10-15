@@ -208,3 +208,37 @@ func TestIndexSelfHealCorrupt(t *testing.T) {
 		t.Fatalf("rebuilt List = %+v, want user-1", list)
 	}
 }
+
+// An index entry written before Account gained ServerURL must still decode:
+// the missing field reads as empty, which callers treat as the default server.
+func TestAccountFromCredentialWithoutServerURL(t *testing.T) {
+	cred := wincred.NewGenericCredential("BiowardenTest/example/user-1")
+	cred.Comment = `{"UserID":"user-1","Email":"user@example.com","Name":"Test User"}`
+
+	acc := accountFromCredential(&cred.Credential, "BiowardenTest/example")
+	if acc.UserID != "user-1" || acc.Email != "user@example.com" || acc.Name != "Test User" {
+		t.Fatalf("account = %+v, want the metadata recovered", acc)
+	}
+	if acc.ServerURL != "" {
+		t.Fatalf("ServerURL = %q, want empty for pre-field metadata", acc.ServerURL)
+	}
+}
+
+// The server address survives the Credential Manager round trip, through both
+// the index and the per-credential comment copy.
+func TestServerURLRoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	acc := sampleAccount("user-1")
+	acc.ServerURL = "https://vault.example.com"
+	if err := s.Put(acc, Key("key")); err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+
+	list, err := s.List()
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(list) != 1 || list[0].ServerURL != acc.ServerURL {
+		t.Fatalf("List = %+v, want the stored server address", list)
+	}
+}

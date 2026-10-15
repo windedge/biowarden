@@ -30,27 +30,33 @@ func (s *loginWindow) loginView(c *ui.Context) {
 // credentialsForm is the email/password step, with the server address behind
 // the Advanced disclosure.
 func (s *loginWindow) credentialsForm(c *ui.Context) {
+	// entered records Enter in any of the three fields; .Submitted is mygo's
+	// Enter-in-a-single-line-input signal, so the form needs no key hook.
+	entered := false
 	ui.Form(c, func() {
 		ui.Field(c, "邮箱", func() {
-			ui.TextInput(c.Key("login-email"), &s.email).
-				Placeholder("you@example.com").Disabled(s.busy)
+			entered = ui.TextInput(c.Key("login-email"), &s.email).
+				Placeholder("you@example.com").Disabled(s.busy).Submitted() || entered
 		})
 		ui.Field(c, "主密码", func() {
-			ui.TextInput(c.Key("login-password"), &s.password).
-				Password().Placeholder("主密码").Disabled(s.busy)
+			entered = ui.TextInput(c.Key("login-password"), &s.password).
+				Password().Placeholder("主密码").Disabled(s.busy).Submitted() || entered
 		})
 	})
 	ui.Collapsible(c, "高级", &s.advancedOpen, func() {
 		ui.Form(c, func() {
 			ui.Field(c, "服务器地址", func() {
-				ui.TextInput(c.Key("login-server"), &s.serverURL).
-					Placeholder(defaultServerURL).Disabled(s.busy)
+				entered = ui.TextInput(c.Key("login-server"), &s.serverURL).
+					Placeholder(defaultServerURL).Disabled(s.busy).Submitted() || entered
 			}).Error(s.serverErr)
 		})
 		muted(c, "默认使用 Bitwarden 官方云。自托管请填自己的地址，例如 https://vault.example.com；提交时按官方规则规范化。")
 	})
 	notice(c, s.notice, s.noticeOK)
 	ready := strings.TrimSpace(s.email) != "" && s.password != ""
+	if s.submitOnEnter(entered) {
+		c.Invalidate()
+	}
 	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 		if ui.PrimaryButton(c, "登录").Disabled(!ready || s.busy).Clicked() {
 			s.submit()
@@ -85,10 +91,11 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 	}
 	m, _ := s.selectedMethod()
 	muted(c, "服务器要求两步验证："+methodTitle(m))
+	entered := false
 	ui.Form(c, func() {
 		ui.Field(c, methodFieldLabel(m), func() {
-			ui.TextInput(c.Key("login-2fa"), &s.code).
-				Placeholder(methodHint(m)).Disabled(s.busy)
+			entered = ui.TextInput(c.Key("login-2fa"), &s.code).
+				Placeholder(methodHint(m)).Disabled(s.busy).Submitted() || entered
 		})
 	})
 	if m.provider == twoFactorEmail {
@@ -109,6 +116,9 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 		muted(c, "服务器还提供了 "+methodTitles(unsupported)+"；"+errTwoFactorUnsupported.Error())
 	}
 	notice(c, s.notice, s.noticeOK)
+	if s.submitTwoFactorOnEnter(entered) {
+		c.Invalidate()
+	}
 	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 		if ui.PrimaryButton(c, "提交验证码").Disabled(strings.TrimSpace(s.code) == "" || s.busy).Clicked() {
 			s.submit2FA()

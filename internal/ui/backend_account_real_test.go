@@ -606,3 +606,26 @@ func TestRealAccountCancelRestoresSignedInSession(t *testing.T) {
 		t.Fatalf("Remove calls = %d, want 0: cancelling must not touch the store", store.removeCalls)
 	}
 }
+
+// A successful login records the server address next to the key, so a later
+// re-login can prefill it even after the persisted session is gone.
+func TestRealAccountLoginRecordsServerURLInMetadata(t *testing.T) {
+	store := newFakeStore()
+	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("key"))}
+	a := newRealAccount(store, &fakeVerifier{result: hello.Verified}, fixedFlow(flow))
+
+	if _, err := a.login("ada@example.com", "pw", "https://vault.example.com"); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	if got := store.accounts["user-1"].ServerURL; got != "https://vault.example.com" {
+		t.Fatalf("stored ServerURL = %q, want the login's address", got)
+	}
+	// The listed row must carry it through to the UI that prefills the form.
+	rows, err := newRealKeysWith(store, &fakeVerifier{available: true}).accounts()
+	if err != nil {
+		t.Fatalf("accounts: %v", err)
+	}
+	if len(rows) != 1 || rows[0].serverURL != "https://vault.example.com" {
+		t.Fatalf("rows = %+v, want the stored address", rows)
+	}
+}

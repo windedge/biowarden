@@ -20,6 +20,8 @@ func (app *appState) settingsPage(c *ui.Context) {
 				ui.Form(c, func() {
 					ui.Fieldset(c, "账号", func() {
 						ui.Field(c, "服务器地址", func() {
+							// The live session's address, the same value the login window
+							// prefills from; read-only, never edited here.
 							ui.TextInput(c, &app.account.session.serverURL).ReadOnly(true).FontSize(11)
 						})
 					})

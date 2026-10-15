@@ -492,3 +492,145 @@ func TestLoginWindowBeginReopensAParkedChallenge(t *testing.T) {
 		t.Fatalf("openWindow calls = %d, want 1", f.opened)
 	}
 }
+
+// The address the form opens on prefers the live session, then the stored
+// account's metadata, then the official cloud. An entry from before the
+// metadata carried an address counts as none, so it cannot blank the form.
+func TestLoginWindowPrefillsServerURL(t *testing.T) {
+	cases := []struct {
+		name          string
+		sessionServer string
+		accountServer string
+		want          string
+	}{
+		{"session wins", "https://session.example", "https://account.example", "https://session.example"},
+		{"account metadata when the session has none", "", "https://account.example", "https://account.example"},
+		{"default when neither has one", "", "", defaultServerURL},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newLoginFixture(t, &stubAccount{sess: accountSession{state: loginLoggedOut, serverURL: tc.sessionServer}})
+			if tc.accountServer == "" {
+				f.page.accounts = nil
+			} else {
+				f.page.accounts = []*accountRow{{userID: "user-1", email: "ada@example.com", serverURL: tc.accountServer}}
+			}
+
+			f.login.begin()
+			if f.login.serverURL != tc.want {
+				t.Fatalf("serverURL = %q, want %q", f.login.serverURL, tc.want)
+			}
+		})
+	}
+}
+
+// Enter in a credential field runs the primary button's action, and lands the
+// login the same way a click does. Cancel is not part of that path.
+func TestLoginWindowEnterSubmitsTheCredentials(t *testing.T) {
+	acct := &stubAccount{sess: loggedInSession(), cancelSess: loggedInSession()}
+	f := newLoginFixture(t, acct)
+	beginLogin(f, "ada@example.com", "secret")
+
+	if !f.login.submitOnEnter(true) {
+		t.Fatal("Enter in a filled form did not start the login")
+	}
+	if !f.login.busy {
+		t.Fatal("Enter did not mark the window busy")
+	}
+	drainLogin(t, f.login)
+
+	if acct.loginCalls != 1 {
+		t.Fatalf("login calls = %d, want 1", acct.loginCalls)
+	}
+	if acct.cancelCalls != 0 {
+		t.Fatalf("Enter reached cancel (%d calls)", acct.cancelCalls)
+	}
+	if f.page.session.state != loginLoggedIn || f.closed != 1 {
+		t.Fatalf("Enter did not land the login: sess=%+v closed=%d", f.page.session, f.closed)
+	}
+}
+
+// An empty form and a call in flight both refuse Enter, so it cannot submit
+// what the disabled Login button would not.
+func TestLoginWindowEnterRespectsTheLoginButtonGuard(t *testing.T) {
+	acct := &stubAccount{sess: loggedInSession(), cancelSess: loggedInSession()}
+	f := newLoginFixture(t, acct)
+
+	f.login.begin()
+	f.login.email = "ada@example.com"
+	if f.login.submitOnEnter(true) {
+		t.Fatal("Enter submitted a form with no password")
+	}
+	if acct.loginCalls != 0 {
+		t.Fatalf("login calls = %d, want 0 with an empty password", acct.loginCalls)
+	}
+
+	f.login.password = "secret"
+	f.login.submit()
+	if f.login.submitOnEnter(true) {
+		t.Fatal("Enter submitted a second time while one call was in flight")
+	}
+	drainLogin(t, f.login)
+	if acct.loginCalls != 1 {
+		t.Fatalf("login calls = %d, want 1: busy must not double-submit", acct.loginCalls)
+	}
+}
+
+// Enter at the 2FA step submits the code, and refuses an empty one or a
+// challenge with nothing biowarden can answer.
+func TestLoginWindowEnterSubmitsTheTwoFactorCode(t *testing.T) {
+	acct := &stubAccount{
+		sess:       accountSession{state: loginNeeds2FA, email: "ada@example.com", serverURL: defaultServerURL, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")},
+		submitSess: loggedInSession(),
+		cancelSess: loggedInSession(),
+	}
+	f := newLoginFixture(t, acct)
+	beginLogin(f, "ada@example.com", "secret")
+	f.login.submit()
+	drainLogin(t, f.login)
+
+	if f.login.submitTwoFactorOnEnter(true) {
+		t.Fatal("Enter submitted an empty code")
+	}
+	if acct.submitCalls != 0 {
+		t.Fatalf("submit calls = %d, want 0 with an empty code", acct.submitCalls)
+	}
+
+	f.login.code = " 123456 "
+	if !f.login.submitTwoFactorOnEnter(true) {
+		t.Fatal("Enter with a code did not submit it")
+	}
+	drainLogin(t, f.login)
+	if acct.submitCalls != 1 || acct.lastCode != "123456" {
+		t.Fatalf("submit calls = %d code = %q, want the trimmed code", acct.submitCalls, acct.lastCode)
+	}
+	if acct.cancelCalls != 0 {
+		t.Fatalf("Enter at the 2FA step reached cancel (%d calls)", acct.cancelCalls)
+	}
+	if f.page.session.state != loginLoggedIn || f.closed != 1 {
+		t.Fatalf("Enter did not land the 2FA login: sess=%+v closed=%d", f.page.session, f.closed)
+	}
+}
+
+// A challenge with no code method never lets Enter reach the backend.
+func TestLoginWindowEnterDoesNothingForUnsupportedMethods(t *testing.T) {
+	challenge := &twoFactorPrompt{methods: []twoFactorMethod{
+		{provider: twoFactorDuo, name: "duo", interaction: interactionBrowser, browserURL: "https://duo.example/authorize"},
+	}}
+	acct := &stubAccount{
+		sess:       accountSession{state: loginNeeds2FA, email: "ada@example.com", serverURL: defaultServerURL, challenge: challenge},
+		cancelSess: loggedOutSession(),
+	}
+	f := newLoginFixture(t, acct)
+	beginLogin(f, "ada@example.com", "secret")
+	f.login.submit()
+	drainLogin(t, f.login)
+
+	f.login.code = "whatever"
+	if f.login.submitTwoFactorOnEnter(true) {
+		t.Fatal("Enter claimed a submission on an unsupported panel")
+	}
+	if acct.submitCalls != 0 {
+		t.Fatalf("submit calls = %d, want 0 for Duo/WebAuthn", acct.submitCalls)
+	}
+}

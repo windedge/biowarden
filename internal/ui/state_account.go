@@ -57,6 +57,9 @@ type accountRow struct {
 	userID  string
 	email   string
 	created string
+	// serverURL is the address the account signed in against, from its stored
+	// metadata; empty for entries written before the field existed.
+	serverURL string
 }
 
 // newAccountState wires the page onto the real credential store and the real
@@ -132,6 +135,22 @@ func (s *accountState) primary() *accountRow {
 		return nil
 	}
 	return s.accounts[0]
+}
+
+// effectiveServerURL is the address the UI shows when it is not tied to one
+// live session: the session's address, else the primary stored account's
+// metadata, else the official cloud. A stored entry from before the metadata
+// carried an address has none, which falls through to the default.
+func (s *accountState) effectiveServerURL() string {
+	if v := strings.TrimSpace(s.session.serverURL); v != "" {
+		return v
+	}
+	if p := s.primary(); p != nil {
+		if v := strings.TrimSpace(p.serverURL); v != "" {
+			return v
+		}
+	}
+	return defaultServerURL
 }
 
 // selectAccount foregrounds one stored account, which is what "switching"

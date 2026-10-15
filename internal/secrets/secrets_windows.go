@@ -147,6 +147,7 @@ func accountFromCredential(cred *wincred.Credential, prefix string) Account {
 	if json.Unmarshal([]byte(cred.Comment), &meta) == nil {
 		acc.Email = meta.Email
 		acc.Name = meta.Name
+		acc.ServerURL = meta.ServerURL
 		acc.CreatedAt = meta.CreatedAt
 	}
 	if acc.CreatedAt.IsZero() {

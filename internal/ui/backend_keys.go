@@ -35,9 +35,10 @@ func (k *realKeys) accounts() ([]accountRow, error) {
 	rows := make([]accountRow, 0, len(list))
 	for _, acc := range list {
 		rows = append(rows, accountRow{
-			userID:  acc.UserID,
-			email:   acc.Email,
-			created: when(acc.CreatedAt),
+			userID:    acc.UserID,
+			email:     acc.Email,
+			created:   when(acc.CreatedAt),
+			serverURL: acc.ServerURL,
 		})
 	}
 	return rows, nil

@@ -394,6 +394,9 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 	if acc.Email == "" {
 		acc.Email = email
 	}
+	// Remember the address next to the key, so a later re-login can prefill it
+	// even when the persisted session is gone.
+	acc.ServerURL = serverURL
 	if err := a.store.Put(acc, secrets.Key(step.userKey)); err != nil {
 		return a.stay(serverURL), fmt.Errorf("保存密钥失败：%w", err)
 	}

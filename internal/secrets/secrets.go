@@ -33,9 +33,13 @@ func (Key) String() string { return "secrets.Key(<redacted>)" }
 // Account is the metadata kept for a stored key. The key itself is not part of
 // it, so an Account is safe to log or show in the GUI.
 type Account struct {
-	UserID    string
-	Email     string
-	Name      string
+	UserID string
+	Email  string
+	Name   string
+	// ServerURL is the Bitwarden server the account signed in against. It is
+	// empty on entries written before the field existed (and on manual key
+	// pastes); readers must treat that as "the default server".
+	ServerURL string
 	CreatedAt time.Time
 }
 
