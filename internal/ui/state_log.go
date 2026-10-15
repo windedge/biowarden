@@ -45,7 +45,7 @@ func (s *logState) refresh() {
 
 // fakeLog stays for the prototype backend in backend_fake.go; the live page
 // reads the real file through logState.load.
-const fakeLog = `[2026-02-14 10:02:11.482] [INFO] host started: biowarden 0.1.0 (windows/amd64)
+const fakeLog = `[2026-02-14 10:02:11.482] [INFO] host started: ` + appName + ` ` + appVersion + ` (windows/amd64)
 [2026-02-14 10:02:11.483] [INFO] registry: 3 browsers known, 1 manifest owned by us
 [2026-02-14 10:03:40.115] [INFO] native message: action=unlock userId=6f1c9a04...
 [2026-02-14 10:03:40.116] [DEBUG] sdk request: {"keyB64":"<redacted>","encryptedString":"<redacted>","iv":"<redacted>","mac":"<redacted>"}

@@ -131,8 +131,11 @@ func (a *accountState) keyCard(c *ui.Context) {
 					ui.Text(c, "未保存").Bold().TextColor(t.Warning)
 					muted(c, "本机尚未保存密钥。登录账号后会自动保存，或展开下面的「高级」手动录入。")
 				})
+				// No key here, so there is nothing for refreshKey's account
+				// backend to re-derive: re-read the local credential store
+				// instead, e.g. after the host saved one outside the GUI.
 				if ui.Button(c, "刷新").Disabled(a.busy).Clicked() {
-					a.refreshKey()
+					a.reload()
 					c.Invalidate()
 				}
 				return
@@ -219,6 +222,7 @@ func (a *accountState) manualEntry(c *ui.Context) {
 				FontSize(12).TextColor(c.Theme().TextMuted)
 		}
 	})
+	muted(c, "输出含 User ID 和加密密钥，只保存在本机凭据管理器，请勿外传。")
 	muted(c, "保存成功后，还要在 Bitwarden 扩展 → 设置 → 安全中开启「解锁时使用生物识别」。")
 
 	if len(a.accounts) == 0 {

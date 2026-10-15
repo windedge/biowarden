@@ -18,7 +18,8 @@ import (
 
 const appName = "biowarden"
 
-// appVersion is shown in the sidebar's footer and on the Settings page.
+// appVersion is shown in the sidebar's footer and on the Settings page, and
+// substitutes into fakeLog. Keep it in sync with mygo.json's version.
 const appVersion = "0.1.0"
 
 // Run blocks until the app quits.

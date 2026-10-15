@@ -101,17 +101,17 @@ func (s *browsersState) installAll() {
 		}
 	}
 	s.reload()
-	switch {
-	case len(failed) > 0:
-		s.notice = "已安装 " + itoa(installed) + " 个；写入失败：" + strings.Join(failed, "、")
-		s.noticeOK = false
-	case skipped > 0:
-		s.notice = "已安装 " + itoa(installed) + " 个；" + itoa(skipped) + " 个需要逐行确认（可能属于官方 Bitwarden 客户端）"
-		s.noticeOK = true
-	default:
-		s.notice = "已为 " + itoa(installed) + " 个浏览器写入 manifest"
-		s.noticeOK = true
+	// One notice carries all three facts, so a failure never hides the
+	// rows the bulk install skipped for a per-row confirmation.
+	parts := []string{"已安装 " + itoa(installed) + " 个"}
+	if len(failed) > 0 {
+		parts = append(parts, "失败："+strings.Join(failed, "、"))
 	}
+	if skipped > 0 {
+		parts = append(parts, itoa(skipped)+" 个需逐行确认（可能属于官方客户端）")
+	}
+	s.notice = strings.Join(parts, "；")
+	s.noticeOK = len(failed) == 0 && skipped == 0
 }
 
 // install writes our manifest for the row, replacing whatever was registered.
