@@ -26,7 +26,7 @@ browser extension -stdio(native messaging)-> biowarden host -> Windows Hello -> 
 
 - One executable, two modes. When stdin is a pipe, biowarden runs as the native messaging host
   (started by the browser on demand); started any other way it opens the GUI - a tray icon plus a
-  window with four pages: **浏览器** / **密钥** / **设置** / **日志** (Browsers / Keys / Settings / Log).
+  window with four pages: **Browsers** / **Keys** / **Settings** / **Log**.
 - Two channels to the extension:
   - the legacy command protocol (today's main path): `setupEncryption` hands the host a 64-byte
     transport key wrapped in RSA-OAEP-SHA1; everything after that is AES-256-CBC + HMAC, and every
@@ -59,15 +59,15 @@ Requires Windows 10 1709 or later with Windows Hello configured.
 
 ## Usage
 
-1. Run `biowarden.exe` and click **安装** (Install) next to your browser on the **浏览器**
-   (Browsers) page. Chrome installs write both the `Google\Chrome` and the `Chromium` registry key;
+1. Run `biowarden.exe` and click **Install** next to your browser on the **Browsers**
+   page. Chrome installs write both the `Google\Chrome` and the `Chromium` registry key;
    biowarden versions before 2026.1 only wrote the former.
-2. With the extension unlocked, click **复制提取脚本** (copy extraction script) on the **密钥**
-   (Keys) page and paste the script into the extension's background console (Chrome:
+2. With the extension unlocked, click **Copy extraction script** on the **Keys**
+   page and paste the script into the extension's background console (Chrome:
    `chrome://extensions` -> the Bitwarden service worker; Firefox: `about:debugging`). It prints
    `{userId, keyB64}`. Bitwarden 2026.8.x keeps the key in session storage (wrapped as `{__json__}`)
    or, under a "never lock" policy, in local `<userId>_user_auto` - the script handles both, and
-   says why it found nothing otherwise. Paste both values back on the **密钥** page, save, and
+   says why it found nothing otherwise. Paste both values back on the **Keys** page, save, and
    approve the Windows Hello prompt.
 3. In the Bitwarden extension, Settings -> Security -> enable "Unlock with biometrics" (this grants
    the `nativeMessaging` permission and reloads the extension). **Restart the browser completely
@@ -80,7 +80,7 @@ Requires Windows 10 1709 or later with Windows Hello configured.
 
 - **The official Bitwarden desktop client conflicts with biowarden.** It unconditionally rewrites
   the `NativeMessagingHosts` registry keys for every browser each time it starts, taking the
-  registration back. The **浏览器** page shows a red "overwritten by another program" state and
+  registration back. The **Browsers** page shows a red "overwritten by another program" state and
   offers one-click recovery, but the real fix is not to run the official desktop app alongside.
 - The extraction script depends on the extension's internal storage layout
   (`chrome.storage.session`'s `user_<id>_crypto_userKey`). A major Bitwarden extension update can
@@ -112,9 +112,9 @@ CGO_ENABLED=0 go build ./... && CGO_ENABLED=0 go vet ./... && go test ./...
 
 ## Uninstall
 
-- **浏览器** page: click **卸载** (Uninstall) for every configured browser (removes the manifest
+- **Browsers** page: click **Uninstall** for every configured browser (removes the manifest
   and the registry value)
-- **密钥** page: delete each stored account key
+- **Keys** page: delete each stored account key
 - Quit biowarden (tray menu -> Exit) and delete the program and its installer
 
 ## Disclaimer
