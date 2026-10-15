@@ -50,6 +50,33 @@ func newTestEnv(t *testing.T) testEnv {
 	}
 }
 
+func writeValue(t *testing.T, root registry.Key, keyPath, value string) {
+	t.Helper()
+	key, _, err := registry.CreateKey(root, keyPath, registry.SET_VALUE)
+	if err != nil {
+		t.Fatalf("create %s: %v", keyPath, err)
+	}
+	if err := key.SetStringValue("", value); err != nil {
+		key.Close()
+		t.Fatalf("write %s: %v", keyPath, err)
+	}
+	key.Close()
+}
+
+func readValue(t *testing.T, root registry.Key, keyPath string) (string, bool) {
+	t.Helper()
+	key, err := registry.OpenKey(root, keyPath, registry.QUERY_VALUE)
+	if err != nil {
+		return "", false
+	}
+	defer key.Close()
+	value, _, err := key.GetStringValue("")
+	if err != nil {
+		return "", false
+	}
+	return value, true
+}
+
 func deleteTree(root registry.Key, path string) {
 	key, err := registry.OpenKey(root, path, registry.ALL_ACCESS)
 	if err != nil {
@@ -140,19 +167,114 @@ func TestInstallAllBrowsers(t *testing.T) {
 	}
 }
 
+func TestChromeInstallCoversBothKeys(t *testing.T) {
+	env := newTestEnv(t)
+	if err := env.reg.Install(Chrome); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	want := filepath.Join(env.dir, "chrome.json")
+	for _, keyPath := range browserKeyPaths[Chrome] {
+		got, ok := readValue(t, env.root, keyPath)
+		if !ok || got != want {
+			t.Fatalf("key %s = %q, %v, want %q", keyPath, got, ok, want)
+		}
+	}
+}
+
+func TestChromeStatusAggregatesKeys(t *testing.T) {
+	tests := []struct {
+		name       string
+		google     string
+		chromium   string
+		registered bool
+		isOurs     bool
+	}{
+		{"none", "", "", false, false},
+		{"google ours", "our", "", true, true},
+		{"chromium ours", "", "our", true, true},
+		{"both foreign", "foreign-google", "foreign-chromium", true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := newTestEnv(t)
+			ourPath := filepath.Join(env.dir, "chrome.json")
+			values := []string{tt.google, tt.chromium}
+			for i, keyPath := range browserKeyPaths[Chrome] {
+				v := values[i]
+				if v == "" {
+					continue
+				}
+				if v == "our" {
+					v = ourPath
+				}
+				writeValue(t, env.root, keyPath, v)
+			}
+
+			st, err := env.reg.Status(Chrome)
+			if err != nil {
+				t.Fatalf("Status: %v", err)
+			}
+			if st.Registered != tt.registered || st.IsOurs != tt.isOurs {
+				t.Fatalf("Status = %+v, want registered=%v ours=%v", st, tt.registered, tt.isOurs)
+			}
+			if tt.isOurs && st.Path != ourPath {
+				t.Fatalf("Status.Path = %q, want %q", st.Path, ourPath)
+			}
+			// The Google key wins when both keys hold a foreign value.
+			if !tt.isOurs && tt.google != "" && st.Path != "foreign-google" {
+				t.Fatalf("Status.Path = %q, want foreign-google", st.Path)
+			}
+			if !tt.isOurs && tt.google == "" && tt.chromium != "" && st.Path != "foreign-chromium" {
+				t.Fatalf("Status.Path = %q, want foreign-chromium", st.Path)
+			}
+		})
+	}
+}
+
+func TestChromeUninstallClearsBothKeys(t *testing.T) {
+	env := newTestEnv(t)
+	if err := env.reg.Install(Chrome); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := env.reg.Uninstall(Chrome); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	for _, keyPath := range browserKeyPaths[Chrome] {
+		if _, ok := readValue(t, env.root, keyPath); ok {
+			t.Fatalf("key %s still set after Uninstall", keyPath)
+		}
+	}
+}
+
+func TestChromeUninstallSkipsForeignAndMissing(t *testing.T) {
+	env := newTestEnv(t)
+	foreignGoogle := filepath.Join(env.dir, "official-google.json")
+	foreignChromium := filepath.Join(env.dir, "official-chromium.json")
+	writeValue(t, env.root, browserKeyPaths[Chrome][0], foreignGoogle)
+	writeValue(t, env.root, browserKeyPaths[Chrome][1], foreignChromium)
+
+	if err := env.reg.Uninstall(Chrome); err != nil {
+		t.Fatalf("Uninstall foreign: %v", err)
+	}
+	if got, _ := readValue(t, env.root, browserKeyPaths[Chrome][0]); got != foreignGoogle {
+		t.Fatalf("google value = %q, want untouched %q", got, foreignGoogle)
+	}
+	if got, _ := readValue(t, env.root, browserKeyPaths[Chrome][1]); got != foreignChromium {
+		t.Fatalf("chromium value = %q, want untouched %q", got, foreignChromium)
+	}
+
+	// Idempotent: a second uninstall with nothing of ours present is fine.
+	if err := env.reg.Uninstall(Chrome); err != nil {
+		t.Fatalf("Uninstall again: %v", err)
+	}
+}
+
 // A value written by something else (for example the official desktop client)
 // must be reported as not ours and left untouched by Uninstall.
 func TestForeignRegistration(t *testing.T) {
 	env := newTestEnv(t)
 	foreign := filepath.Join(env.dir, "official-client.json")
-	key, _, err := registry.CreateKey(env.root, browserKeyPaths[Chrome], registry.SET_VALUE)
-	if err != nil {
-		t.Fatalf("create foreign key: %v", err)
-	}
-	if err := key.SetStringValue("", foreign); err != nil {
-		t.Fatalf("write foreign value: %v", err)
-	}
-	key.Close()
+	writeValue(t, env.root, browserKeyPaths[Chrome][0], foreign)
 
 	st, err := env.reg.Status(Chrome)
 	if err != nil {
@@ -165,14 +287,9 @@ func TestForeignRegistration(t *testing.T) {
 	if err := env.reg.Uninstall(Chrome); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	key, err = registry.OpenKey(env.root, browserKeyPaths[Chrome], registry.QUERY_VALUE)
-	if err != nil {
-		t.Fatalf("foreign key gone after Uninstall: %v", err)
-	}
-	defer key.Close()
-	got, _, err := key.GetStringValue("")
-	if err != nil || got != foreign {
-		t.Fatalf("foreign value = %q, %v, want %q", got, err, foreign)
+	got, ok := readValue(t, env.root, browserKeyPaths[Chrome][0])
+	if !ok || got != foreign {
+		t.Fatalf("foreign value = %q, %v, want %q", got, ok, foreign)
 	}
 }
 

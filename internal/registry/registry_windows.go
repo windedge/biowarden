@@ -27,12 +27,16 @@ var firefoxExtensions = []string{
 	"{446900e4-71c2-419f-a6a7-df9c091e268b}",
 }
 
-// browserKeyPaths maps each browser to the HKCU subkey whose default value
-// holds the manifest path.
-var browserKeyPaths = map[Browser]string{
-	Chrome:  `Software\Google\Chrome\NativeMessagingHosts\` + hostName,
-	Edge:    `Software\Microsoft\Edge\NativeMessagingHosts\` + hostName,
-	Firefox: `Software\Mozilla\NativeMessagingHosts\` + hostName,
+// browserKeyPaths maps each browser to the HKCU subkeys whose default value
+// holds the manifest path. Chromium reads a key of its own, separate from
+// Google Chrome, so "Chrome" installs must cover both.
+var browserKeyPaths = map[Browser][]string{
+	Chrome: {
+		`Software\Google\Chrome\NativeMessagingHosts\` + hostName,
+		`Software\Chromium\NativeMessagingHosts\` + hostName,
+	},
+	Edge:    {`Software\Microsoft\Edge\NativeMessagingHosts\` + hostName},
+	Firefox: {`Software\Mozilla\NativeMessagingHosts\` + hostName},
 }
 
 // Options overrides the real machine state. Its zero value targets the current
@@ -74,26 +78,44 @@ func NewWithOptions(opts Options) Registrar {
 }
 
 func (r *registrar) Status(b Browser) (Status, error) {
-	path, ok, err := r.registeredPath(b)
-	if err != nil {
-		return Status{}, err
-	}
+	keyPaths, ok := browserKeyPaths[b]
 	if !ok {
-		return Status{}, nil
+		return Status{}, fmt.Errorf("registry: unsupported browser %q", b)
 	}
 	dir, err := r.manifestsDir()
 	if err != nil {
 		return Status{}, err
 	}
-	return Status{
-		Registered: true,
-		Path:       path,
-		IsOurs:     path == r.manifestPath(b, dir),
-	}, nil
+	ourPath := r.manifestPath(b, dir)
+
+	// Our value in any key wins: when Chrome has two registration points, a
+	// foreign value on one of them must not hide the fact that the browser is
+	// pointed at us. The first foreign value seen is reported otherwise, and
+	// the key order makes the more common Google key take precedence.
+	foreign := ""
+	for _, keyPath := range keyPaths {
+		path, ok, err := r.readRegisteredPath(keyPath)
+		if err != nil {
+			return Status{}, err
+		}
+		if !ok {
+			continue
+		}
+		if path == ourPath {
+			return Status{Registered: true, Path: ourPath, IsOurs: true}, nil
+		}
+		if foreign == "" {
+			foreign = path
+		}
+	}
+	if foreign != "" {
+		return Status{Registered: true, Path: foreign}, nil
+	}
+	return Status{}, nil
 }
 
 func (r *registrar) Install(b Browser) error {
-	keyPath, ok := browserKeyPaths[b]
+	keyPaths, ok := browserKeyPaths[b]
 	if !ok {
 		return fmt.Errorf("registry: unsupported browser %q", b)
 	}
@@ -117,59 +139,67 @@ func (r *registrar) Install(b Browser) error {
 		return fmt.Errorf("registry: cannot write manifest: %w", err)
 	}
 
-	key, _, err := registry.CreateKey(r.root, keyPath, registry.SET_VALUE)
-	if err != nil {
-		return fmt.Errorf("registry: cannot create %s: %w", keyPath, err)
-	}
-	defer key.Close()
-	if err := key.SetStringValue("", manifestPath); err != nil {
-		return fmt.Errorf("registry: cannot write %s: %w", keyPath, err)
+	// Every registration point of the browser must point at the shared
+	// manifest, otherwise the engine actually in use keeps its old value.
+	for _, keyPath := range keyPaths {
+		key, _, err := registry.CreateKey(r.root, keyPath, registry.SET_VALUE)
+		if err != nil {
+			return fmt.Errorf("registry: cannot create %s: %w", keyPath, err)
+		}
+		err = key.SetStringValue("", manifestPath)
+		key.Close()
+		if err != nil {
+			return fmt.Errorf("registry: cannot write %s: %w", keyPath, err)
+		}
 	}
 	return nil
 }
 
 func (r *registrar) Uninstall(b Browser) error {
-	keyPath, ok := browserKeyPaths[b]
+	keyPaths, ok := browserKeyPaths[b]
 	if !ok {
 		return fmt.Errorf("registry: unsupported browser %q", b)
 	}
-	// Only clear a registration that points at our manifest: a value the
-	// official client wrote must survive an uninstall.
-	st, err := r.Status(b)
-	if err != nil {
-		return err
-	}
-	if st.Registered && st.IsOurs {
-		key, err := registry.OpenKey(r.root, keyPath, registry.SET_VALUE)
-		if err != nil && !errors.Is(err, registry.ErrNotExist) {
-			return fmt.Errorf("registry: cannot open %s: %w", keyPath, err)
-		}
-		if err == nil {
-			err := key.DeleteValue("")
-			key.Close()
-			if err != nil && !errors.Is(err, registry.ErrNotExist) {
-				return fmt.Errorf("registry: cannot delete %s: %w", keyPath, err)
-			}
-		}
-	}
-
 	dir, err := r.manifestsDir()
 	if err != nil {
 		return err
 	}
-	if err := os.Remove(r.manifestPath(b, dir)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	ourPath := r.manifestPath(b, dir)
+
+	// Clear only the keys that point at our manifest: a value the official
+	// client wrote must survive an uninstall, and a key that is absent or not
+	// ours is not an error, which keeps uninstall idempotent.
+	for _, keyPath := range keyPaths {
+		path, ok, err := r.readRegisteredPath(keyPath)
+		if err != nil {
+			return err
+		}
+		if !ok || path != ourPath {
+			continue
+		}
+		key, err := registry.OpenKey(r.root, keyPath, registry.SET_VALUE)
+		if errors.Is(err, registry.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("registry: cannot open %s: %w", keyPath, err)
+		}
+		err = key.DeleteValue("")
+		key.Close()
+		if err != nil && !errors.Is(err, registry.ErrNotExist) {
+			return fmt.Errorf("registry: cannot delete %s: %w", keyPath, err)
+		}
+	}
+
+	if err := os.Remove(ourPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("registry: cannot remove manifest: %w", err)
 	}
 	return nil
 }
 
-// registeredPath reads the manifest path from a browser's registration key,
+// readRegisteredPath reads the manifest path from a single registration key,
 // reporting false when the key or its default value is absent.
-func (r *registrar) registeredPath(b Browser) (string, bool, error) {
-	keyPath, ok := browserKeyPaths[b]
-	if !ok {
-		return "", false, fmt.Errorf("registry: unsupported browser %q", b)
-	}
+func (r *registrar) readRegisteredPath(keyPath string) (string, bool, error) {
 	key, err := registry.OpenKey(r.root, keyPath, registry.QUERY_VALUE)
 	if errors.Is(err, registry.ErrNotExist) {
 		return "", false, nil
