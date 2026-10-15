@@ -19,7 +19,11 @@
 // Current scope. The core password chain is real: server URL derivation, the
 // HTTP/header layer, prelogin (both variants), the KDF (PBKDF2-SHA256 and
 // Argon2id), EncString type 2 decoding and userKey unlocking, the token
-// request, refresh and profile. Two-factor answering is not wired to a UI
-// yet: the flow stops at LoginNeedTwoFactor and hands the challenge back.
-// ErrNotImplemented remains only on UnsupportedSolver.
+// request, refresh and profile. The second-factor solver core is real too:
+// the challenge model names the interaction each offered method needs, and
+// LoginFlow.SolveTwoFactor drives TOTP, email and YubiKey codes and delegates
+// browser methods (Duo, WebAuthn) to the solver seam. What is not built yet
+// is the browser path itself and the GUI; see
+// docs/research/2fa-browser-path.md. ErrNotImplemented remains only on
+// UnsupportedSolver.
 package auth

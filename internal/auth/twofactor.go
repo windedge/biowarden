@@ -64,6 +64,56 @@ func (p TwoFactorProvider) String() string {
 	return "unknown"
 }
 
+// ChallengeInteraction is how one offered second-factor method is answered.
+// It is the only thing a login window needs in order to render the method, so
+// it stays free of protocol detail.
+type ChallengeInteraction int
+
+const (
+	// InteractionCode means the user supplies a short code: a TOTP code off an
+	// authenticator app (provider 0), a code emailed by the server (provider
+	// 1), or a YubiKey one-time password read off the device (provider 3).
+	InteractionCode ChallengeInteraction = iota
+	// InteractionBrowser means the method completes in the system browser and
+	// only the resulting token comes back: Duo (providers 2 and 6) and WebAuthn
+	// (provider 7). The browser path itself is deferred; see
+	// docs/research/2fa-browser-path.md.
+	InteractionBrowser
+	// InteractionUnsupported means biowarden has no path for the method yet, so
+	// a login window must not offer it. Recovery codes (provider 8) are a user
+	// input like the code methods but are out of scope for this ticket.
+	InteractionUnsupported
+)
+
+// String names the interaction for logs and UI.
+func (i ChallengeInteraction) String() string {
+	switch i {
+	case InteractionCode:
+		return "code"
+	case InteractionBrowser:
+		return "browser"
+	case InteractionUnsupported:
+		return "unsupported"
+	}
+	return "unknown"
+}
+
+// TwoFactorMethod is one offered method and the interaction it needs. Methods
+// preserves the server's order so a login window can render the list as sent.
+type TwoFactorMethod struct {
+	// Provider is the method the submission must echo back as
+	// twoFactorProvider.
+	Provider TwoFactorProvider
+	// Interaction is what the login window must render for this method.
+	Interaction ChallengeInteraction
+	// Email is where the code was sent for provider 1, as the server reported
+	// it; it may be masked.
+	Email string
+	// BrowserURL is the page to open for InteractionBrowser. Duo fills it from
+	// the Frameless AuthUrl; the WebAuthn connector URL is not built yet.
+	BrowserURL string
+}
+
 // TwoFactorChallenge is the server's request for a second factor, extracted
 // from the 400 body of {identity}/connect/token. Which fields are meaningful
 // depends on the offered providers.
@@ -84,9 +134,11 @@ type TwoFactorChallenge struct {
 	DuoURL string
 
 	// WebAuthnURL is the web vault connector page (webauthn-connector.html)
-	// opened for provider 7 in a browser. WebAuthnChallenge and
-	// WebAuthnAllowCredentials are the server's assertion options, for a
-	// future native path.
+	// opened for provider 7 in a browser. Building that URL from the provider
+	// payload is deferred to the browser-path work; the mechanism is written
+	// up in docs/research/2fa-browser-path.md. WebAuthnChallenge and
+	// WebAuthnAllowCredentials are the server's assertion options, reserved
+	// for a future native (webauthn.dll) path.
 	WebAuthnURL              string
 	WebAuthnChallenge        string
 	WebAuthnAllowCredentials [][]byte
@@ -105,19 +157,67 @@ func (c *TwoFactorChallenge) Has(p TwoFactorProvider) bool {
 	return false
 }
 
+// Methods returns one TwoFactorMethod per offered provider, in the server's
+// order. A login window renders these directly and picks the interaction it
+// supports.
+func (c *TwoFactorChallenge) Methods() []TwoFactorMethod {
+	if c == nil {
+		return nil
+	}
+	methods := make([]TwoFactorMethod, 0, len(c.Providers))
+	for _, p := range c.Providers {
+		methods = append(methods, c.method(p))
+	}
+	return methods
+}
+
+// Method returns the offered method for provider p.
+func (c *TwoFactorChallenge) Method(p TwoFactorProvider) (TwoFactorMethod, bool) {
+	if c == nil {
+		return TwoFactorMethod{}, false
+	}
+	for _, offered := range c.Providers {
+		if offered == p {
+			return c.method(p), true
+		}
+	}
+	return TwoFactorMethod{}, false
+}
+
+// method classifies one provider into its interaction and payload.
+func (c *TwoFactorChallenge) method(p TwoFactorProvider) TwoFactorMethod {
+	m := TwoFactorMethod{Provider: p, Interaction: InteractionUnsupported}
+	switch p {
+	case TwoFactorAuthenticator, TwoFactorYubiKey:
+		m.Interaction = InteractionCode
+	case TwoFactorEmail:
+		m.Interaction = InteractionCode
+		m.Email = c.Email
+	case TwoFactorDuo, TwoFactorOrganizationDuo:
+		m.Interaction = InteractionBrowser
+		m.BrowserURL = c.DuoURL
+	case TwoFactorWebAuthn:
+		m.Interaction = InteractionBrowser
+		m.BrowserURL = c.WebAuthnURL
+	}
+	return m
+}
+
 // TwoFactorSolver collects the second factor from the user. The GUI and the
 // native-messaging host each implement it; the login flow never assumes a
-// particular UI.
+// particular UI. Implementations must never log the token they return.
 type TwoFactorSolver interface {
 	// TOTP returns a 6-digit authenticator code (provider 0).
 	TOTP(ctx context.Context) (string, error)
 	// EmailCode requests an email code (provider 1) and returns the code the
-	// user received. send performs the actual send-email-login request so the
-	// solver can trigger it exactly once.
+	// user received. send performs the actual send-email-login request, so the
+	// solver must call it exactly once before collecting the code; the flow
+	// makes a repeated call a no-op.
 	EmailCode(ctx context.Context, send func(ctx context.Context) error) (string, error)
 	// OpenBrowser opens a Duo AuthURL or a WebAuthn connector page in the
-	// system browser and returns the token the browser path yields (providers
-	// 2, 6 and 7).
+	// system browser and returns the token the browser path yields: "code|state"
+	// for Duo (providers 2 and 6) or the assertion JSON for WebAuthn (provider
+	// 7).
 	OpenBrowser(ctx context.Context, url string) (string, error)
 	// YubiKey returns the YubiKey one-time password the user typed
 	// (provider 3).

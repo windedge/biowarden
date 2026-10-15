@@ -42,8 +42,16 @@ func (s LoginState) String() string {
 	return "unknown"
 }
 
-// TwoFactorSubmission is the user's answer to a TwoFactorChallenge. Remember
-// asks the server to issue a TwoFactorToken for the next login.
+// TwoFactorSubmission is the user's answer to a TwoFactorChallenge. Provider
+// and Token are sent as twoFactorProvider and twoFactorToken.
+//
+// Remember is the "remember this device" flag (twoFactorRemember). The map
+// decision is not to use it: biowarden gates access to the local key with
+// Windows Hello instead of persisting a server-side remember token, so the
+// GUI must keep Remember false and not render a toggle. The field and
+// TokenResponse.TwoFactorToken stay so the decision is cheap to revisit: set
+// Remember, then store the returned TwoFactorToken per account and resend it
+// as TwoFactorProvider with TwoFactorRemember.
 type TwoFactorSubmission struct {
 	Provider TwoFactorProvider
 	Token    string
@@ -159,6 +167,105 @@ func (f *LoginFlow) Continue(ctx context.Context, in LoginInput) (LoginResult, e
 	default:
 		return LoginResult{State: LoginFailed}, fmt.Errorf("auth: login: cannot continue from state %s", f.state)
 	}
+}
+
+// SolveTwoFactor answers the current challenge through the configured solver
+// and resubmits the token request. It is the step a login window runs after
+// Continue returned LoginNeedTwoFactor: the challenge's Methods tell the
+// window what to render, the user picks a method, and SolveTwoFactor collects
+// the answer and resends the grant.
+//
+// On success it returns LoginDone, or a fresh LoginNeedTwoFactor when the
+// server asks for another method. A rejected code, a cancelled or timed-out
+// solve, and an unsupported method all leave the flow in LoginNeedTwoFactor
+// with the same challenge and return the error, so the caller can correct the
+// code, retry, or pick a different offered method.
+func (f *LoginFlow) SolveTwoFactor(ctx context.Context, provider TwoFactorProvider) (LoginResult, error) {
+	if f.state != LoginNeedTwoFactor || f.challenge == nil {
+		return LoginResult{State: LoginFailed}, fmt.Errorf("auth: login: no two-factor challenge to solve (state %s)", f.state)
+	}
+	submission, err := f.solve(ctx, provider)
+	if err != nil {
+		return f.retryTwoFactor(err)
+	}
+	result, err := f.continueTwoFactor(ctx, submission)
+	if err != nil {
+		return f.retryTwoFactor(err)
+	}
+	return result, nil
+}
+
+// retryTwoFactor rewinds to NeedTwoFactor after a failed solve or a rejected
+// resubmission, keeping the current challenge so the user can try again. A
+// new challenge the server sent is already stored on the flow.
+func (f *LoginFlow) retryTwoFactor(err error) (LoginResult, error) {
+	f.state = LoginNeedTwoFactor
+	return LoginResult{State: LoginNeedTwoFactor, Challenge: f.challenge}, err
+}
+
+// solve asks the solver for the token of one offered method. The method's
+// interaction decides which solver entry point is used.
+func (f *LoginFlow) solve(ctx context.Context, provider TwoFactorProvider) (*TwoFactorSubmission, error) {
+	method, ok := f.challenge.Method(provider)
+	if !ok {
+		return nil, fmt.Errorf("%w: %s was not offered", ErrTwoFactorUnsupported, provider)
+	}
+	if f.solver == nil {
+		return nil, fmt.Errorf("%w: no solver is configured", ErrTwoFactorUnsupported)
+	}
+	var (
+		token string
+		err   error
+	)
+	switch method.Interaction {
+	case InteractionCode:
+		token, err = f.solveCode(ctx, method)
+	case InteractionBrowser:
+		if method.BrowserURL == "" {
+			return nil, fmt.Errorf("%w: %s needs a browser URL the flow does not have yet", ErrTwoFactorUnsupported, provider)
+		}
+		token, err = f.solver.OpenBrowser(ctx, method.BrowserURL)
+	default:
+		return nil, fmt.Errorf("%w: %s has no solver path", ErrTwoFactorUnsupported, provider)
+	}
+	if err != nil {
+		return nil, err
+	}
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, fmt.Errorf("auth: login: the %s solver returned an empty token", provider)
+	}
+	return &TwoFactorSubmission{Provider: provider, Token: token}, nil
+}
+
+// solveCode handles the three methods that need a string from the user. Email
+// is the only one with a server-side preparation step.
+func (f *LoginFlow) solveCode(ctx context.Context, method TwoFactorMethod) (string, error) {
+	switch method.Provider {
+	case TwoFactorAuthenticator:
+		return f.solver.TOTP(ctx)
+	case TwoFactorYubiKey:
+		return f.solver.YubiKey(ctx)
+	case TwoFactorEmail:
+		return f.solver.EmailCode(ctx, f.sendEmailCode)
+	}
+	return "", fmt.Errorf("%w: %s has no code solver", ErrTwoFactorUnsupported, method.Provider)
+}
+
+// sendEmailCode posts the send-email-login request for the email method. The
+// challenge records that it ran, so a solver that calls send again does not
+// produce a second email.
+func (f *LoginFlow) sendEmailCode(ctx context.Context) error {
+	if f.challenge != nil && f.challenge.EmailSent {
+		return nil
+	}
+	if err := f.client.SendEmailLogin(ctx, f.email, f.masterPasswordHash); err != nil {
+		return err
+	}
+	if f.challenge != nil {
+		f.challenge.EmailSent = true
+	}
+	return nil
 }
 
 // continuePassword derives the master key, hashes it and sends the password

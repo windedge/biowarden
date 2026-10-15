@@ -69,6 +69,10 @@ var (
 	// ErrTwoFactorRequired means the token endpoint wants a second factor;
 	// the response carries the offered providers.
 	ErrTwoFactorRequired = errors.New("auth: two-factor required")
+	// ErrTwoFactorUnsupported means the chosen second-factor method has no
+	// solver path: it was not offered, its interaction is not implemented, or
+	// its solver is missing. The caller may pick another offered method.
+	ErrTwoFactorUnsupported = errors.New("auth: two-factor method is not supported")
 	// ErrCaptchaRequired means the server demands a CAPTCHA, which cannot be
 	// solved headless.
 	ErrCaptchaRequired = errors.New("auth: captcha required")
