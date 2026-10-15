@@ -18,24 +18,12 @@ import (
 // Deriving a real per-install id is a later ticket.
 const deviceID = "biowarden-windows"
 
-// errNeedCredentials reports a refresh or relogin with no cached login in
-// memory, which happens after a restart and after a login finished in the 2FA
-// step: passwords are never persisted, so the user has to sign in again before
-// the key can be re-derived.
-var errNeedCredentials = errors.New("需要先登录账号，才能刷新密钥")
-
 // errTwoFactorUnsupported reports a second factor biowarden has no path for:
 // Duo (providers 2 and 6) and WebAuthn (7) complete through a browser hand-off
 // whose callback the map decision deferred, so the login window points at the
 // account page's extraction script instead. The login window renders this
 // wording, so it stays one source of truth.
 var errTwoFactorUnsupported = errors.New("此方式 biowarden 暂不支持，请在账号页高级选项里用提取脚本录入密钥")
-
-// errTwoFactorNeedsSignIn reports a key refresh or relogin that stopped for a
-// second factor. The login window is where a challenge is answered, so the
-// account page asks for the sign-in there instead of parking itself on a
-// prompt it cannot submit.
-var errTwoFactorNeedsSignIn = errors.New("重新登录需要两步验证，请在「登录 Bitwarden 账号」窗口完成登录")
 
 // errNoTwoFactorChallenge reports a 2FA submission with nothing parked to
 // answer, which a stale window can reach after the attempt was abandoned.
@@ -85,8 +73,8 @@ type accountAuthFactory func(serverURL string) (accountAuth, error)
 // realAccount is the accountBackend on the real seams: internal/auth performs
 // the login, Windows Hello gates the write, and the Credential Manager stores
 // the key. The access and refresh tokens stay inside the flow and are dropped
-// as soon as the key is derived; the login inputs are kept in memory for the
-// run so refreshKey and relogin can re-derive the key. Nothing is persisted.
+// as soon as the key is derived, and the master password is never kept: a key
+// that has to be re-derived goes through a fresh sign-in in the login window.
 type realAccount struct {
 	store    secrets.Store
 	verifier hello.Verifier
@@ -100,12 +88,9 @@ type realAccount struct {
 	mu   sync.Mutex
 	sess accountSession
 	// lastLoggedIn is the session to fall back to when a pending login is
-	// abandoned: cancelling a relogin returns to the account that was already
-	// signed in, cancelling a first login lands back on signed out.
+	// abandoned: cancelling a fresh sign-in returns to the account that was
+	// already signed in, cancelling a first login lands back on signed out.
 	lastLoggedIn accountSession
-	email        string
-	pass         string
-	server       string
 	// pending is the attempt waiting for a second factor. The login window
 	// answers it through submit2FA; cancelLogin and a finished login drop it.
 	pending *pendingTwoFactor
@@ -377,14 +362,12 @@ func (a *realAccount) runLogin(email, password, serverURL, helloReason string) (
 		a.parkTwoFactor(flow, serverURL, email, step.challenge)
 		return a.currentSession(), nil
 	}
-	return a.completeLogin(step, serverURL, email, password, helloReason)
+	return a.completeLogin(step, serverURL, email, helloReason)
 }
 
 // parkTwoFactor records the challenge the login window must answer. The
 // plaintext password is not kept while the prompt waits: nothing needs it
 // until the flow finishes, and a cancelled attempt must not leave it behind.
-// A login finished in the 2FA step therefore lands without cached credentials,
-// so a later refreshKey asks for a fresh sign-in.
 func (a *realAccount) parkTwoFactor(flow accountAuth, serverURL, email string, challenge *twoFactorPrompt) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -396,16 +379,14 @@ func (a *realAccount) parkTwoFactor(flow accountAuth, serverURL, email string, c
 		twoFAMethod: challenge.first(),
 		challenge:   challenge,
 	}
-	a.email, a.pass, a.server = "", "", ""
 }
 
 // completeLogin applies a finished step: Hello consent first, then the key
 // write, then the session. The order is the point - a refused or failed
-// prompt must leave the store untouched. password is empty when the login
-// finished in the 2FA step, which is why the credentials are not cached then.
-// The session (refresh token + identity) is persisted after the key; a failed
-// session write only warns, because the login itself succeeded.
-func (a *realAccount) completeLogin(step authStep, serverURL, email, password, helloReason string) (accountSession, error) {
+// prompt must leave the store untouched. The session (refresh token +
+// identity) is persisted after the key; a failed session write only warns,
+// because the login itself succeeded.
+func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason string) (accountSession, error) {
 	if err := verifyHello(a.verifier, helloReason); err != nil {
 		return a.stay(serverURL), err
 	}
@@ -433,11 +414,6 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, password, h
 	}
 	a.lastLoggedIn = a.sess
 	a.pending = nil
-	if password == "" {
-		a.email, a.pass, a.server = "", "", ""
-	} else {
-		a.email, a.pass, a.server = email, password, serverURL
-	}
 	return a.sess, nil
 }
 
@@ -502,7 +478,7 @@ func (a *realAccount) submit2FA(provider int, code string) (accountSession, erro
 		a.parkTwoFactor(p.auth, p.serverURL, p.email, step.challenge)
 		return a.currentSession(), nil
 	}
-	return a.completeLogin(step, p.serverURL, p.email, "", "保存 biowarden 密钥")
+	return a.completeLogin(step, p.serverURL, p.email, "保存 biowarden 密钥")
 }
 
 // sendEmailCode asks the server to mail the code for the pending email
@@ -537,16 +513,13 @@ func (a *realAccount) sendEmailCode() error {
 }
 
 // cancelLogin abandons a pending login attempt: the session falls back to the
-// one before it, and the cached credentials, the parked flow and the challenge
-// are dropped. A cancelled relogin therefore returns to the signed-in account,
-// while a cancelled first login lands back on signed out. The password is gone
-// after this, so refreshKey and relogin ask for a fresh sign-in, exactly as
-// after a restart.
+// one before it, and the parked flow and the challenge are dropped. A sign-in
+// started while already signed in therefore returns to that account, while a
+// first login lands back on signed out.
 func (a *realAccount) cancelLogin() (accountSession, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.sess = a.lastLoggedIn
-	a.email, a.pass, a.server = "", "", ""
 	a.pending = nil
 	return a.sess, nil
 }
@@ -576,7 +549,6 @@ func (a *realAccount) logout() error {
 	a.mu.Lock()
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
 	a.lastLoggedIn = a.sess
-	a.email, a.pass, a.server = "", "", ""
 	a.pending = nil
 	a.mu.Unlock()
 	if clearErr != nil {
@@ -644,39 +616,11 @@ func (a *realAccount) adoptRestored(sess accountSession) {
 	a.mu.Unlock()
 }
 
-func (a *realAccount) refreshKey() error {
-	return a.reauthenticate("刷新 biowarden 密钥")
-}
-
-func (a *realAccount) relogin() error {
-	return a.reauthenticate("重新登录 biowarden")
-}
-
-// reauthenticate re-runs the login with the credentials kept in memory and
-// rewrites the stored key after a fresh Hello consent. Without a cached login
-// (the app was restarted, or the sign-in finished in the 2FA step) it asks the
-// user to sign in again. A stop for 2FA is reported as an error, not as a
-// successful refresh: the key was not rewritten, and the challenge belongs to
-// the login window, so nothing is parked here.
-func (a *realAccount) reauthenticate(helloReason string) error {
-	a.mu.Lock()
-	email, password, serverURL := a.email, a.pass, a.server
-	a.mu.Unlock()
-	if email == "" || password == "" {
-		return errNeedCredentials
-	}
-	sess, err := a.runLogin(email, password, serverURL, helloReason)
-	if err != nil {
-		return err
-	}
-	if sess.state == loginNeeds2FA {
-		a.mu.Lock()
-		a.pending = nil
-		a.sess = a.lastLoggedIn
-		a.mu.Unlock()
-		return errTwoFactorNeedsSignIn
-	}
-	return nil
+// forgetSession drops the persisted login for an account whose stored key was
+// just deleted, so a restart cannot restore a session for a key that no longer
+// exists. It touches no key material and asks for no consent.
+func (a *realAccount) forgetSession(userID string) error {
+	return a.sessions.clear(userID)
 }
 
 // serverURLOf falls back to the official server when the page has no address.

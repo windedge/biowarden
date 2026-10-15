@@ -12,14 +12,12 @@ import (
 	"github.com/windedge/biowarden/internal/secrets"
 )
 
-// scriptedAuth is an accountAuth whose steps are fixed by the test. The same
-// instance is returned for every attempt, so a refresh sees the mutated step.
+// scriptedAuth is an accountAuth whose steps are fixed by the test.
 type scriptedAuth struct {
-	startErr  error
-	step      authStep
-	stepErr   error
-	starts    int
-	passwords []string
+	startErr error
+	step     authStep
+	stepErr  error
+	starts   int
 
 	// solveStep and solveErr answer solveTwoFactor, and sendErr answers the
 	// email preparation. Both record what they were asked, because the backend
@@ -38,8 +36,7 @@ func (f *scriptedAuth) start(context.Context, string) error {
 	return f.startErr
 }
 
-func (f *scriptedAuth) password(_ context.Context, password string) (authStep, error) {
-	f.passwords = append(f.passwords, password)
+func (f *scriptedAuth) password(_ context.Context, _ string) (authStep, error) {
 	return f.step, f.stepErr
 }
 
@@ -265,78 +262,6 @@ func TestRealAccountLogoutRefusedKeepsSession(t *testing.T) {
 	sess, _ := a.session()
 	if sess.state != loginLoggedIn {
 		t.Fatalf("state = %v, want still logged in", sess.state)
-	}
-}
-
-// refreshKey re-derives the key from the in-memory credentials and rewrites
-// the stored copy after a fresh consent.
-func TestRealAccountRefreshRewritesKey(t *testing.T) {
-	store := newFakeStore()
-	verifier := &fakeVerifier{result: hello.Verified}
-	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("old-key"))}
-	a := newRealAccount(store, verifier, fixedFlow(flow))
-
-	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
-		t.Fatalf("login: %v", err)
-	}
-	flow.step = doneStep("user-1", "ada@example.com", []byte("new-key"))
-	if err := a.refreshKey(); err != nil {
-		t.Fatalf("refreshKey: %v", err)
-	}
-	if got := store.keys["user-1"]; !bytes.Equal(got, []byte("new-key")) {
-		t.Fatalf("stored key = %q, want new-key", got)
-	}
-	if store.putCalls != 2 {
-		t.Fatalf("Put calls = %d, want 2", store.putCalls)
-	}
-	if verifier.calls != 2 {
-		t.Fatalf("Verify calls = %d, want 2 (one per write)", verifier.calls)
-	}
-	if len(flow.passwords) != 2 {
-		t.Fatalf("password steps = %d, want 2", len(flow.passwords))
-	}
-}
-
-// Without a cached login (the app was restarted) refreshing cannot re-derive
-// the key, and says so instead of silently doing nothing.
-func TestRealAccountRefreshWithoutCredentials(t *testing.T) {
-	a := newRealAccount(newFakeStore(), &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}))
-	if err := a.refreshKey(); !errors.Is(err, errNeedCredentials) {
-		t.Fatalf("refreshKey error = %v, want errNeedCredentials", err)
-	}
-	if err := a.relogin(); !errors.Is(err, errNeedCredentials) {
-		t.Fatalf("relogin error = %v, want errNeedCredentials", err)
-	}
-}
-
-// A refresh that stops for 2FA must not report success: the stored key was not
-// rewritten, and the challenge belongs to the login window, not to the page.
-func TestRealAccountRefreshTwoFactorIsNotSuccess(t *testing.T) {
-	store := newFakeStore()
-	verifier := &fakeVerifier{result: hello.Verified}
-	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("old-key"))}
-	a := newRealAccount(store, verifier, fixedFlow(flow))
-
-	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
-		t.Fatalf("login: %v", err)
-	}
-	flow.step = authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")}
-	if err := a.refreshKey(); !errors.Is(err, errTwoFactorNeedsSignIn) {
-		t.Fatalf("refreshKey error = %v, want errTwoFactorNeedsSignIn", err)
-	}
-	if got := store.keys["user-1"]; !bytes.Equal(got, []byte("old-key")) {
-		t.Fatalf("stored key = %q, want the unchanged old-key", got)
-	}
-	// The refresh must leave the account page signed in, not parked on a
-	// prompt it cannot submit.
-	sess, _ := a.session()
-	if sess.state != loginLoggedIn {
-		t.Fatalf("state = %v, want the still signed-in account", sess.state)
-	}
-	// And it must not park a flow the login window could mistake for a live
-	// attempt.
-	if _, err := a.submit2FA(twoFactorAuthenticator, "123456"); !errors.Is(err, errNoTwoFactorChallenge) {
-		t.Fatalf("submit2FA after a failed refresh = %v, want errNoTwoFactorChallenge", err)
 	}
 }
 
@@ -653,30 +578,10 @@ func TestRealAccountCancelLoginResetsTwoFactorSession(t *testing.T) {
 	}
 }
 
-// A 2FA stop is not a login, so the master password must not be parked in
-// memory while the challenge waits: a cancelled attempt leaves nothing, and a
-// login finished in the 2FA step lands without cached credentials.
-func TestRealAccountTwoFactorStopDoesNotRetainPassword(t *testing.T) {
-	store := newFakeStore()
-	verifier := &fakeVerifier{result: hello.Verified}
-	flow := &scriptedAuth{step: authStep{
-		needs2FA:  true,
-		challenge: codeChallenge(twoFactorAuthenticator, "authenticator"),
-	}}
-	a := newRealAccount(store, verifier, fixedFlow(flow))
-
-	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
-		t.Fatalf("login: %v", err)
-	}
-	if err := a.refreshKey(); !errors.Is(err, errNeedCredentials) {
-		t.Fatalf("refreshKey = %v, want errNeedCredentials (no cached password)", err)
-	}
-}
-
-// Cancelling a relogin returns to the signed-in session but drops the cached
-// credentials, so refreshKey asks for a fresh sign-in instead of reusing the
-// abandoned attempt's password.
-func TestRealAccountCancelReloginRestoresSignedInSessionAndDropsPassword(t *testing.T) {
+// A sign-in started while already signed in, then parked on a 2FA prompt and
+// cancelled, must return to the signed-in session instead of leaving the page
+// on the abandoned attempt.
+func TestRealAccountCancelRestoresSignedInSession(t *testing.T) {
 	store := newFakeStore()
 	verifier := &fakeVerifier{result: hello.Verified}
 	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("key"))}
@@ -686,8 +591,8 @@ func TestRealAccountCancelReloginRestoresSignedInSessionAndDropsPassword(t *test
 		t.Fatalf("login: %v", err)
 	}
 	flow.step = authStep{needs2FA: true, challenge: codeChallenge(twoFactorAuthenticator, "authenticator")}
-	if err := a.relogin(); !errors.Is(err, errTwoFactorNeedsSignIn) {
-		t.Fatalf("relogin error = %v, want errTwoFactorNeedsSignIn", err)
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("second login: %v", err)
 	}
 
 	sess, err := a.cancelLogin()
@@ -699,8 +604,5 @@ func TestRealAccountCancelReloginRestoresSignedInSessionAndDropsPassword(t *test
 	}
 	if store.removeCalls != 0 {
 		t.Fatalf("Remove calls = %d, want 0: cancelling must not touch the store", store.removeCalls)
-	}
-	if err := a.refreshKey(); !errors.Is(err, errNeedCredentials) {
-		t.Fatalf("refreshKey after cancel = %v, want errNeedCredentials (password dropped)", err)
 	}
 }

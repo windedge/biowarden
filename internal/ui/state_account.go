@@ -231,27 +231,6 @@ func (s *accountState) applySave(err error) {
 	s.reload()
 }
 
-// refreshKey asks the account backend to re-read the vault's key, then reloads
-// so the card shows the new storage time.
-func (s *accountState) refreshKey() {
-	account := s.account
-	s.async(func() func(*accountState) {
-		err := account.refreshKey()
-		return func(st *accountState) {
-			if err != nil {
-				st.notice = err.Error()
-				st.noticeOK = false
-				return
-			}
-			// Reload first: it clears the notice while starting its async
-			// read, so the success line has to be set after it.
-			st.reload()
-			st.notice = "密钥已从账号刷新"
-			st.noticeOK = true
-		}
-	})
-}
-
 func (s *accountState) testUnlock(acc *accountRow) {
 	keys := s.keys
 	id := acc.userID
@@ -273,14 +252,22 @@ func (s *accountState) applyUnlock(id string, err error) {
 
 func (s *accountState) removeAccount(target *accountRow) {
 	keys := s.keys
+	account := s.account
 	id := target.userID
 	s.async(func() func(*accountState) {
 		err := keys.remove(id)
-		return func(st *accountState) { st.applyRemove(id, err) }
+		var clearErr error
+		if err == nil {
+			// The key is gone, so the persisted login for it must go too:
+			// otherwise a restart would restore the session and show the
+			// account as signed in with no key.
+			clearErr = account.forgetSession(id)
+		}
+		return func(st *accountState) { st.applyRemove(id, err, clearErr) }
 	})
 }
 
-func (s *accountState) applyRemove(id string, err error) {
+func (s *accountState) applyRemove(id string, err, clearErr error) {
 	if err != nil {
 		s.notice = err.Error()
 		s.noticeOK = false
@@ -293,6 +280,12 @@ func (s *accountState) applyRemove(id string, err error) {
 		}
 	}
 	s.accounts = out
+	if clearErr != nil {
+		// The key is deleted either way; only the session cleanup failed.
+		s.notice = "已删除该账户的密钥，但清除登录会话失败：" + clearErr.Error()
+		s.noticeOK = false
+		return
+	}
 	s.notice = "已删除该账户的密钥。"
 	s.noticeOK = true
 }

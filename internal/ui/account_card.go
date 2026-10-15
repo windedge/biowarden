@@ -24,11 +24,9 @@ type accountCardView struct {
 	detail string
 	hint   string
 	// loginLabel is the button that opens the sign-in window. The configured
-	// state words it as a refresh, because that is the only reason to sign in
-	// again when a key is already stored.
+	// state words it as a re-login, because refreshing the key is the only
+	// reason to sign in again when a key is already stored.
 	loginLabel string
-	// relogin offers the secondary sign-in button beside a signed-in identity.
-	relogin bool
 	// logout offers the destructive button that deletes the stored key.
 	logout bool
 	// identity draws the avatar row from the session's email.
@@ -52,7 +50,6 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 			state:    cardSignedIn,
 			title:    "已登录",
 			detail:   detail,
-			relogin:  true,
 			logout:   true,
 			identity: true,
 		}

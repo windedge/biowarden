@@ -291,6 +291,75 @@ func TestLogoutClearsStoredSession(t *testing.T) {
 	}
 }
 
+// Deleting a stored key must drop the persisted login that belongs to it;
+// otherwise a restart would restore the session and show the account as signed
+// in with no key.
+func TestForgetSessionClearsStoredSession(t *testing.T) {
+	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
+	}}
+	a := newRealAccountWith(newFakeStore(), &fakeVerifier{result: hello.Verified},
+		fixedFlow(&scriptedAuth{}), sessions, nil)
+
+	if err := a.forgetSession("user-1"); err != nil {
+		t.Fatalf("forgetSession: %v", err)
+	}
+	if sessions.has {
+		t.Fatal("forgetSession left the persisted session behind")
+	}
+	if len(sessions.clears) != 1 || sessions.clears[0] != "user-1" {
+		t.Fatalf("clears = %v, want user-1", sessions.clears)
+	}
+}
+
+// Removing a stored key goes through the account backend's session cleanup, so
+// the key and its persisted session cannot outlive each other.
+func TestRemoveAccountClearsStoredSession(t *testing.T) {
+	store := newFakeStore()
+	if err := store.Put(secrets.Account{UserID: "user-1", Email: "ada@example.com"}, secrets.Key("secret")); err != nil {
+		t.Fatalf("seed store: %v", err)
+	}
+	acct := &stubAccount{}
+	s := newAccountStateWith(newRealKeysWith(store, &fakeVerifier{result: hello.Verified}), acct)
+	drain(t, &s)
+
+	s.removeAccount(&accountRow{userID: "user-1"})
+	drain(t, &s)
+
+	if store.removeCalls != 1 {
+		t.Fatalf("Remove calls = %d, want 1", store.removeCalls)
+	}
+	if len(acct.forgotten) != 1 || acct.forgotten[0] != "user-1" {
+		t.Fatalf("forgetSession calls = %v, want user-1", acct.forgotten)
+	}
+	if len(s.accounts) != 0 {
+		t.Fatalf("accounts = %v, want the removed row gone", s.accounts)
+	}
+}
+
+// When the key removal fails, the session must be left alone: nothing was
+// deleted, so the account is still signed in.
+func TestRemoveAccountKeepsSessionWhenKeyRemovalFails(t *testing.T) {
+	store := newFakeStore()
+	store.removeErr = errors.New("locked")
+	if err := store.Put(secrets.Account{UserID: "user-1"}, secrets.Key("secret")); err != nil {
+		t.Fatalf("seed store: %v", err)
+	}
+	acct := &stubAccount{}
+	s := newAccountStateWith(newRealKeysWith(store, &fakeVerifier{result: hello.Verified}), acct)
+	drain(t, &s)
+
+	s.removeAccount(&accountRow{userID: "user-1"})
+	drain(t, &s)
+
+	if len(acct.forgotten) != 0 {
+		t.Fatalf("forgetSession calls = %v, want none after a failed removal", acct.forgotten)
+	}
+	if len(s.accounts) != 1 {
+		t.Fatalf("accounts = %v, want the row kept after a failed removal", s.accounts)
+	}
+}
+
 // The account card's three states are chosen from the session and the stored
 // key, with the wording the ticket asks for.
 func TestAccountCardStates(t *testing.T) {

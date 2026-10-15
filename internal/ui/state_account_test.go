@@ -80,6 +80,10 @@ type stubAccount struct {
 	sendErr   error
 	sendCalls int
 
+	// forgotten records the ids removeAccount asked to drop sessions for.
+	forgotten []string
+	forgetErr error
+
 	sessionCalls int
 	restoreCalls int
 }
@@ -134,6 +138,9 @@ func (a *stubAccount) sendEmailCode() error {
 	return a.sendErr
 }
 
-func (a *stubAccount) logout() error     { return a.err }
-func (a *stubAccount) refreshKey() error { return a.err }
-func (a *stubAccount) relogin() error    { return a.err }
+func (a *stubAccount) logout() error { return a.err }
+
+func (a *stubAccount) forgetSession(userID string) error {
+	a.forgotten = append(a.forgotten, userID)
+	return a.forgetErr
+}

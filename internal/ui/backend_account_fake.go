@@ -46,6 +46,6 @@ func (fakeAccount) sendEmailCode() error { return errAccountBackend }
 
 func (fakeAccount) logout() error { return errAccountBackend }
 
-func (fakeAccount) refreshKey() error { return errAccountBackend }
-
-func (fakeAccount) relogin() error { return errAccountBackend }
+// forgetSession has no persisted session to drop, so it is a no-op that only
+// exists to satisfy the seam.
+func (fakeAccount) forgetSession(string) error { return nil }

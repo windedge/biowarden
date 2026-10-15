@@ -172,10 +172,10 @@ type accountBackend interface {
 	// is done.
 	login(email, password, serverURL string) (accountSession, error)
 	// cancelLogin abandons a pending login attempt. The session returns to
-	// the one in force before the attempt: the signed-in account when a
-	// relogin was under way, signed out otherwise. The in-memory credentials,
-	// the parked flow and the pending 2FA challenge are dropped, so a later
-	// reload cannot revive the attempt.
+	// the one in force before the attempt: the signed-in account when a fresh
+	// sign-in was under way, signed out otherwise. The parked flow and the
+	// pending 2FA challenge are dropped, so a later reload cannot revive the
+	// attempt.
 	cancelLogin() (accountSession, error)
 	// submit2FA finishes a login that is waiting for a two-factor code,
 	// answering the offered method identified by provider (see the
@@ -189,11 +189,8 @@ type accountBackend interface {
 	// logout forgets the session and deletes the signed-in account's stored
 	// key, behind a Hello consent like every other key operation.
 	logout() error
-	// refreshKey re-derives the account key by logging in again with the
-	// credentials kept in memory, so the local store matches the vault after
-	// a password or KDF change. It needs a Hello consent before the write.
-	refreshKey() error
-	// relogin runs the login flow again from the beginning, with the same
-	// in-memory credentials and the same Hello-before-write rule.
-	relogin() error
+	// forgetSession drops the persisted login for one account whose stored key
+	// was just deleted, so a restart cannot restore a session for a key that no
+	// longer exists. It touches no key material and asks for no consent.
+	forgetSession(userID string) error
 }

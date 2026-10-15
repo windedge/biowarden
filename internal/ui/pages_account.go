@@ -132,7 +132,8 @@ func (a *accountState) identityRow(c *ui.Context, stateColor ui.Color) {
 }
 
 // keyCard is the stored-key status: whether a key exists, when it was stored,
-// and the two actions that touch it. It reads the local store, so it stays
+// and delete. Refreshing the key is the account card's re-login, so a second
+// button here would only duplicate it. It reads the local store, so it stays
 // meaningful whether or not the login backend is wired.
 func (a *accountState) keyCard(c *ui.Context) {
 	t := c.Theme()
@@ -144,9 +145,8 @@ func (a *accountState) keyCard(c *ui.Context) {
 					ui.Text(c, "未保存").Bold().TextColor(t.Warning)
 					muted(c, "本机尚未保存密钥。登录账号后会自动保存，或展开下面的「高级」手动录入。")
 				})
-				// No key here, so there is nothing for refreshKey's account
-				// backend to re-derive: re-read the local credential store
-				// instead, e.g. after the host saved one outside the GUI.
+				// No key is stored here, so re-read the local credential store,
+				// e.g. after the host saved one outside the GUI.
 				if ui.Button(c, "刷新").Disabled(a.busy).Clicked() {
 					a.reload()
 					c.Invalidate()
@@ -162,10 +162,6 @@ func (a *accountState) keyCard(c *ui.Context) {
 				})
 				muted(c, "账户 "+shortID(acc.userID)+" · 存储于 "+acc.created)
 			})
-			if ui.Button(c, "刷新").Disabled(a.busy).Clicked() {
-				a.refreshKey()
-				c.Invalidate()
-			}
 			if ui.Button(c, "删除").Disabled(a.busy).Clicked() {
 				a.removeAccount(acc)
 				c.Invalidate()
