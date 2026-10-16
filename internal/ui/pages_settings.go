@@ -4,6 +4,16 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+// The settings controls are capped: the page's fields stretch to the window
+// width, so on a wide window a short value sits in a read-only box that reads
+// as an editor. The text fields match the login window's own field width for a
+// consistent look, and the log level dropdown is narrower because its options
+// are a word each.
+const (
+	settingsFieldWidth  = 400
+	settingsSelectWidth = 260
+)
+
 // settingsPage mirrors the reference SettingsTab, extended with the log
 // settings the Windows tool needs: autostart, Windows Hello availability,
 // log path and level, version. Autostart and Hello are real; see below.
@@ -22,7 +32,8 @@ func (app *appState) settingsPage(c *ui.Context) {
 						ui.Field(c, "服务器地址", func() {
 							// The live session's address, the same value the login window
 							// prefills from; read-only, never edited here.
-							ui.TextInput(c, &app.account.session.serverURL).ReadOnly(true).FontSize(11)
+							ui.TextInput(c, &app.account.session.serverURL).ReadOnly(true).FontSize(11).
+								Width(settingsFieldWidth).Label("服务器地址（只读）")
 						})
 					})
 					ui.Fieldset(c, "入口", func() {
@@ -67,10 +78,12 @@ func (app *appState) settingsPage(c *ui.Context) {
 						ui.Field(c, "级别", func() {
 							// The host reads its level from an environment variable, so the
 							// dropdown cannot reach it; it stays a memory value for now.
-							ui.Select(c, &app.settings.logLevel, logLevels)
+							ui.Select(c, &app.settings.logLevel, logLevels).
+								Width(settingsSelectWidth).Label("日志级别")
 						})
 						ui.Field(c, "路径", func() {
-							ui.TextInput(c, &app.settings.logPath).ReadOnly(true).FontSize(11)
+							ui.TextInput(c, &app.settings.logPath).ReadOnly(true).FontSize(11).
+								Width(settingsFieldWidth).Label("日志路径（只读）")
 						})
 					})
 					ui.Fieldset(c, "关于", func() {

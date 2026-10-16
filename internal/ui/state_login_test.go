@@ -680,8 +680,8 @@ func TestLoginWindowResizesWhenABadAddressOpensAdvanced(t *testing.T) {
 	f.login.submit()
 	drainLogin(t, f.login)
 
-	if len(f.resizes) != 1 || f.resizes[0] != loginWindowAdvancedHeight {
-		t.Fatalf("resizes after the refused address = %v, want [%d]", f.resizes, loginWindowAdvancedHeight)
+	if len(f.resizes) != 1 || f.resizes[0] != loginWindowAdvancedHeight+loginWindowServerErrHeight+loginWindowNoticeHeight {
+		t.Fatalf("resizes after the refused address = %v, want [%d]", f.resizes, loginWindowAdvancedHeight+loginWindowServerErrHeight+loginWindowNoticeHeight)
 	}
 }
 
@@ -696,12 +696,12 @@ func TestLoginWindowResizesForTwoFactorStages(t *testing.T) {
 		{
 			name:    "single method",
 			methods: []twoFactorMethod{{provider: twoFactorAuthenticator, name: "authenticator", interaction: interactionCode}},
-			want:    loginWindowTwoFactorHeight,
+			want:    loginWindowTwoFactorHeight + loginWindowNoticeHeight,
 		},
 		{
 			name:    "email method adds the send row",
 			methods: []twoFactorMethod{{provider: twoFactorEmail, name: "email", interaction: interactionCode}},
-			want:    loginWindowTwoFactorHeight + loginWindowEmailHeight,
+			want:    loginWindowTwoFactorHeight + loginWindowEmailHeight + loginWindowNoticeHeight,
 		},
 		{
 			name: "two code methods add the segmented row",
@@ -709,7 +709,7 @@ func TestLoginWindowResizesForTwoFactorStages(t *testing.T) {
 				{provider: twoFactorAuthenticator, name: "authenticator", interaction: interactionCode},
 				{provider: twoFactorEmail, name: "email", interaction: interactionCode},
 			},
-			want: loginWindowTwoFactorHeight + loginWindowSegmentHeight,
+			want: loginWindowTwoFactorHeight + loginWindowSegmentHeight + loginWindowNoticeHeight,
 		},
 		{
 			name: "an unsupported method adds its line",
@@ -717,7 +717,7 @@ func TestLoginWindowResizesForTwoFactorStages(t *testing.T) {
 				{provider: twoFactorAuthenticator, name: "authenticator", interaction: interactionCode},
 				{provider: twoFactorDuo, name: "duo", interaction: interactionBrowser},
 			},
-			want: loginWindowTwoFactorHeight + loginWindowUnsupportedHeight,
+			want: loginWindowTwoFactorHeight + loginWindowUnsupportedHeight + loginWindowNoticeHeight,
 		},
 	}
 	for _, tc := range cases {
@@ -730,6 +730,9 @@ func TestLoginWindowResizesForTwoFactorStages(t *testing.T) {
 			}}
 			f := newLoginFixture(t, acct)
 			beginLogin(f, "ada@example.com", "secret")
+			// The begin opened on the parked challenge; the resize under test is
+			// the one the login's own stage lands.
+			f.resizes = nil
 			f.login.submit()
 			drainLogin(t, f.login)
 
@@ -737,5 +740,55 @@ func TestLoginWindowResizesForTwoFactorStages(t *testing.T) {
 				t.Fatalf("resizes = %v, want [%d]", f.resizes, tc.want)
 			}
 		})
+	}
+}
+
+// The window grows by a notice row and shrinks back when it clears, and a
+// notice that wraps to a second line grows by that line too.
+func TestLoginWindowResizesForTheNotice(t *testing.T) {
+	f := newLoginFixture(t, &stubAccount{sess: loggedOutSession()})
+	beginLogin(f, "ada@example.com", "secret")
+
+	f.login.notice = "邮箱或主密码不正确"
+	f.login.syncHeight()
+	if len(f.resizes) != 1 || f.resizes[0] != loginWindowHeight+loginWindowNoticeHeight {
+		t.Fatalf("resizes with a notice = %v, want [%d]", f.resizes, loginWindowHeight+loginWindowNoticeHeight)
+	}
+
+	f.login.notice = ""
+	f.login.syncHeight()
+	if len(f.resizes) != 2 || f.resizes[1] != loginWindowHeight {
+		t.Fatalf("resizes after the notice cleared = %v, want the opening height back", f.resizes)
+	}
+
+	f.login.notice = strings.Repeat("测", 40)
+	f.login.syncHeight()
+	want := loginWindowHeight + loginWindowNoticeHeight + loginWindowNoticeLineHeight
+	if len(f.resizes) != 3 || f.resizes[2] != want {
+		t.Fatalf("resizes for a wrapped notice = %v, want [%d]", f.resizes, want)
+	}
+}
+
+// noticeLines has to agree with the renderer about where a line ends: the
+// status font fits 32 wide glyphs or 64 half-width characters in the notice's
+// 388 DIP width.
+func TestNoticeLinesCountsWrappedLines(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want int
+	}{
+		{"no text", "", 0},
+		{"a short hint", "验证码已发送", 1},
+		{"the 2FA hint", "服务器要求两步验证，请输入验证码", 1},
+		{"a refused address", `服务器地址无效：auth: base URL "http://bad host" has no host`, 1},
+		{"32 wide glyphs", strings.Repeat("测", 32), 1},
+		{"33 wide glyphs", strings.Repeat("测", 33), 2},
+		{"65 half-width characters", strings.Repeat("a", 65), 2},
+	}
+	for _, tc := range cases {
+		if got := noticeLines(tc.text); got != tc.want {
+			t.Errorf("noticeLines(%s) = %d, want %d", tc.name, got, tc.want)
+		}
 	}
 }

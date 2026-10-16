@@ -147,25 +147,85 @@ func (s *loginWindow) begin() {
 
 // targetHeight is the outer height the form needs in its current state. The
 // credentials step is the opening or the Advanced height; a two-factor prompt
-// is the single-method height plus the rows its challenge added.
+// is the single-method height plus the rows its challenge added. On top of the
+// stage go the rows its text adds: a visible status line (a retry hint, the
+// email confirmation) and, at the credentials step, the refusal under the
+// server address field. Keeping these in the target is what stops the form
+// from falling back to the scroll view while a notice is up.
 func (s *loginWindow) targetHeight() int {
+	var h int
 	if s.challenge == nil {
+		h = loginWindowHeight
 		if s.advancedOpen {
-			return loginWindowAdvancedHeight
+			h = loginWindowAdvancedHeight
+			// The refusal only shows under the address field, which only the
+			// Advanced fold holds.
+			if s.serverErr != "" {
+				h += loginWindowServerErrHeight
+			}
 		}
-		return loginWindowHeight
+	} else {
+		h = loginWindowTwoFactorHeight
+		if len(s.challenge.codeMethods()) > 1 {
+			h += loginWindowSegmentHeight
+		}
+		if m, ok := s.selectedMethod(); ok && m.provider == twoFactorEmail {
+			h += loginWindowEmailHeight
+		}
+		if len(s.challenge.unsupported()) > 0 {
+			h += loginWindowUnsupportedHeight
+		}
 	}
-	h := loginWindowTwoFactorHeight
-	if len(s.challenge.codeMethods()) > 1 {
-		h += loginWindowSegmentHeight
+	return h + s.noticeHeight()
+}
+
+// noticeHeight is the rows the visible status line adds to the form, nil text
+// adding none. The state machine has no Context to measure the line with, so
+// it counts display cells (see noticeLines).
+func (s *loginWindow) noticeHeight() int {
+	if s.notice == "" {
+		return 0
 	}
-	if m, ok := s.selectedMethod(); ok && m.provider == twoFactorEmail {
-		h += loginWindowEmailHeight
+	return loginWindowNoticeHeight + (noticeLines(s.notice)-1)*loginWindowNoticeLineHeight
+}
+
+// noticeLines is how many lines text wraps to at the notice's width, which is
+// the window minus the column's 16 DIP padding on both sides. The renderer's
+// 12 DIP font fits 32 wide glyphs (CJK) or 64 half-width characters on that
+// line, so the estimate counts a wide rune as two cells and any other as one.
+// The Scroll view still catches a text this estimate undercounts.
+func noticeLines(text string) int {
+	const cellsPerLine = 64
+	cells := 0
+	for _, r := range text {
+		if isWideRune(r) {
+			cells += 2
+		} else {
+			cells++
+		}
 	}
-	if len(s.challenge.unsupported()) > 0 {
-		h += loginWindowUnsupportedHeight
+	if cells == 0 {
+		return 0
 	}
-	return h
+	return (cells + cellsPerLine - 1) / cellsPerLine
+}
+
+// isWideRune reports whether r draws two cells at the notice font: the CJK and
+// Hangul blocks and the fullwidth forms, which are the scripts the notices and
+// the backend's error wording use.
+func isWideRune(r rune) bool {
+	switch {
+	case r >= 0x1100 && r <= 0x115F,
+		r >= 0x2E80 && r <= 0xA4CF,
+		r >= 0xAC00 && r <= 0xD7A3,
+		r >= 0xF900 && r <= 0xFAFF,
+		r >= 0xFE30 && r <= 0xFE6F,
+		r >= 0xFF00 && r <= 0xFF60,
+		r >= 0xFFE0 && r <= 0xFFE6,
+		r >= 0x20000 && r <= 0x3FFFD:
+		return true
+	}
+	return false
 }
 
 // syncHeight resizes the window to the height its current state needs. The
@@ -251,6 +311,7 @@ func (s *loginWindow) applyLogin(serverURL string, sess accountSession, err erro
 func (s *loginWindow) fail(err error) {
 	s.notice = err.Error()
 	s.noticeOK = false
+	s.syncHeight()
 }
 
 // submit2FA answers the challenge with the code in the form. The chosen method
@@ -351,6 +412,7 @@ func (s *loginWindow) applyEmailSent(err error) {
 		s.notice = "验证码已发送到 " + m.email
 	}
 	s.noticeOK = true
+	s.syncHeight()
 }
 
 // finishLogin hands the session to the account page, which reloads the stored
