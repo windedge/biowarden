@@ -1,6 +1,9 @@
 package ui
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // TestNavPageRoundTrip keeps the sidebar's string IDs and the app's page enum
 // in step: a typo in either map would send a click to the wrong page.
@@ -16,19 +19,32 @@ func TestNavPageRoundTrip(t *testing.T) {
 	}
 }
 
-// drain applies the pending async result the way tick does, so a test can
-// drive the state machine without a ui.Context.
+// drain applies one pending page result the way tick does, so a test can
+// drive an async backend call without a ui.Context. It blocks: async always
+// posts exactly one result. The startup restore lands on its own lane and is
+// drained by waitRestore instead.
 func drain(t *testing.T, s *accountState) {
 	t.Helper()
-	// Block: the async call always posts exactly one result.
 	apply := <-s.results
 	s.busy = false
 	apply(s)
 }
 
+// waitRestore applies the startup restore's result the way tick does while
+// verifying, blocking until it lands so a test can assert the settled state.
+func waitRestore(t *testing.T, s *accountState) {
+	t.Helper()
+	select {
+	case apply := <-s.restoreResult:
+		apply(s)
+	case <-time.After(2 * time.Second):
+		t.Fatal("the startup restore did not settle")
+	}
+}
+
 func TestAccountStateStartsLoggedOutWithStoredKeys(t *testing.T) {
 	s := newAccountStateWith(fakeKeys{}, fakeAccount{})
-	drain(t, &s)
+	waitRestore(t, &s)
 
 	if s.session.state != loginLoggedOut {
 		t.Fatalf("session state = %v, want logged out", s.session.state)
@@ -57,6 +73,9 @@ type stubAccount struct {
 	restoreSet  bool
 	restoreSess accountSession
 	restoreErr  error
+	// restoreGate, when set, holds restoreSession until it is closed, so a
+	// test can freeze the startup verification on the wire.
+	restoreGate chan struct{}
 
 	loginCalls   int
 	lastEmail    string
@@ -95,6 +114,9 @@ func (a *stubAccount) session() (accountSession, error) {
 
 func (a *stubAccount) restoreSession() (accountSession, error) {
 	a.restoreCalls++
+	if a.restoreGate != nil {
+		<-a.restoreGate
+	}
 	if a.restoreSet {
 		return a.restoreSess, a.restoreErr
 	}
@@ -124,13 +146,22 @@ func (a *stubAccount) cancelLogin() (accountSession, error) {
 	if a.cancelErr != nil {
 		return accountSession{}, a.cancelErr
 	}
+	// Mirror the backend: a cancel lands the session it returns, so a later
+	// reload's session() read agrees with what the page shows.
+	a.sess = a.cancelSess
 	return a.cancelSess, nil
 }
 
 func (a *stubAccount) submit2FA(provider int, code string) (accountSession, error) {
 	a.submitCalls++
 	a.lastProvider, a.lastCode = provider, code
-	return a.submitSess, a.submitErr
+	if a.submitErr != nil {
+		return a.submitSess, a.submitErr
+	}
+	// Mirror the backend: a successful answer replaces the parked session, so
+	// the page reload that follows does not resurrect the 2FA prompt.
+	a.sess = a.submitSess
+	return a.submitSess, nil
 }
 
 func (a *stubAccount) sendEmailCode() error {
@@ -138,7 +169,13 @@ func (a *stubAccount) sendEmailCode() error {
 	return a.sendErr
 }
 
-func (a *stubAccount) logout() error { return a.err }
+func (a *stubAccount) logout() error {
+	if a.err != nil {
+		return a.err
+	}
+	a.sess = loggedOutSession()
+	return nil
+}
 
 func (a *stubAccount) forgetSession(userID string) error {
 	a.forgotten = append(a.forgotten, userID)

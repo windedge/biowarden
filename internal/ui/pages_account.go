@@ -59,6 +59,9 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 			return
 		}
 
+		if a.verifying {
+			muted(c, "正在验证登录会话...")
+		}
 		v := accountCardViewFor(a.session, a.primary())
 		a.accountIdentity(c, v, t)
 		switch v.state {

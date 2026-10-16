@@ -522,7 +522,7 @@ func TestRealKeysListsAllStoredAccounts(t *testing.T) {
 // the sign-in session is not touched, because there are no parallel sessions.
 func TestAccountStatePrimaryFollowsSelection(t *testing.T) {
 	s := newAccountStateWith(fakeKeys{}, fakeAccount{})
-	drain(t, &s)
+	waitRestore(t, &s)
 
 	if got := s.primary(); got == nil || got.email != "ada@example.com" {
 		t.Fatalf("primary = %+v, want the first stored account", got)

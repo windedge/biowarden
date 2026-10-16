@@ -338,7 +338,7 @@ func TestFirstRunSetupReportsMarkerFailure(t *testing.T) {
 func newFirstRunApp(t *testing.T, backend firstRunBackend) (*appState, *int) {
 	t.Helper()
 	page := newAccountStateWith(fakeKeys{}, &stubAccount{sess: loggedOutSession()})
-	drain(t, &page)
+	waitRestore(t, &page)
 
 	app := &appState{firstRun: newFirstRunState(backend)}
 	app.account = page

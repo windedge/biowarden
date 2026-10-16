@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/danieljoos/wincred"
 
@@ -156,16 +157,23 @@ func (s *wincredSessionStore) clear(userID string) error {
 // the only place the session store's contents meet the network.
 type sessionRefresher func(ctx context.Context, serverURL, refreshToken string) (auth.TokenResponse, error)
 
+// sessionRefreshTimeout bounds the startup restore's one network call. It runs
+// while the account page waits to show the stored keys, so a dead or slow
+// server must fail fast: the unverified fallback is fine, hanging is not.
+const sessionRefreshTimeout = 5 * time.Second
+
 // newSessionRefresher builds the real refresher through internal/auth. The
 // refresh grant returns no account key, so a restored session can prove the
-// login but still needs the master password to re-derive the key.
+// login but still needs the master password to re-derive the key. The client
+// gets the short startup timeout instead of the login path's 30 seconds.
 func newSessionRefresher() sessionRefresher {
 	return func(ctx context.Context, serverURL, refreshToken string) (auth.TokenResponse, error) {
 		cfg, err := auth.NewServerConfig(serverURL)
 		if err != nil {
 			return auth.TokenResponse{}, err
 		}
-		return auth.NewClient(cfg, deviceID).Refresh(ctx, refreshToken)
+		client := auth.NewClient(cfg, deviceID).WithTimeout(sessionRefreshTimeout)
+		return client.Refresh(ctx, refreshToken)
 	}
 }
 

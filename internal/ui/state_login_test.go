@@ -23,7 +23,7 @@ type loginFixture struct {
 func newLoginFixture(t *testing.T, acct *stubAccount) *loginFixture {
 	t.Helper()
 	page := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &page) // the initial reload the page starts with
+	waitRestore(t, &page) // the startup restore the page begins with
 	f := &loginFixture{page: &page, acct: acct}
 	lw := newLoginWindow(&page)
 	lw.openWindow = func() { f.opened++ }
@@ -174,7 +174,8 @@ func TestLoginWindowLoginSuccessLandsOnAccountPageAndCloses(t *testing.T) {
 	if f.login.showing || f.closed != 1 {
 		t.Fatalf("window did not close: showing=%v closed=%d", f.login.showing, f.closed)
 	}
-	drain(t, f.page) // the reload the page started; it must not wipe the line
+	// The reload finishLogin ran is synchronous, so the success line is
+	// already the page's only notice.
 	if f.page.notice != "已登录 ada@example.com" {
 		t.Fatalf("notice after reload = %q, want the success line", f.page.notice)
 	}

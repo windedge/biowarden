@@ -243,6 +243,32 @@ func TestRestoreSessionNetworkErrorKeepsSession(t *testing.T) {
 	}
 }
 
+// A slow server that trips the startup client's short deadline arrives as the
+// same network error, so the restore falls back to the conservative unverified
+// state and keeps the stored session for the next launch.
+func TestRestoreSessionTimeoutKeepsSession(t *testing.T) {
+	store := seedStore("user-1", "ada@example.com")
+	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
+	}}
+	refresh := func(context.Context, string, string) (auth.TokenResponse, error) {
+		// What auth.Client produces once http.Client.Timeout fires.
+		return auth.TokenResponse{}, fmt.Errorf("%w: Client.Timeout exceeded while awaiting headers", auth.ErrNetwork)
+	}
+	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh)
+
+	sess, err := a.restoreSession()
+	if !errors.Is(err, errSessionUnverified) {
+		t.Fatalf("restoreSession error = %v, want errSessionUnverified", err)
+	}
+	if sess.state != loginLoggedOut {
+		t.Fatalf("session = %+v, want the conservative signed-out state", sess)
+	}
+	if !sessions.has {
+		t.Fatal("a timed-out restore must not clear the stored session")
+	}
+}
+
 // With nothing stored, a restore is a no-op that reports the signed-out state
 // and never calls the network.
 func TestRestoreSessionWithoutStoredSession(t *testing.T) {
@@ -321,7 +347,7 @@ func TestRemoveAccountClearsStoredSession(t *testing.T) {
 	}
 	acct := &stubAccount{}
 	s := newAccountStateWith(newRealKeysWith(store, &fakeVerifier{result: hello.Verified}), acct)
-	drain(t, &s)
+	waitRestore(t, &s)
 
 	s.removeAccount(&accountRow{userID: "user-1"})
 	drain(t, &s)
@@ -347,7 +373,7 @@ func TestRemoveAccountKeepsSessionWhenKeyRemovalFails(t *testing.T) {
 	}
 	acct := &stubAccount{}
 	s := newAccountStateWith(newRealKeysWith(store, &fakeVerifier{result: hello.Verified}), acct)
-	drain(t, &s)
+	waitRestore(t, &s)
 
 	s.removeAccount(&accountRow{userID: "user-1"})
 	drain(t, &s)
@@ -405,15 +431,23 @@ func TestAccountCardStates(t *testing.T) {
 func TestReloadRevalidatesOnlyOnce(t *testing.T) {
 	acct := &stubAccount{sess: loggedInSession()}
 	s := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &s)
+	waitRestore(t, &s)
 
-	if acct.restoreCalls != 1 || acct.sessionCalls != 0 {
-		t.Fatalf("first load: restore %d, session %d, want 1/0", acct.restoreCalls, acct.sessionCalls)
+	if acct.restoreCalls != 1 {
+		t.Fatalf("first load: restore %d, want 1", acct.restoreCalls)
 	}
+	if s.session.state != loginLoggedIn || s.verifying {
+		t.Fatalf("session = %+v verifying=%v, want the settled login", s.session, s.verifying)
+	}
+
+	// A later reload re-reads only the in-memory session: it must not dial
+	// the server again.
 	s.reload()
-	drain(t, &s)
-	if acct.restoreCalls != 1 || acct.sessionCalls != 1 {
-		t.Fatalf("second load: restore %d, session %d, want 1/1", acct.restoreCalls, acct.sessionCalls)
+	if acct.restoreCalls != 1 {
+		t.Fatalf("second load: restore %d, want still 1", acct.restoreCalls)
+	}
+	if s.verifying {
+		t.Fatal("a later reload must not re-enter verifying")
 	}
 }
 
@@ -421,7 +455,7 @@ func TestReloadRevalidatesOnlyOnce(t *testing.T) {
 func TestAccountStateShowsConfiguredAfterRevokedSession(t *testing.T) {
 	acct := &stubAccount{restoreSet: true, restoreSess: loggedOutSession(), restoreErr: errSessionRevoked}
 	s := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &s)
+	waitRestore(t, &s)
 
 	if s.session.state != loginLoggedOut {
 		t.Fatalf("session = %+v, want signed out", s.session)
@@ -439,12 +473,68 @@ func TestAccountStateShowsConfiguredAfterRevokedSession(t *testing.T) {
 func TestAccountStateShowsUnverifiedNotice(t *testing.T) {
 	acct := &stubAccount{restoreSet: true, restoreSess: loggedOutSession(), restoreErr: errSessionUnverified}
 	s := newAccountStateWith(fakeKeys{}, acct)
-	drain(t, &s)
+	waitRestore(t, &s)
 
 	if s.session.state != loginLoggedOut {
 		t.Fatalf("session = %+v, want signed out", s.session)
 	}
 	if !strings.Contains(s.notice, "无法验证登录会话") {
 		t.Fatalf("notice = %q, want the unverified wording", s.notice)
+	}
+}
+
+// The first reload renders the stored keys before the restore answers: local
+// data is read on the UI thread, the persisted login's re-check runs in the
+// background and lands only on the session fields, never on the rows already
+// on screen.
+func TestReloadShowsLocalStateBeforeSlowRestore(t *testing.T) {
+	store := seedStore("user-1", "ada@example.com")
+	acct := &stubAccount{
+		// The in-memory session is still the fresh install's; only the
+		// persisted login restoreSession will produce a login.
+		sess:       loggedOutSession(),
+		restoreSet: true, restoreSess: loggedInSession(),
+		restoreGate: make(chan struct{}),
+	}
+	s := newAccountStateWith(newRealKeysWith(store, &fakeVerifier{result: hello.Verified}), acct)
+
+	// The synchronous first reload: the stored row is already on the card
+	// while the restore is still held on the wire.
+	if len(s.accounts) != 1 || s.accounts[0].userID != "user-1" {
+		t.Fatalf("accounts = %+v, want the stored row without waiting", s.accounts)
+	}
+	if s.session.state != loginLoggedOut || !s.verifying {
+		t.Fatalf("session = %+v verifying=%v, want logged-out while verifying", s.session, s.verifying)
+	}
+
+	// The restore settles on its own lane: the session lands and the local
+	// rows stay put.
+	close(acct.restoreGate)
+	waitRestore(t, &s)
+	if s.verifying {
+		t.Fatal("the settled restore did not clear verifying")
+	}
+	if s.session.state != loginLoggedIn || s.session.userID != "user-1" {
+		t.Fatalf("session = %+v, want the restored login", s.session)
+	}
+	if len(s.accounts) != 1 || s.accounts[0].userID != "user-1" {
+		t.Fatalf("accounts = %+v, want the local rows untouched", s.accounts)
+	}
+}
+
+// A reload that lands while the startup restore is still on the wire reuses
+// the in-flight check instead of starting a second one.
+func TestReloadWhileVerifyingDoesNotDoubleRestore(t *testing.T) {
+	acct := &stubAccount{sess: loggedOutSession(), restoreGate: make(chan struct{})}
+	s := newAccountStateWith(fakeKeys{}, acct)
+	s.reload() // the startup restore is still on the wire
+	close(acct.restoreGate)
+	waitRestore(t, &s)
+
+	if acct.restoreCalls != 1 {
+		t.Fatalf("restore calls = %d, want exactly one", acct.restoreCalls)
+	}
+	if s.verifying {
+		t.Fatal("the restore did not settle")
 	}
 }

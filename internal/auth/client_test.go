@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestClientEndpointURLs(t *testing.T) {
@@ -229,6 +230,41 @@ func TestClientMapsTransportFailureToNetworkError(t *testing.T) {
 	err = c.getJSON(context.Background(), c.apiURL("/accounts/profile"), nil)
 	if !errors.Is(err, ErrNetwork) {
 		t.Fatalf("getJSON error = %v, want ErrNetwork", err)
+	}
+}
+
+// WithTimeout bounds one request and leaves the client it came from alone:
+// the startup restore needs a short deadline while the login path keeps the
+// constructor's 30 seconds.
+func TestWithTimeoutBoundsOneClientOnly(t *testing.T) {
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-release
+	}))
+	defer srv.Close()
+	defer close(release)
+
+	cfg, err := NewServerConfig(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := NewClient(cfg, "device-123")
+	short := base.WithTimeout(50 * time.Millisecond)
+
+	if base.http.Timeout != 30*time.Second {
+		t.Fatalf("base timeout = %v, want the constructor's 30s untouched", base.http.Timeout)
+	}
+	if short.http.Timeout != 50*time.Millisecond {
+		t.Fatalf("short timeout = %v, want 50ms", short.http.Timeout)
+	}
+
+	start := time.Now()
+	err = short.getJSON(context.Background(), short.apiURL("/accounts/profile"), nil)
+	if !errors.Is(err, ErrNetwork) {
+		t.Fatalf("getJSON error = %v, want ErrNetwork after the short deadline", err)
+	}
+	if elapsed := time.Since(start); elapsed > 10*time.Second {
+		t.Fatalf("the short timeout took %v; it did not bound the request", elapsed)
 	}
 }
 

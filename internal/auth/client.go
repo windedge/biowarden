@@ -101,6 +101,17 @@ func NewClient(cfg ServerConfig, deviceID string) *Client {
 	}
 }
 
+// WithTimeout returns a copy of the client whose requests time out after
+// timeout instead of the constructor's 30 seconds. Transport, identity headers
+// and error mapping are untouched. The startup session restore uses it so a
+// slow or dead server fails fast into the unverified fallback instead of
+// leaving the page checking for half a minute.
+func (c *Client) WithTimeout(timeout time.Duration) *Client {
+	dup := *c
+	dup.http = &http.Client{Timeout: timeout}
+	return &dup
+}
+
 // URLs returns the service URLs the client was built with.
 func (c *Client) URLs() ServiceURLs { return c.urls }
 

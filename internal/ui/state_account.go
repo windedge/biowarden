@@ -41,10 +41,18 @@ type accountState struct {
 	advancedOpen bool
 	scriptOpen   bool
 
-	// revalidated records that the first load already re-checked the persisted
-	// session; later reloads (after a save, logout, ...) only read the
-	// in-memory session and must not hit the network again.
-	revalidated bool
+	// verified records that the first load has already dealt with the
+	// persisted login: either restoreSession settled it, or there was nothing
+	// stored to verify. Later reloads (after a save, logout, ...) only read
+	// the in-memory session and must not dial the server again.
+	verified bool
+	// verifying is true while the startup restore is still on the wire. The
+	// card shows a weak "checking" hint and tick keeps a frame coming for its
+	// result.
+	verifying bool
+	// restoreResult carries the finished startup restore on its own lane, so a
+	// slow server cannot hold results, which the Hello and key calls share.
+	restoreResult chan func(*accountState)
 
 	busy    bool
 	results chan func(*accountState)
@@ -73,11 +81,12 @@ func newAccountState() accountState {
 // outcomes without a network or a Windows Hello prompt.
 func newAccountStateWith(keys keysBackend, account accountBackend) accountState {
 	s := accountState{
-		keys:       keys,
-		account:    account,
-		scriptBody: extractSnippet,
-		session:    accountSession{state: loginLoggedOut, serverURL: defaultServerURL},
-		results:    make(chan func(*accountState), 8),
+		keys:          keys,
+		account:       account,
+		scriptBody:    extractSnippet,
+		session:       accountSession{state: loginLoggedOut, serverURL: defaultServerURL},
+		results:       make(chan func(*accountState), 8),
+		restoreResult: make(chan func(*accountState), 1),
 	}
 	// The first list and session must come from the backends, not a seed, so
 	// the page shows the real accounts from the first frame.
@@ -92,9 +101,17 @@ func (s *accountState) tick(c *ui.Context) {
 		apply(s)
 	default:
 	}
-	if s.busy {
-		// A backend call is still running; poll again so its result lands
-		// even though the goroutine cannot touch the UI.
+	// The startup restore lands on its own channel, so a slow server cannot
+	// hold the results lane the Hello and key calls share.
+	select {
+	case apply := <-s.restoreResult:
+		apply(s)
+	default:
+	}
+	if s.busy || s.verifying {
+		// A backend call - or the startup restore - is still running; poll
+		// again so its result lands even though the goroutine cannot touch
+		// the UI.
 		c.After(60 * time.Millisecond)
 	}
 	if !s.copiedAt.IsZero() {
@@ -159,29 +176,46 @@ func (s *accountState) selectAccount(userID string) {
 	s.selectedUserID = userID
 }
 
+// reload reads the local state synchronously - the credential store, the
+// Hello check and the in-memory session all answer without the network - so
+// the stored keys render in the first frame. The first call also re-checks any
+// persisted login in the background: that restore lands on its own lane and
+// updates only the session fields, never the rows already on screen.
 func (s *accountState) reload() {
-	keys, account := s.keys, s.account
-	revalidate := !s.revalidated
-	s.revalidated = true
-	s.async(func() func(*accountState) {
-		var sess accountSession
-		var sessErr error
-		if revalidate {
-			// The first load re-checks any persisted login before showing the
-			// page, so a restart does not have to claim the user signed out.
-			sess, sessErr = account.restoreSession()
-		} else {
-			sess, sessErr = account.session()
+	rows, err := s.keys.accounts()
+	available, availErr := s.keys.helloAvailable()
+	sess, sessErr := s.account.session()
+	s.applyLocal(rows, err, available, availErr)
+	s.applySession(sess, sessErr)
+
+	if s.verified {
+		return
+	}
+	// The persisted login is checked exactly once, so a later save or logout
+	// never dials the server again.
+	s.verified = true
+	s.verifying = true
+	account := s.account
+	go func() {
+		sess, sessErr := account.restoreSession()
+		s.restoreResult <- func(st *accountState) {
+			st.verifying = false
+			st.applySession(sess, sessErr)
 		}
-		rows, err := keys.accounts()
-		available, availErr := keys.helloAvailable()
-		return func(st *accountState) {
-			st.applyReload(rows, err, available, availErr, sess, sessErr)
-		}
-	})
+	}()
 }
 
+// applyReload lands a full reload answer, the local stage and the session
+// stage in the order the caller already holds them.
 func (s *accountState) applyReload(rows []accountRow, err error, available bool, availErr error, sess accountSession, sessErr error) {
+	s.applyLocal(rows, err, available, availErr)
+	s.applySession(sess, sessErr)
+}
+
+// applyLocal installs what a reload read without the network: the stored rows,
+// the Hello availability and the selection. It renders in the first frame,
+// before the startup restore has answered.
+func (s *accountState) applyLocal(rows []accountRow, err error, available bool, availErr error) {
 	switch {
 	case err != nil:
 		s.notice = "读取已保存账户失败：" + err.Error()
@@ -189,21 +223,9 @@ func (s *accountState) applyReload(rows []accountRow, err error, available bool,
 	case availErr != nil:
 		s.notice = "检查 Windows Hello 失败：" + availErr.Error()
 		s.noticeOK = false
-	case errors.Is(sessErr, errSessionRevoked):
-		s.notice = "登录会话已失效，已清除本地会话；密钥仍已保存，解锁不受影响。"
-		s.noticeOK = false
-	case errors.Is(sessErr, errSessionUnverified):
-		s.notice = "暂时无法验证登录会话（网络或服务器问题），已保守显示为未登录；密钥仍已保存。"
-		s.noticeOK = false
-	case sessErr != nil:
-		s.notice = "读取登录状态失败：" + sessErr.Error()
-		s.noticeOK = false
 	case !available:
 		s.notice = "此电脑未配置 Windows Hello，无法保存或删除密钥。"
 		s.noticeOK = false
-	}
-	if sessErr == nil || errors.Is(sessErr, errSessionRevoked) || errors.Is(sessErr, errSessionUnverified) {
-		s.session = sess
 	}
 	s.accounts = s.accounts[:0]
 	for i := range rows {
@@ -222,6 +244,26 @@ func (s *accountState) applyReload(rows []accountRow, err error, available bool,
 		if !found {
 			s.selectedUserID = ""
 		}
+	}
+}
+
+// applySession installs the login state and its notice. It runs on its own
+// when the startup restore answers off the UI thread, so it never touches the
+// rows already on screen.
+func (s *accountState) applySession(sess accountSession, sessErr error) {
+	switch {
+	case errors.Is(sessErr, errSessionRevoked):
+		s.notice = "登录会话已失效，已清除本地会话；密钥仍已保存，解锁不受影响。"
+		s.noticeOK = false
+	case errors.Is(sessErr, errSessionUnverified):
+		s.notice = "暂时无法验证登录会话（网络或服务器问题），已保守显示为未登录；密钥仍已保存。"
+		s.noticeOK = false
+	case sessErr != nil:
+		s.notice = "读取登录状态失败：" + sessErr.Error()
+		s.noticeOK = false
+	}
+	if sessErr == nil || errors.Is(sessErr, errSessionRevoked) || errors.Is(sessErr, errSessionUnverified) {
+		s.session = sess
 	}
 }
 
@@ -320,8 +362,11 @@ func (s *accountState) logout() {
 				return
 			}
 			st.session = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
-			// Reload before the notice: reload clears it while starting its
-			// async read, so the order keeps "已退出登录" on screen.
+			// The persisted login was just deleted on purpose; the card must
+			// not wait for any restore that could still be on the wire.
+			st.verified = true
+			// Reload first: a local read error it reports must not clobber
+			// the "已退出登录" line, so the line is set after it.
 			st.reload()
 			st.notice = "已退出登录"
 			st.noticeOK = true
