@@ -119,6 +119,20 @@ func (r *registrar) Status(b Browser) (Status, error) {
 	return Status{OursInstalled: oursInstalled}, nil
 }
 
+// ManifestPath reports where our manifest for b is (or would be) written,
+// without touching the registry or the disk. It is the overwrite target the
+// GUI lists before a human confirms taking over a foreign registration.
+func (r *registrar) ManifestPath(b Browser) (string, error) {
+	if _, ok := browserKeyPaths[b]; !ok {
+		return "", fmt.Errorf("registry: unsupported browser %q", b)
+	}
+	dir, err := r.manifestsDir()
+	if err != nil {
+		return "", err
+	}
+	return r.manifestPath(b, dir), nil
+}
+
 func (r *registrar) Install(b Browser) error {
 	keyPaths, ok := browserKeyPaths[b]
 	if !ok {

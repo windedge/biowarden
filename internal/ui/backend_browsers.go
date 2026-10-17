@@ -50,10 +50,15 @@ func (b *realBrowsers) refresh() ([]browserRow, error) {
 		if err != nil {
 			return nil, err
 		}
+		self, err := b.reg.ManifestPath(br)
+		if err != nil {
+			return nil, err
+		}
 		rows = append(rows, browserRow{
 			browser:         br,
 			name:            br.String(),
 			path:            st.Path,
+			installPath:     self,
 			state:           browserStateOf(st),
 			lastConnectedAt: lastConnectedFor(connections, br),
 		})

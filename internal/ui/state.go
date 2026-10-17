@@ -41,6 +41,9 @@ type appState struct {
 	firstRun firstRunState
 	// loginWin is the native window while it is up; nil once it closed.
 	loginWin *mygo.Window
+	// browsersWin is the bulk-overwrite confirmation dialog while it is up;
+	// nil once it closed.
+	browsersWin *mygo.Window
 
 	// mainWindow is the window start creates; the login window is its modal
 	// child, and the login state needs it to open one.
@@ -57,6 +60,8 @@ func newAppState() *appState {
 	}
 	app.account = newAccountState()
 	app.login = newLoginWindow(&app.account)
+	app.browsers.openConfirmWindow = app.showBrowsersConfirmWindow
+	app.browsers.closeConfirmWindow = app.hideBrowsersConfirmWindow
 	app.firstRun = newFirstRunState(newRealFirstRun())
 	app.login.openWindow = app.showLoginWindow
 	app.login.closeWindow = app.hideLoginWindow

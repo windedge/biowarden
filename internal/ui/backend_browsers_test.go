@@ -29,6 +29,10 @@ func (f *fakeRegistrar) Status(b registry.Browser) (registry.Status, error) {
 	return f.status[b], nil
 }
 
+func (f *fakeRegistrar) ManifestPath(b registry.Browser) (string, error) {
+	return `C:\biowarden\manifests\` + string(b) + ".json", nil
+}
+
 func (f *fakeRegistrar) Install(b registry.Browser) error {
 	if f.installErr != nil {
 		return f.installErr
@@ -70,9 +74,9 @@ func TestRealBrowsersRefreshMapsStatus(t *testing.T) {
 		t.Fatalf("refresh: %v", err)
 	}
 	want := []browserRow{
-		{browser: registry.Chrome, name: "Chrome", state: browserMissing},
-		{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, state: browserForeign},
-		{browser: registry.Firefox, name: "Firefox", path: `C:\ours\firefox.json`, state: browserOurs},
+		{browser: registry.Chrome, name: "Chrome", installPath: `C:\biowarden\manifests\chrome.json`, state: browserMissing},
+		{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, installPath: `C:\biowarden\manifests\edge.json`, state: browserForeign},
+		{browser: registry.Firefox, name: "Firefox", path: `C:\ours\firefox.json`, installPath: `C:\biowarden\manifests\firefox.json`, state: browserOurs},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("refresh returned %d rows, want %d", len(rows), len(want))

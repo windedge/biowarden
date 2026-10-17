@@ -373,3 +373,34 @@ func TestUnsupportedBrowser(t *testing.T) {
 		t.Fatalf("Install unsupported = %v, want unsupported error", err)
 	}
 }
+
+// ManifestPath is the overwrite target the GUI lists; it must be exactly where
+// Install then registers the browser, or the confirmation would name a path
+// the install never writes.
+func TestManifestPathMatchesInstallTarget(t *testing.T) {
+	env := newTestEnv(t)
+	path, err := env.reg.ManifestPath(Chrome)
+	if err != nil {
+		t.Fatalf("ManifestPath: %v", err)
+	}
+	if want := filepath.Join(env.dir, "chrome.json"); path != want {
+		t.Fatalf("ManifestPath = %q, want %q", path, want)
+	}
+	if err := env.reg.Install(Chrome); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	st, err := env.reg.Status(Chrome)
+	if err != nil {
+		t.Fatalf("Status: %v", err)
+	}
+	if st.Path != path {
+		t.Fatalf("Status.Path = %q, want the ManifestPath %q", st.Path, path)
+	}
+}
+
+func TestManifestPathUnsupportedBrowser(t *testing.T) {
+	env := newTestEnv(t)
+	if _, err := env.reg.ManifestPath(Browser("opera")); err == nil || !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("ManifestPath unsupported = %v, want unsupported error", err)
+	}
+}

@@ -50,6 +50,10 @@ type Status struct {
 // Registrar registers and unregisters biowarden's native messaging host.
 type Registrar interface {
 	Status(b Browser) (Status, error)
+	// ManifestPath is where biowarden's manifest for b lives, whether or not it
+	// is registered yet. The GUI shows it as the overwrite target before a
+	// human confirms replacing a registration that belongs to another client.
+	ManifestPath(b Browser) (string, error)
 	// Install writes biowarden's manifest and points the browser at it,
 	// replacing whatever was registered before.
 	Install(b Browser) error

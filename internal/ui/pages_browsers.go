@@ -32,8 +32,10 @@ func (app *appState) browsersPage(c *ui.Context) {
 		})
 		muted(c, "已配置 "+itoa(configured)+" / "+itoa(len(app.browsers.rows))+" 个浏览器 · 已存 "+
 			itoa(len(app.account.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生物识别解锁。"+
-			"「一键全部安装」只写未安装和属于我们的行，可能属于官方客户端的配置仍需逐行确认。")
+			"「一键全部安装」直接写入未安装和属于我们的行；可能属于官方客户端或被覆盖的注册会先列出确认，确认后一并覆盖。")
 		switch {
+		case len(bs.bulk) > 0:
+			notice(c, "有 "+itoa(len(bs.bulk))+" 个注册需要确认，请在确认对话框中处理。", false)
 		case bs.confirmCover >= 0:
 			notice(c, "覆盖前确认：该 manifest 可能属于 Bitwarden 官方桌面客户端，覆盖后官方生物解锁会失效。", false)
 		case hijacked > 0:
