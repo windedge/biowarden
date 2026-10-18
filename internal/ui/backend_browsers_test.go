@@ -69,13 +69,15 @@ func TestRealBrowsersRefreshMapsStatus(t *testing.T) {
 	fake.status[registry.Edge] = registry.Status{Registered: true, Path: `C:\official\edge.json`}
 	fake.status[registry.Firefox] = registry.Status{Registered: true, Path: `C:\ours\firefox.json`, IsOurs: true}
 
-	rows, err := newRealBrowsersWith(fake, nil).refresh()
+	rows, err := newRealBrowsersWith(fake, nil, func() []registry.Browser {
+		return []registry.Browser{registry.Edge}
+	}).refresh()
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
 	want := []browserRow{
 		{browser: registry.Chrome, name: "Chrome", installPath: `C:\biowarden\manifests\chrome.json`, state: browserMissing},
-		{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, installPath: `C:\biowarden\manifests\edge.json`, state: browserForeign},
+		{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, installPath: `C:\biowarden\manifests\edge.json`, state: browserForeign, installed: true},
 		{browser: registry.Firefox, name: "Firefox", path: `C:\ours\firefox.json`, installPath: `C:\biowarden\manifests\firefox.json`, state: browserOurs},
 	}
 	if len(rows) != len(want) {
@@ -100,6 +102,51 @@ func TestBrowserStateOfHijacked(t *testing.T) {
 	}
 }
 
+// The install probe is injected, and its answer is cached: the page reloads
+// its rows on every frame, so the App Paths registry is read once per backend
+// rather than once per refresh.
+func TestRealBrowsersRefreshCachesDetect(t *testing.T) {
+	fake := newFakeRegistrar()
+	calls := 0
+	detect := func() []registry.Browser {
+		calls++
+		return []registry.Browser{registry.Edge}
+	}
+	backend := newRealBrowsersWith(fake, nil, detect)
+
+	rows, err := backend.refresh()
+	if err != nil {
+		t.Fatalf("first refresh: %v", err)
+	}
+	if rows[0].installed || !rows[1].installed || rows[2].installed {
+		t.Fatalf("installed flags = %v, want only Edge", rows)
+	}
+	if _, err := backend.refresh(); err != nil {
+		t.Fatalf("second refresh: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("detect calls = %d, want the cached single probe", calls)
+	}
+}
+
+// An empty probe result marks every row absent, which is the honest answer on
+// a machine that has none of the supported browsers.
+func TestRealBrowsersRefreshMarksNothingInstalledForEmptyDetect(t *testing.T) {
+	fake := newFakeRegistrar()
+	rows, err := newRealBrowsersWith(fake, nil, func() []registry.Browser { return nil }).refresh()
+	if err != nil {
+		t.Fatalf("refresh: %v", err)
+	}
+	if len(rows) != len(registry.Browsers) {
+		t.Fatalf("refresh returned %d rows, want %d", len(rows), len(registry.Browsers))
+	}
+	for _, row := range rows {
+		if row.installed {
+			t.Fatalf("row %s reported installed despite an empty probe", row.name)
+		}
+	}
+}
+
 func TestRealBrowsersUninstallHijackedRemovesOurManifest(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.status[registry.Edge] = registry.Status{
@@ -107,7 +154,7 @@ func TestRealBrowsersUninstallHijackedRemovesOurManifest(t *testing.T) {
 		Path:          `C:\official\edge.json`,
 		OursInstalled: true,
 	}
-	backend := newRealBrowsersWith(fake, nil)
+	backend := newRealBrowsersWith(fake, nil, nil)
 
 	row := browserRow{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, state: browserHijacked}
 	if err := backend.uninstall(row); err != nil {
@@ -123,7 +170,7 @@ func TestRealBrowsersUninstallHijackedRemovesOurManifest(t *testing.T) {
 
 func TestRealBrowsersInstallTargetsTheRowBrowser(t *testing.T) {
 	fake := newFakeRegistrar()
-	backend := newRealBrowsersWith(fake, nil)
+	backend := newRealBrowsersWith(fake, nil, nil)
 
 	rows, err := backend.refresh()
 	if err != nil {
@@ -141,7 +188,7 @@ func TestRealBrowsersInstallTargetsTheRowBrowser(t *testing.T) {
 func TestRealBrowsersInstallPropagatesError(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.installErr = errors.New("access denied")
-	backend := newRealBrowsersWith(fake, nil)
+	backend := newRealBrowsersWith(fake, nil, nil)
 
 	row := browserRow{browser: registry.Chrome, name: "Chrome", state: browserMissing}
 	if err := backend.install(row); !errors.Is(err, fake.installErr) {
@@ -152,7 +199,7 @@ func TestRealBrowsersInstallPropagatesError(t *testing.T) {
 func TestRealBrowsersUninstallOursDeletes(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.status[registry.Chrome] = registry.Status{Registered: true, Path: `C:\ours\chrome.json`, IsOurs: true}
-	backend := newRealBrowsersWith(fake, nil)
+	backend := newRealBrowsersWith(fake, nil, nil)
 
 	row := browserRow{browser: registry.Chrome, name: "Chrome", path: `C:\ours\chrome.json`, state: browserOurs}
 	if err := backend.uninstall(row); err != nil {
@@ -169,7 +216,7 @@ func TestRealBrowsersUninstallOursDeletes(t *testing.T) {
 func TestRealBrowsersUninstallForeignIsRefused(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.status[registry.Edge] = registry.Status{Registered: true, Path: `C:\official\edge.json`}
-	backend := newRealBrowsersWith(fake, nil)
+	backend := newRealBrowsersWith(fake, nil, nil)
 
 	row := browserRow{browser: registry.Edge, name: "Edge", path: `C:\official\edge.json`, state: browserForeign}
 	err := backend.uninstall(row)
@@ -187,7 +234,7 @@ func TestRealBrowsersUninstallForeignIsRefused(t *testing.T) {
 func TestRealBrowsersRefreshPropagatesError(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.statusErr = errors.New("cannot open key")
-	if _, err := newRealBrowsersWith(fake, nil).refresh(); !errors.Is(err, fake.statusErr) {
+	if _, err := newRealBrowsersWith(fake, nil, nil).refresh(); !errors.Is(err, fake.statusErr) {
 		t.Fatalf("refresh error = %v, want %v", err, fake.statusErr)
 	}
 }

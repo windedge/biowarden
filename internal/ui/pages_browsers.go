@@ -32,7 +32,8 @@ func (app *appState) browsersPage(c *ui.Context) {
 		})
 		muted(c, "已配置 "+itoa(configured)+" / "+itoa(len(app.browsers.rows))+" 个浏览器 · 已存 "+
 			itoa(len(app.account.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生物识别解锁。"+
-			"「一键全部安装」直接写入未安装和属于我们的行；可能属于官方客户端或被覆盖的注册会先列出确认，确认后一并覆盖。")
+			"「一键全部安装」直接写入本机已安装且没有 manifest 或属于我们的行；本机未安装的浏览器会跳过；"+
+			"可能属于官方客户端或被覆盖的注册会先列出确认，确认后一并覆盖。")
 		switch {
 		case len(bs.bulk) > 0:
 			notice(c, "有 "+itoa(len(bs.bulk))+" 个注册需要确认，请在确认对话框中处理。", false)
@@ -58,7 +59,12 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 	b := &app.browsers.rows[i]
 	ui.Row(c).Key(b.name).Gap(12).Padding(10, 8).AlignItems(ui.Center).Children(func() {
 		ui.Column(c).Grow(1).Gap(2).Children(func() {
-			ui.Text(c, b.name).Bold()
+			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, b.name).Bold()
+				if !b.installed {
+					ui.Text(c, "未安装").FontSize(11).TextColor(t.TextMuted).Tooltip(browserAbsentHint())
+				}
+			})
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, browserStatusLabel(b.state)).FontSize(11).TextColor(browserStatusColor(t, b.state))
 				ui.Text(c, connectionLabel(time.Now(), b.lastConnectedAt)).FontSize(11).
@@ -80,15 +86,15 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 			ui.PrimaryButton(c, confirm).OnClick(func() {
 				bs.confirmCover = -1
 				bs.install(b)
-			})
+			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
 		case b.state == browserOurs:
-			ui.Button(c, "修复").OnClick(func() { bs.install(b) })
+			ui.Button(c, "修复").OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
 			ui.Button(c, "卸载").OnClick(func() { bs.uninstall(b) })
 		case b.state == browserForeign:
 			ui.Button(c, "覆盖安装").OnClick(func() {
 				bs.confirmCover = i
 				bs.notice = ""
-			})
+			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
 			if bs.confirmUninstall == i {
 				// Deleting a manifest that may be the official client's deserves
 				// the same second click as overwriting one.
@@ -109,7 +115,7 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 			ui.PrimaryButton(c, "恢复安装").OnClick(func() {
 				bs.confirmCover = i
 				bs.notice = ""
-			})
+			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
 			if bs.confirmUninstall == i {
 				ui.Button(c, "取消").OnClick(func() { bs.confirmUninstall = -1 })
 				ui.PrimaryButton(c, "确认卸载").OnClick(func() {
@@ -123,9 +129,15 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 				bs.notice = ""
 			})
 		default:
-			ui.Button(c, "安装").OnClick(func() { bs.install(b) })
+			ui.Button(c, "安装").OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
 		}
 	})
+}
+
+// browserAbsentHint explains a disabled write action: a browser this machine
+// does not have has no registration point to write.
+func browserAbsentHint() string {
+	return "本机未检测到该浏览器，没有可写入的注册点"
 }
 
 func browserStatusLabel(state int) string {

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/egoist/mygo/ui"
 	"github.com/windedge/biowarden/internal/hoststate"
 	"github.com/windedge/biowarden/internal/registry"
 )
@@ -84,6 +85,82 @@ func TestLastConnectedForTakesNewestID(t *testing.T) {
 	}
 }
 
+// A browser this machine does not have is marked "未安装" by its name, and its
+// install action is disabled: there is no registration point to write.
+func TestBrowsersRowMarksAndDisablesAbsentBrowser(t *testing.T) {
+	backend := &recordingBrowsersBackend{rows: []browserRow{
+		{browser: registry.Firefox, name: "Firefox", path: `C:\official\firefox.json`, state: browserForeign},
+	}}
+	app := &appState{browsers: newBrowsersStateWith(backend)}
+	tester := ui.NewTester(func(c *ui.Context) { app.browserRow(c, 0) }, 640, 120)
+	tester.Frame()
+
+	if !tester.HasText("未安装") {
+		t.Fatalf("row does not mark the absent browser; texts = %v", tester.Texts())
+	}
+	if err := tester.Click("覆盖安装"); err != nil {
+		t.Fatalf("click the disabled install button: %v", err)
+	}
+	if app.browsers.confirmCover != -1 {
+		t.Fatalf("the disabled button started a confirmation (confirmCover = %d)", app.browsers.confirmCover)
+	}
+}
+
+// The marker belongs only to absent browsers: an installed one is not marked.
+func TestBrowsersRowDoesNotMarkInstalledBrowser(t *testing.T) {
+	backend := &recordingBrowsersBackend{rows: []browserRow{
+		{browser: registry.Firefox, name: "Firefox", path: `C:\official\firefox.json`, state: browserForeign, installed: true},
+	}}
+	app := &appState{browsers: newBrowsersStateWith(backend)}
+	tester := ui.NewTester(func(c *ui.Context) { app.browserRow(c, 0) }, 640, 120)
+	tester.Frame()
+
+	if tester.HasText("未安装") {
+		t.Fatalf("installed row shows the absent marker; texts = %v", tester.Texts())
+	}
+	if err := tester.Click("覆盖安装"); err != nil {
+		t.Fatalf("click the install button: %v", err)
+	}
+	if app.browsers.confirmCover != 0 {
+		t.Fatalf("the enabled button did not start a confirmation (confirmCover = %d)", app.browsers.confirmCover)
+	}
+}
+
+// The plain "安装" button is the disabled one on a row with no registration,
+// so the click never reaches the registry.
+func TestBrowsersRowDisablesInstallForAbsentBrowser(t *testing.T) {
+	backend := &recordingBrowsersBackend{rows: []browserRow{
+		{browser: registry.Firefox, name: "Firefox", state: browserMissing},
+	}}
+	app := &appState{browsers: newBrowsersStateWith(backend)}
+	tester := ui.NewTester(func(c *ui.Context) { app.browserRow(c, 0) }, 640, 120)
+	tester.Frame()
+
+	if err := tester.Click("安装"); err != nil {
+		t.Fatalf("click the install button: %v", err)
+	}
+	if len(backend.installs) != 0 {
+		t.Fatalf("installs = %v, want none from a disabled button", backend.installs)
+	}
+}
+
+// An installed row keeps the working "安装" button.
+func TestBrowsersRowInstallsWhenBrowserPresent(t *testing.T) {
+	backend := &recordingBrowsersBackend{rows: []browserRow{
+		{browser: registry.Firefox, name: "Firefox", state: browserMissing, installed: true},
+	}}
+	app := &appState{browsers: newBrowsersStateWith(backend)}
+	tester := ui.NewTester(func(c *ui.Context) { app.browserRow(c, 0) }, 640, 120)
+	tester.Frame()
+
+	if err := tester.Click("安装"); err != nil {
+		t.Fatalf("click the install button: %v", err)
+	}
+	if len(backend.installs) != 1 || backend.installs[0] != "Firefox" {
+		t.Fatalf("installs = %v, want [Firefox]", backend.installs)
+	}
+}
+
 func TestRealBrowsersRefreshAttachesConnections(t *testing.T) {
 	fake := newFakeRegistrar()
 	fake.status[registry.Firefox] = registry.Status{Registered: true, Path: `C:\ours\firefox.json`, IsOurs: true}
@@ -92,7 +169,7 @@ func TestRealBrowsersRefreshAttachesConnections(t *testing.T) {
 		return map[string]time.Time{hoststate.BrowserFirefox: at}, nil
 	}
 
-	rows, err := newRealBrowsersWith(fake, connections).refresh()
+	rows, err := newRealBrowsersWith(fake, connections, nil).refresh()
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -111,7 +188,7 @@ func TestRealBrowsersRefreshSurvivesConnectionReadError(t *testing.T) {
 	connections := func() (map[string]time.Time, error) {
 		return nil, errors.New("state dir unreadable")
 	}
-	rows, err := newRealBrowsersWith(fake, connections).refresh()
+	rows, err := newRealBrowsersWith(fake, connections, nil).refresh()
 	if err != nil {
 		t.Fatalf("refresh returned %v, want the rows with no indicator", err)
 	}

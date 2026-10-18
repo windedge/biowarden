@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/windedge/biowarden/internal/hoststate"
@@ -20,30 +21,56 @@ type realBrowsers struct {
 	// connections reads each browser id's last connection time. A read failure
 	// only loses the indicator, so it never fails the rows.
 	connections func() (map[string]time.Time, error)
+	// detect reports the browsers installed on this machine. It is cached, so
+	// the App Paths probe runs at most once per backend.
+	detect func() []registry.Browser
 }
 
 // newRealBrowsers wraps a registrar; nil selects the real HKCU-backed one, so
 // tests inject an in-memory double through the same constructor.
 func newRealBrowsers(reg registry.Registrar) *realBrowsers {
-	return newRealBrowsersWith(reg, hoststate.LastConnections)
+	return newRealBrowsersWith(reg, hoststate.LastConnections, registry.Detect)
 }
 
-// newRealBrowsersWith injects the connection reader too, so a test never reads
-// the tester's real %LOCALAPPDATA%.
-func newRealBrowsersWith(reg registry.Registrar, connections func() (map[string]time.Time, error)) *realBrowsers {
+// newRealBrowsersWith injects the connection reader and the install probe too,
+// so a test never reads the tester's real %LOCALAPPDATA% or registry. A nil
+// detect reports nothing, which is the safe default for a backend built
+// without the real one.
+func newRealBrowsersWith(reg registry.Registrar, connections func() (map[string]time.Time, error), detect func() []registry.Browser) *realBrowsers {
 	if reg == nil {
 		reg = registry.New()
 	}
 	if connections == nil {
 		connections = func() (map[string]time.Time, error) { return nil, nil }
 	}
-	return &realBrowsers{reg: reg, connections: connections}
+	if detect == nil {
+		detect = func() []registry.Browser { return nil }
+	}
+	return &realBrowsers{reg: reg, connections: connections, detect: cachedDetect(detect)}
+}
+
+// cachedDetect memoizes the App Paths probe. The page reloads its rows on
+// every frame, but a browser install does not change while the app runs, so
+// one probe per backend is enough and the registry stays untouched after it.
+func cachedDetect(detect func() []registry.Browser) func() []registry.Browser {
+	var (
+		once      sync.Once
+		installed []registry.Browser
+	)
+	return func() []registry.Browser {
+		once.Do(func() { installed = detect() })
+		return installed
+	}
 }
 
 func (b *realBrowsers) refresh() ([]browserRow, error) {
 	// A state read failure is not worth failing the page: the row's indicator
 	// just stays at "扩展未连接" until the host has something to say.
 	connections, _ := b.connections()
+	installed := make(map[registry.Browser]bool)
+	for _, br := range b.detect() {
+		installed[br] = true
+	}
 	rows := make([]browserRow, 0, len(registry.Browsers))
 	for _, br := range registry.Browsers {
 		st, err := b.reg.Status(br)
@@ -60,6 +87,7 @@ func (b *realBrowsers) refresh() ([]browserRow, error) {
 			path:            st.Path,
 			installPath:     self,
 			state:           browserStateOf(st),
+			installed:       installed[br],
 			lastConnectedAt: lastConnectedFor(connections, br),
 		})
 	}

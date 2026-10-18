@@ -35,9 +35,9 @@ func (r *recordingBrowsersBackend) uninstall(browserRow) error { return nil }
 // human has seen it.
 func TestBrowsersStateInstallAllDefersTakeoversToConfirm(t *testing.T) {
 	backend := &recordingBrowsersBackend{rows: []browserRow{
-		{browser: registry.Chrome, name: "Chrome", state: browserMissing},
-		{browser: registry.Edge, name: "Edge", state: browserForeign},
-		{browser: registry.Firefox, name: "Firefox", state: browserOurs},
+		{browser: registry.Chrome, name: "Chrome", state: browserMissing, installed: true},
+		{browser: registry.Edge, name: "Edge", state: browserForeign, installed: true},
+		{browser: registry.Firefox, name: "Firefox", state: browserOurs, installed: true},
 	}}
 	s := newBrowsersStateWith(backend)
 	opened := false
@@ -80,7 +80,7 @@ func TestBrowsersStateInstallAllDefersTakeoversToConfirm(t *testing.T) {
 // waits for the one confirmation instead of being written silently.
 func TestBrowsersStateInstallAllDefersHijacked(t *testing.T) {
 	backend := &recordingBrowsersBackend{rows: []browserRow{
-		{browser: registry.Firefox, name: "Firefox", state: browserHijacked},
+		{browser: registry.Firefox, name: "Firefox", state: browserHijacked, installed: true},
 	}}
 	s := newBrowsersStateWith(backend)
 	s.installAll()
@@ -97,8 +97,8 @@ func TestBrowsersStateInstallAllDefersHijacked(t *testing.T) {
 // already installed stay installed.
 func TestBrowsersStateInstallAllCancelLeavesTakeoversAlone(t *testing.T) {
 	backend := &recordingBrowsersBackend{rows: []browserRow{
-		{browser: registry.Chrome, name: "Chrome", state: browserMissing},
-		{browser: registry.Edge, name: "Edge", state: browserForeign},
+		{browser: registry.Chrome, name: "Chrome", state: browserMissing, installed: true},
+		{browser: registry.Edge, name: "Edge", state: browserForeign, installed: true},
 	}}
 	s := newBrowsersStateWith(backend)
 	s.installAll()
@@ -124,8 +124,8 @@ func TestBrowsersStateInstallAllCancelLeavesTakeoversAlone(t *testing.T) {
 // safe rows and reports the plain summary.
 func TestBrowsersStateInstallAllWithoutTakeoversWritesDirectly(t *testing.T) {
 	backend := &recordingBrowsersBackend{rows: []browserRow{
-		{browser: registry.Chrome, name: "Chrome", state: browserMissing},
-		{browser: registry.Firefox, name: "Firefox", state: browserOurs},
+		{browser: registry.Chrome, name: "Chrome", state: browserMissing, installed: true},
+		{browser: registry.Firefox, name: "Firefox", state: browserOurs, installed: true},
 	}}
 	s := newBrowsersStateWith(backend)
 	opened := false
@@ -147,9 +147,9 @@ func TestBrowsersStateInstallAllWithoutTakeoversWritesDirectly(t *testing.T) {
 func TestBrowsersStateInstallAllReportsFailureAcrossConfirm(t *testing.T) {
 	backend := &recordingBrowsersBackend{
 		rows: []browserRow{
-			{browser: registry.Chrome, name: "Chrome", state: browserMissing},
-			{browser: registry.Edge, name: "Edge", state: browserForeign},
-			{browser: registry.Firefox, name: "Firefox", state: browserMissing},
+			{browser: registry.Chrome, name: "Chrome", state: browserMissing, installed: true},
+			{browser: registry.Edge, name: "Edge", state: browserForeign, installed: true},
+			{browser: registry.Firefox, name: "Firefox", state: browserMissing, installed: true},
 		},
 		failFor: map[string]bool{"Firefox": true},
 	}
@@ -167,5 +167,72 @@ func TestBrowsersStateInstallAllReportsFailureAcrossConfirm(t *testing.T) {
 	}
 	if strings.Contains(s.notice, "逐行") {
 		t.Fatalf("notice %q still asks for a per-row confirmation", s.notice)
+	}
+}
+
+// A browser this machine does not have is skipped whole: it is never written,
+// never listed in the confirmation dialog, and the summary names it so the
+// human knows why nothing happened to that row.
+func TestBrowsersStateInstallAllSkipsAbsentBrowsers(t *testing.T) {
+	backend := &recordingBrowsersBackend{rows: []browserRow{
+		{browser: registry.Chrome, name: "Chrome", state: browserMissing, installed: true},
+		{browser: registry.Edge, name: "Edge", state: browserForeign, installed: true},
+		{browser: registry.Firefox, name: "Firefox", state: browserForeign},
+	}}
+	s := newBrowsersStateWith(backend)
+	opened := false
+	s.openConfirmWindow = func() { opened = true }
+	s.installAll()
+
+	if !opened {
+		t.Fatalf("installAll did not open the confirmation dialog")
+	}
+	if got := strings.Join(backend.installs, ","); got != "Chrome" {
+		t.Fatalf("direct installs = %v, want only the installed safe row", backend.installs)
+	}
+	if len(s.bulk) != 1 || s.bulk[0].name != "Edge" {
+		t.Fatalf("bulk = %+v, want only the installed foreign row", s.bulk)
+	}
+
+	s.confirmBulk()
+
+	if got := strings.Join(backend.installs, ","); got != "Chrome,Edge" {
+		t.Fatalf("installs = %v, want the installed rows only", backend.installs)
+	}
+	for _, want := range []string{"已安装 2 个", "未安装，跳过：Firefox"} {
+		if !strings.Contains(s.notice, want) {
+			t.Fatalf("notice %q does not contain %q", s.notice, want)
+		}
+	}
+	if !s.noticeOK {
+		t.Fatalf("notice = %q ok = false, want a clean summary", s.notice)
+	}
+}
+
+// With no browser installed there is nothing to write and no dialog at all;
+// the summary reports the empty run and names every skipped browser.
+func TestBrowsersStateInstallAllWithNoBrowsersInstalled(t *testing.T) {
+	backend := &recordingBrowsersBackend{rows: []browserRow{
+		{browser: registry.Chrome, name: "Chrome", state: browserMissing},
+		{browser: registry.Firefox, name: "Firefox", state: browserForeign},
+	}}
+	s := newBrowsersStateWith(backend)
+	opened := false
+	s.openConfirmWindow = func() { opened = true }
+	s.installAll()
+
+	if opened {
+		t.Fatalf("installAll opened a dialog with no installed browsers")
+	}
+	if len(backend.installs) != 0 {
+		t.Fatalf("installs = %v, want none", backend.installs)
+	}
+	for _, want := range []string{"已安装 0 个", "未安装，跳过：Chrome、Firefox"} {
+		if !strings.Contains(s.notice, want) {
+			t.Fatalf("notice %q does not contain %q", s.notice, want)
+		}
+	}
+	if !s.noticeOK {
+		t.Fatalf("notice = %q ok = false, want a missing browser to read as information", s.notice)
 	}
 }

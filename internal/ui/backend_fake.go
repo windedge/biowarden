@@ -13,8 +13,8 @@ type fakeBrowsers struct{}
 
 func (fakeBrowsers) refresh() ([]browserRow, error) {
 	return []browserRow{
-		{name: "Chrome", path: `%LOCALAPPDATA%\biowarden\manifests\chrome.json`, state: browserOurs},
-		{name: "Microsoft Edge", path: `C:\Users\<user>\scoop\apps\bitwarden\...\browsers\edge.json`, state: browserForeign},
+		{name: "Chrome", path: `%LOCALAPPDATA%\biowarden\manifests\chrome.json`, state: browserOurs, installed: true},
+		{name: "Microsoft Edge", path: `C:\Users\<user>\scoop\apps\bitwarden\...\browsers\edge.json`, state: browserForeign, installed: true},
 		{name: "Firefox", path: "", state: browserMissing},
 	}, nil
 }

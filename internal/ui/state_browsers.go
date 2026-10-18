@@ -33,11 +33,13 @@ type browsersState struct {
 
 	// bulk holds the foreign and hijacked rows "一键全部安装" collected into
 	// one confirmation, instead of skipping them row by row. Empty when no
-	// dialog is up. bulkInstalled and bulkFailed carry the rows the button
-	// already wrote directly, so the dialog's summary reports both stages.
+	// dialog is up. bulkInstalled, bulkFailed and bulkAbsent carry the rest of
+	// the button's summary (written, failed, and not installed), so the dialog
+	// reports the full picture whatever the human decides.
 	bulk          []browserRow
 	bulkInstalled int
 	bulkFailed    []string
+	bulkAbsent    []string
 
 	// openConfirmWindow and closeConfirmWindow are the GUI seams, nil in tests,
 	// mirroring the login window's.
@@ -56,6 +58,10 @@ type browserRow struct {
 	// overwrite confirmation lists it as the target a takeover would write.
 	installPath string
 	state       int // browserMissing / browserOurs / browserForeign / browserHijacked
+	// installed is whether the browser is present on this machine. A browser
+	// that is not installed has no registration point to write, so the row is
+	// marked and install all skips it.
+	installed bool
 
 	// lastConnectedAt is when this browser's extension last reached the host,
 	// zero when it never has. The host writes it per connection; the row shows
@@ -96,20 +102,26 @@ func (s *browsersState) reload() {
 	s.rows = rows
 }
 
-// installAll is the page's one-click install. Rows with no registration and
-// rows already ours are written straight away. A foreign or hijacked value is
-// collected into one confirmation instead of being skipped row by row: the
-// button opens a modal dialog listing every registration it would take over,
-// and only the human's confirm writes them.
+// installAll is the page's one-click install. Browsers this machine does not
+// have are skipped whole: there is no registration point to write. Rows with
+// no registration and rows already ours are written straight away. A foreign
+// or hijacked value is collected into one confirmation instead of being
+// skipped row by row: the button opens a modal dialog listing every
+// registration it would take over, and only the human's confirm writes them.
 func (s *browsersState) installAll() {
 	// A bulk write reloads the rows, so any per-row confirmation still open
 	// would point at a stale index.
 	s.confirmCover, s.confirmUninstall = -1, -1
 	installed := 0
 	var failed []string
+	var absent []string
 	var takeovers []browserRow
 	for i := range s.rows {
 		row := s.rows[i]
+		if !row.installed {
+			absent = append(absent, row.name)
+			continue
+		}
 		switch row.state {
 		case browserMissing, browserOurs:
 			if err := s.backend.install(row); err != nil {
@@ -123,9 +135,9 @@ func (s *browsersState) installAll() {
 	}
 	s.reload()
 	s.bulk = takeovers
-	s.bulkInstalled, s.bulkFailed = installed, failed
+	s.bulkInstalled, s.bulkFailed, s.bulkAbsent = installed, failed, absent
 	if len(takeovers) == 0 {
-		s.notice, s.noticeOK = bulkInstallNotice(installed, failed, 0)
+		s.notice, s.noticeOK = bulkInstallNotice(installed, failed, absent, 0)
 		return
 	}
 	// The dialog owns the wording while it is up; the click that opened it
@@ -139,6 +151,7 @@ func (s *browsersState) installAll() {
 // confirmBulk takes over every registration the dialog listed and closes it.
 func (s *browsersState) confirmBulk() {
 	failed := append([]string(nil), s.bulkFailed...)
+	absent := append([]string(nil), s.bulkAbsent...)
 	taken := 0
 	for _, row := range s.bulk {
 		if err := s.backend.install(row); err != nil {
@@ -148,9 +161,9 @@ func (s *browsersState) confirmBulk() {
 		taken++
 	}
 	installed := s.bulkInstalled + taken
-	s.bulk, s.bulkInstalled, s.bulkFailed = nil, 0, nil
+	s.bulk, s.bulkInstalled, s.bulkFailed, s.bulkAbsent = nil, 0, nil, nil
 	s.reload()
-	s.notice, s.noticeOK = bulkInstallNotice(installed, failed, 0)
+	s.notice, s.noticeOK = bulkInstallNotice(installed, failed, absent, 0)
 	s.closeConfirm()
 }
 
@@ -166,13 +179,13 @@ func (s *browsersState) cancelBulk() {
 // close event uses it when the human clicks the dialog's X, which destroys
 // the window on its own path.
 func (s *browsersState) applyBulkCancel() {
-	installed, failed, left := s.bulkInstalled, s.bulkFailed, len(s.bulk)
-	s.bulk, s.bulkInstalled, s.bulkFailed = nil, 0, nil
+	installed, failed, absent, left := s.bulkInstalled, s.bulkFailed, s.bulkAbsent, len(s.bulk)
+	s.bulk, s.bulkInstalled, s.bulkFailed, s.bulkAbsent = nil, 0, nil, nil
 	if left == 0 {
 		s.notice, s.noticeOK = "", true
 		return
 	}
-	s.notice, s.noticeOK = bulkInstallNotice(installed, failed, left)
+	s.notice, s.noticeOK = bulkInstallNotice(installed, failed, absent, left)
 }
 
 // closeConfirm asks the GUI to destroy the dialog. It is a no-op in tests.
@@ -183,12 +196,16 @@ func (s *browsersState) closeConfirm() {
 }
 
 // bulkInstallNotice is the one summary the bulk install keeps: what was
-// written, what failed, and the takeover rows a cancel left untouched (zero
-// once the dialog was confirmed).
-func bulkInstallNotice(installed int, failed []string, left int) (string, bool) {
+// written, what failed, the browsers this machine does not have, and the
+// takeover rows a cancel left untouched (zero once the dialog was confirmed).
+// A missing browser is not a failure, so it does not turn the line orange.
+func bulkInstallNotice(installed int, failed, absent []string, left int) (string, bool) {
 	parts := []string{"已安装 " + itoa(installed) + " 个"}
 	if len(failed) > 0 {
 		parts = append(parts, "失败："+strings.Join(failed, "、"))
+	}
+	if len(absent) > 0 {
+		parts = append(parts, "未安装，跳过："+strings.Join(absent, "、"))
 	}
 	if left > 0 {
 		parts = append(parts, "跳过 "+itoa(left)+" 个（已取消覆盖，未改动）")
