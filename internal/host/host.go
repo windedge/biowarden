@@ -25,6 +25,10 @@ import (
 const hostAppID = "dev.windedge.biowarden"
 
 const (
+	// The Hello prompt's reason stays Chinese: the host runs without mygo.App,
+	// so the catalogs, which say the app's language, are not loaded here. Change
+	// this when a ticket reads the user's UI language (GetUserDefaultUILanguage)
+	// for the host itself.
 	unlockReason = "Bitwarden 浏览器扩展请求解锁"
 	authReason   = "Bitwarden 浏览器扩展请求身份验证"
 )

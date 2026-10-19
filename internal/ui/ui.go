@@ -14,6 +14,8 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+
+	"github.com/windedge/biowarden/locales"
 )
 
 const appName = "biowarden"
@@ -81,11 +83,7 @@ func start() {
 	tray, err := mygo.NewTray(mygo.TrayOptions{
 		Icon:    trayIcon(),
 		ToolTip: appName,
-		Menu: mygo.NewMenu([]*mygo.MenuItem{
-			{Label: "Open " + appName, Click: func(*mygo.MenuItem, *mygo.Window) { win.Show() }},
-			mygo.Separator(),
-			{Role: mygo.RoleQuit},
-		}),
+		Menu:    trayMenu(win),
 	})
 	if err != nil {
 		// Unlocking never depended on the GUI running, so a missing tray only
@@ -96,11 +94,29 @@ func start() {
 		// it the moment start returns.
 		mygo.App.OnWillQuit(func(*mygo.QuitEvent) { tray.Destroy() })
 	}
+	// What the app set once, its tray menu's own label, is set again in the new
+	// language. The window's title is the app's name, which is not translated.
+	mygo.App.OnLocaleChanged(func(string) {
+		if tray == nil {
+			return
+		}
+		tray.SetMenu(trayMenu(win))
+	})
 	win.Show()
 	// Zero-configuration first launch: register the browsers this machine has,
 	// then ask the human to log in. It runs after the window is up because the
 	// login window is that window's modal child.
 	app.runFirstRun()
+}
+
+// trayMenu builds the tray's menu in the language the app shows, again when the
+// language changes: RoleQuit relabels itself, the app's own item does not.
+func trayMenu(win *mygo.Window) *mygo.Menu {
+	return mygo.NewMenu([]*mygo.MenuItem{
+		{Label: locales.TrayOpen(appName), Click: func(*mygo.MenuItem, *mygo.Window) { win.Show() }},
+		mygo.Separator(),
+		{Role: mygo.RoleQuit},
+	})
 }
 
 // trayIcon draws a ring, blue so it stays visible on light and dark taskbars.

@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "language": "Language",
+  "@language": {
+    "description": "The Settings page's field label for the language the app shows."
+  },
+  "languageSystem": "Follow the system",
+  "@languageSystem": {
+    "description": "The Language row's first choice: the app shows the language the system prefers."
+  },
+  "trayOpen": "Open {app}",
+  "@trayOpen": {
+    "description": "The tray menu's item that shows the main window.",
+    "placeholders": {
+      "app": { "type": "String", "example": "biowarden" }
+    }
+  }
+}

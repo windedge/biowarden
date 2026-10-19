@@ -45,3 +45,25 @@ func (fakeSettings) autostart() (bool, error)      { return true, nil }
 func (fakeSettings) setAutostart(bool) error       { return errFakeBackend }
 func (fakeSettings) logPath() string               { return `%LOCALAPPDATA%\biowarden\host.log` }
 func (fakeSettings) logTail(int64) (string, error) { return fakeLog, nil }
+
+// fakeLocale stands where mygo.App's language stands, and records the choice.
+type fakeLocale struct {
+	shown     string
+	langs     []string
+	preferred []string
+	chosen    []string
+}
+
+func (f *fakeLocale) locale() string { return f.shown }
+
+func (f *fakeLocale) languages() []string { return f.langs }
+
+func (f *fakeLocale) preferredLanguages() []string { return f.preferred }
+
+func (f *fakeLocale) setLocale(tag string) {
+	f.chosen = append(f.chosen, tag)
+	f.shown = tag
+	if f.shown == "" {
+		f.shown = systemLanguage(f)
+	}
+}

@@ -2,6 +2,8 @@ package ui
 
 import (
 	"github.com/egoist/mygo/ui"
+
+	"github.com/windedge/biowarden/locales"
 )
 
 // The settings controls are capped: the page's fields stretch to the window
@@ -37,6 +39,16 @@ func (app *appState) settingsPage(c *ui.Context) {
 						})
 					})
 					ui.Fieldset(c, "入口", func() {
+						// The language row is the first text of the page the catalogs
+						// say; the rest of it moves there in a later ticket.
+						ui.Field(c, locales.Language(), func() {
+							// The choices are labels; the tag is what mygo shows.
+							_, labels := app.settings.languageOptions()
+							chosen := app.settings.languageLabel()
+							if ui.Select(c, &chosen, labels).Width(settingsSelectWidth).Changed() {
+								app.settings.setLanguage(app.settings.languageTagFor(chosen))
+							}
+						})
 						ui.Field(c, "登录时自动启动", func() {
 							if ui.Switch(c, &app.settings.launchAtLogin).Changed() {
 								app.settings.setAutostart()
