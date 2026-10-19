@@ -42,11 +42,11 @@ func (app *appState) settingsPage(c *ui.Context) {
 						// The language row is the first text of the page the catalogs
 						// say; the rest of it moves there in a later ticket.
 						ui.Field(c, locales.Language(), func() {
-							// The choices are labels; the tag is what mygo shows.
-							_, labels := app.settings.languageOptions()
-							chosen := app.settings.languageLabel()
-							if ui.Select(c, &chosen, labels).Width(settingsSelectWidth).Changed() {
-								app.settings.setLanguage(app.settings.languageTagFor(chosen))
+							// The row works in tags, the labels are display only, so a
+							// label changing with the language can never be written back
+							// as a tag.
+							if tag, changed := app.settings.languageSelect(c); changed {
+								app.settings.setLanguage(tag)
 							}
 						})
 						ui.Field(c, "登录时自动启动", func() {

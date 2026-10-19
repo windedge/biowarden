@@ -142,11 +142,47 @@ func (s *settingsState) languageOptions() (tags, labels []string) {
 	return tags, labels
 }
 
+// languageSelect renders the Language row and reports the tag chosen this
+// frame and whether the user chose one. The value bound to the control is the
+// tag mygo SetLocale takes, so the row never has to map a display label back
+// to a tag: the trigger and the options only show labels.
+func (s *settingsState) languageSelect(c *ui.Context) (chosen string, changed bool) {
+	tags, labels := s.languageOptions()
+	chosen = s.languageTag
+	t := c.Theme()
+	sel := ui.SelectBase(c, &chosen)
+	sel.Trigger.Gap(6).Padding(4, 10).Radius(t.Radius).
+		Background(t.Surface).Border(1, t.Border).
+		Justify(ui.SpaceBetween).Width(settingsSelectWidth).
+		Children(func() {
+			ui.Text(c, s.languageLabelFor(chosen)).SingleLine()
+			ui.Text(c, "▾").TextColor(t.TextMuted)
+		})
+	sel.Popup(func(panel ui.Element) {
+		panel.Margin(4, 0, 0, 0).Padding(4).Radius(t.Radius+2).
+			Background(t.Background).Border(1, t.Border).
+			Shadow(0, 6, 20, 0, ui.RGBA(0, 0, 0, 0.18))
+		for i, tag := range tags {
+			item := sel.Item(tag).Padding(6, 10).Radius(t.Radius)
+			if item.Highlighted() {
+				item.Background(t.Accent).TextColor(t.AccentText)
+			}
+			item.Children(func() { ui.Text(c, labels[i]).SingleLine() })
+		}
+	})
+	return chosen, sel.Trigger.Changed()
+}
+
 // languageLabel names the choice the row shows.
 func (s *settingsState) languageLabel() string {
+	return s.languageLabelFor(s.languageTag)
+}
+
+// languageLabelFor names one choice, the first when the tag is unknown.
+func (s *settingsState) languageLabelFor(tag string) string {
 	tags, labels := s.languageOptions()
-	for i, tag := range tags {
-		if tag == s.languageTag {
+	for i, t := range tags {
+		if t == tag {
 			return labels[i]
 		}
 	}
@@ -163,18 +199,6 @@ func (s *settingsState) guessLanguageTag() string {
 		return shown
 	}
 	return ""
-}
-
-// languageTagFor maps a chosen label back to its tag, as the row's labels
-// change with the language.
-func (s *settingsState) languageTagFor(label string) string {
-	tags, labels := s.languageOptions()
-	for i, l := range labels {
-		if l == label {
-			return tags[i]
-		}
-	}
-	return s.languageTag
 }
 
 // setLanguage shows tag at once, "" for the system's languages again. mygo
