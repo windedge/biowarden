@@ -144,24 +144,25 @@ func TestRealAccountLoginTwoFactorDoesNotWrite(t *testing.T) {
 	}
 }
 
-// The auth sentinels must reach the page as actionable wording, not raw
-// error text. The adapter is what maps them, so the mapping is tested here
-// directly.
+// The auth sentinels must reach the UI as typed failures it can map to
+// wording, not as raw error text. The adapter is what maps them, so the
+// mapping is tested here directly.
 func TestFriendlyAuthErrorMapsSentinels(t *testing.T) {
 	cases := []struct {
 		err  error
-		want string
+		want error
 	}{
-		{auth.ErrUnauthorized, "邮箱或主密码不正确"},
-		{auth.ErrForbidden, "服务器拒绝登录"},
-		{auth.ErrCaptchaRequired, "人机验证"},
-		{auth.ErrNetwork, "无法连接服务器"},
-		{auth.ErrServer, "服务器返回错误"},
-		{auth.ErrTwoFactorRequired, "两步验证"},
+		{auth.ErrUnauthorized, errWrongCredentials},
+		{auth.ErrForbidden, errLoginForbidden},
+		{auth.ErrCaptchaRequired, errCaptchaRequired},
+		{auth.ErrNetwork, errNetworkUnreachable},
+		{auth.ErrServer, errServerFailure},
+		{auth.ErrTwoFactorRequired, errNoTwoFactorMethod},
+		{auth.ErrTwoFactorUnsupported, errTwoFactorUnsupported},
 	}
 	for _, tc := range cases {
-		if got := friendlyAuthError(tc.err).Error(); !strings.Contains(got, tc.want) {
-			t.Errorf("friendlyAuthError(%v) = %q, want it to contain %q", tc.err, got, tc.want)
+		if got := friendlyAuthError(tc.err); !errors.Is(got, tc.want) {
+			t.Errorf("friendlyAuthError(%v) = %v, want %v", tc.err, got, tc.want)
 		}
 	}
 	// An unknown error passes through unchanged.
@@ -198,8 +199,11 @@ func TestRealAccountLoginStoreErrorSurfaces(t *testing.T) {
 	a := newRealAccount(store, verifier, fixedFlow(flow))
 
 	sess, err := a.login("ada@example.com", "pw", defaultServerURL)
-	if err == nil || !strings.Contains(err.Error(), "保存密钥失败") {
-		t.Fatalf("error = %v, want the wrapped store failure", err)
+	if !errors.Is(err, errSaveKey) {
+		t.Fatalf("error = %v, want errSaveKey", err)
+	}
+	if !strings.Contains(err.Error(), "vault full") {
+		t.Fatalf("error = %v, want the store failure carried as the detail", err)
 	}
 	if sess.state == loginLoggedIn {
 		t.Fatal("session reported a login despite the failed write")
@@ -478,8 +482,8 @@ func TestRealAccountCheckServer(t *testing.T) {
 	if err != nil || got != defaultServerURL {
 		t.Fatalf("checkServer(empty) = %q, %v, want the default server", got, err)
 	}
-	if _, err := a.checkServer("http://bad host"); err == nil || !strings.Contains(err.Error(), "服务器地址无效") {
-		t.Fatalf("checkServer(bad) = %v, want the validator's refusal", err)
+	if _, err := a.checkServer("http://bad host"); !errors.Is(err, errServerAddress) {
+		t.Fatalf("checkServer(bad) = %v, want errServerAddress", err)
 	}
 }
 

@@ -39,13 +39,13 @@ func TestLoginWindowTwoFactorNoticeFitsMeasuredContent(t *testing.T) {
 	drainLogin(t, f.login)
 
 	// The 2FA stop left the "server asked for two-factor" hint up.
-	if f.login.notice == "" {
+	if f.login.notice.text() == "" {
 		t.Fatal("the 2FA stop left no notice to measure")
 	}
 	noticeContent := renderedContentHeight(t, f.login)
 	noticeTarget := f.login.targetHeight()
 
-	f.login.notice = ""
+	f.login.notice = loginNotice{}
 	plainContent := renderedContentHeight(t, f.login)
 	plainTarget := f.login.targetHeight()
 

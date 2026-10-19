@@ -1,5 +1,7 @@
 package ui
 
+import "github.com/windedge/biowarden/locales"
+
 // The account seam is where the Account page and the login window meet
 // Bitwarden's account and login machinery. The pages talk only to
 // accountBackend and never import internal/auth; backend_account_real.go is
@@ -23,17 +25,18 @@ const (
 	loginLoggedIn
 )
 
-// label is the page's wording for the state.
+// label is the page's wording for the state, said in the language the app
+// shows.
 func (s loginState) label() string {
 	switch s {
 	case loginLoggingIn:
-		return "登录中"
+		return locales.LoginStateLoggingIn()
 	case loginNeeds2FA:
-		return "等待两步验证码"
+		return locales.LoginStateNeeds2FA()
 	case loginLoggedIn:
-		return "已登录"
+		return locales.LoginStateLoggedIn()
 	default:
-		return "未登录"
+		return locales.LoginStateLoggedOut()
 	}
 }
 
@@ -145,8 +148,9 @@ type accountSession struct {
 	// challenge is the pending second factor, nil outside loginNeeds2FA.
 	challenge *twoFactorPrompt
 	// warning is a non-fatal notice about a login that succeeded anyway, e.g.
-	// a session that could not be persisted. Empty when nothing needs saying.
-	warning string
+	// a session that could not be persisted. nil when nothing needs saying; the
+	// UI maps it to wording.
+	warning error
 }
 
 // accountBackend is what the Account page and the login window need from a

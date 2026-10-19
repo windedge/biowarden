@@ -123,8 +123,11 @@ func TestLoginSessionSaveFailureDoesNotBlockLogin(t *testing.T) {
 	if sess.state != loginLoggedIn {
 		t.Fatalf("state = %v, want logged in despite the failed session write", sess.state)
 	}
-	if !strings.Contains(sess.warning, "无法持久化") {
-		t.Fatalf("warning = %q, want the persistence warning", sess.warning)
+	if !errors.Is(sess.warning, errSessionPersist) {
+		t.Fatalf("warning = %v, want errSessionPersist", sess.warning)
+	}
+	if !strings.Contains(sess.warning.Error(), "credential write failed") {
+		t.Fatalf("warning = %v, want the store failure as the detail", sess.warning)
 	}
 	if store.putCalls != 1 {
 		t.Fatalf("Put calls = %d, want the key stored once", store.putCalls)
@@ -389,6 +392,7 @@ func TestRemoveAccountKeepsSessionWhenKeyRemovalFails(t *testing.T) {
 // The account card's three states are chosen from the session and the stored
 // key, with the wording the ticket asks for.
 func TestAccountCardStates(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	row := &accountRow{userID: "user-1", email: "ada@example.com", created: "2026-01-12 09:24"}
 
 	signedOut := accountCardViewFor(accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil)

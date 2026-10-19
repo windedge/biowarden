@@ -5,6 +5,8 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+
+	"github.com/windedge/biowarden/locales"
 )
 
 // The login window's opening size. It is a modal dialog: narrow, and a child of
@@ -51,11 +53,11 @@ func (app *appState) showLoginWindow() {
 	if app.mainWindow == nil {
 		// A login without a parent would not be modal; the tray app always
 		// builds one first, so this only guards an early or failed start.
-		log.Println("biowarden: 登录窗缺少主窗口，未创建")
+		log.Println("biowarden: login window has no parent window; not created")
 		return
 	}
 	win := mygo.NewWindow(mygo.WindowOptions{
-		Title:           "登录 Bitwarden 账号",
+		Title:           locales.LoginTitle(),
 		Width:           loginWindowWidth,
 		Height:          loginWindowHeight,
 		MinWidth:        loginWindowWidth,
@@ -66,6 +68,12 @@ func (app *appState) showLoginWindow() {
 		Content:         ui.View(app.login.loginView),
 	})
 	app.loginWin = win
+	// The window is built once per attempt, so its title follows the app's
+	// language through a listener that is dropped with the window, as the tray
+	// menu is rebuilt when the language changes.
+	app.loginLocaleOff = mygo.App.OnLocaleChanged(func(string) {
+		win.SetTitle(locales.LoginTitle())
+	})
 	win.OnClose(func(e *mygo.CloseEvent) {
 		// Closing the window means Cancel, and the state machine owns the
 		// actual close: it destroys the window once the backend confirmed
@@ -74,6 +82,7 @@ func (app *appState) showLoginWindow() {
 		app.login.requestClose()
 	})
 	win.OnClosed(func() {
+		app.unsubscribeLoginLocale()
 		app.loginWin = nil
 		app.login.showing = false
 		// The account page behind the modal was disabled until now, so it has
@@ -82,6 +91,16 @@ func (app *appState) showLoginWindow() {
 			app.mainWindow.Invalidate()
 		}
 	})
+}
+
+// unsubscribeLoginLocale drops the login window's language listener. The window
+// is destroyed once per attempt, so the off function runs with it; nil-ing the
+// field keeps a second call a no-op.
+func (app *appState) unsubscribeLoginLocale() {
+	if app.loginLocaleOff != nil {
+		app.loginLocaleOff()
+		app.loginLocaleOff = nil
+	}
 }
 
 // hideLoginWindow destroys the login window once the attempt settled. Destroy

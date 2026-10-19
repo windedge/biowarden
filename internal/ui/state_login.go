@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+
+	"github.com/windedge/biowarden/locales"
 )
 
 // loginWindow is the login window's working data: the form, the pending
@@ -33,8 +35,8 @@ type loginWindow struct {
 	// cloud, and checkServer normalizes whatever the human typed.
 	serverURL string
 	// serverErr is the checkServer refusal, shown under the address field so
-	// a typo is visible where it was made.
-	serverErr    string
+	// a typo is visible where it was made; loginErrorText says it at draw time.
+	serverErr    error
 	advancedOpen bool
 
 	// challenge is the pending second factor, nil while the credentials form
@@ -47,9 +49,8 @@ type loginWindow struct {
 	// ask for a second one.
 	emailSent bool
 
-	busy     bool
-	notice   string
-	noticeOK bool
+	busy   bool
+	notice loginNotice
 
 	results chan func(*loginWindow)
 
@@ -99,8 +100,8 @@ func (s *loginWindow) async(work func() func(*loginWindow)) {
 		return
 	}
 	s.busy = true
-	s.notice = ""
-	s.serverErr = ""
+	s.notice = loginNotice{}
+	s.serverErr = nil
 	go func() { s.results <- work() }()
 }
 
@@ -111,9 +112,8 @@ func (s *loginWindow) async(work func() func(*loginWindow)) {
 func (s *loginWindow) begin() {
 	s.showing = true
 	s.busy = false
-	s.notice = ""
-	s.noticeOK = false
-	s.serverErr = ""
+	s.notice = loginNotice{}
+	s.serverErr = nil
 	s.password = ""
 	s.code = ""
 	s.emailSent = false
@@ -160,7 +160,7 @@ func (s *loginWindow) targetHeight() int {
 			h = loginWindowAdvancedHeight
 			// The refusal only shows under the address field, which only the
 			// Advanced fold holds.
-			if s.serverErr != "" {
+			if s.serverErr != nil {
 				h += loginWindowServerErrHeight
 			}
 		}
@@ -181,12 +181,13 @@ func (s *loginWindow) targetHeight() int {
 
 // noticeHeight is the rows the visible status line adds to the form, nil text
 // adding none. The state machine has no Context to measure the line with, so
-// it counts display cells (see noticeLines).
+// it counts display cells (see noticeLines) on the same text the drawing says.
 func (s *loginWindow) noticeHeight() int {
-	if s.notice == "" {
+	text := s.notice.text()
+	if text == "" {
 		return 0
 	}
-	return loginWindowNoticeHeight + (noticeLines(s.notice)-1)*loginWindowNoticeLineHeight
+	return loginWindowNoticeHeight + (noticeLines(text)-1)*loginWindowNoticeLineHeight
 }
 
 // noticeLines is how many lines text wraps to at the notice's width, which is
@@ -211,8 +212,8 @@ func noticeLines(text string) int {
 }
 
 // isWideRune reports whether r draws two cells at the notice font: the CJK and
-// Hangul blocks and the fullwidth forms, which are the scripts the notices and
-// the backend's error wording use.
+// Hangul blocks and the fullwidth forms, which are the scripts the catalog's
+// notices use.
 func isWideRune(r rune) bool {
 	switch {
 	case r >= 0x1100 && r <= 0x115F,
@@ -275,9 +276,8 @@ func (s *loginWindow) submitOnEnter(entered bool) bool {
 // it is on screen.
 func (s *loginWindow) failServer(err error) {
 	s.advancedOpen = true
-	s.serverErr = err.Error()
-	s.notice = "服务器地址无效，请修改后重试"
-	s.noticeOK = false
+	s.serverErr = err
+	s.notice = loginNotice{kind: loginNoticeBadServer}
 	s.syncHeight()
 }
 
@@ -296,12 +296,10 @@ func (s *loginWindow) applyLogin(serverURL string, sess accountSession, err erro
 		s.challenge = sess.challenge
 		s.methodIndex = 0
 		s.emailSent = false
-		s.notice = "服务器要求两步验证，请输入验证码"
-		s.noticeOK = false
+		s.notice = loginNotice{kind: loginNoticeTwoFactor}
 		s.syncHeight()
 	default:
-		s.notice = "正在登录..."
-		s.noticeOK = false
+		s.notice = loginNotice{kind: loginNoticeSigningIn}
 	}
 }
 
@@ -309,8 +307,7 @@ func (s *loginWindow) applyLogin(serverURL string, sess accountSession, err erro
 // attempt it could not finish. The message is the backend's wording: a failure
 // must not carry the password or the code it was called with.
 func (s *loginWindow) fail(err error) {
-	s.notice = err.Error()
-	s.noticeOK = false
+	s.notice = loginNotice{kind: loginNoticeFailure, failure: err}
 	s.syncHeight()
 }
 
@@ -379,11 +376,9 @@ func (s *loginWindow) applyTwoFactor(sess accountSession, err error) {
 			s.emailSent = false
 			s.syncHeight()
 		}
-		s.notice = "验证码未被接受，请确认后重试"
-		s.noticeOK = false
+		s.notice = loginNotice{kind: loginNoticeCodeRejected}
 	default:
-		s.notice = "正在验证..."
-		s.noticeOK = false
+		s.notice = loginNotice{kind: loginNoticeVerifying}
 	}
 }
 
@@ -407,11 +402,10 @@ func (s *loginWindow) applyEmailSent(err error) {
 		return
 	}
 	s.emailSent = true
-	s.notice = "验证码已发送"
+	s.notice = loginNotice{kind: loginNoticeEmailSent, ok: true}
 	if m, ok := s.selectedMethod(); ok && m.email != "" {
-		s.notice = "验证码已发送到 " + m.email
+		s.notice = loginNotice{kind: loginNoticeEmailSentTo, args: []string{m.email}, ok: true}
 	}
-	s.noticeOK = true
 	s.syncHeight()
 }
 
@@ -421,12 +415,12 @@ func (s *loginWindow) applyEmailSent(err error) {
 func (s *loginWindow) finishLogin(sess accountSession) {
 	s.page.session = sess
 	s.page.reload()
-	if sess.warning != "" {
+	if sess.warning != nil {
 		// The login itself succeeded; only keeping the session failed.
-		s.page.notice = sess.warning
+		s.page.notice = loginErrorText(sess.warning)
 		s.page.noticeOK = false
 	} else {
-		s.page.notice = "已登录 " + sess.email
+		s.page.notice = locales.LoginNoticeLoggedIn(sess.email)
 		s.page.noticeOK = true
 	}
 	s.clearSecrets()
@@ -450,7 +444,7 @@ func (s *loginWindow) applyCancel(sess accountSession, err error) {
 		return
 	}
 	s.page.session = sess
-	s.page.notice = "已取消登录"
+	s.page.notice = locales.LoginNoticeCancelled()
 	s.page.noticeOK = true
 	s.clearSecrets()
 	s.showing = false
@@ -463,8 +457,7 @@ func (s *loginWindow) applyCancel(sess accountSession, err error) {
 // leaves the window up with its message.
 func (s *loginWindow) requestClose() {
 	if s.busy {
-		s.notice = "登录进行中，请等待或点「取消」"
-		s.noticeOK = false
+		s.notice = loginNotice{kind: loginNoticeBusy}
 		return
 	}
 	s.cancel()

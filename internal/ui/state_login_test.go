@@ -116,8 +116,8 @@ func TestLoginWindowBadServerAddressShowsOnTheField(t *testing.T) {
 	if f.acct.loginCalls != 0 {
 		t.Fatalf("login ran despite the bad address (%d calls)", f.acct.loginCalls)
 	}
-	if !strings.Contains(f.login.serverErr, "服务器地址无效") {
-		t.Fatalf("serverErr = %q, want the validator's refusal", f.login.serverErr)
+	if got := loginErrorText(f.login.serverErr); !strings.Contains(got, "服务器地址无效") {
+		t.Fatalf("serverErr = %q, want the validator's refusal", got)
 	}
 	if !f.login.advancedOpen {
 		t.Fatal("the advanced fold stayed closed around the refused field")
@@ -129,8 +129,8 @@ func TestLoginWindowBadServerAddressShowsOnTheField(t *testing.T) {
 		t.Fatalf("window closed on a bad address: showing=%v closed=%d", f.login.showing, f.closed)
 	}
 	// The password must not leak into the wording.
-	if strings.Contains(f.login.notice, "secret") || strings.Contains(f.login.serverErr, "secret") {
-		t.Fatalf("the failure wording carries the password: %q / %q", f.login.notice, f.login.serverErr)
+	if strings.Contains(f.login.notice.text(), "secret") || strings.Contains(loginErrorText(f.login.serverErr), "secret") {
+		t.Fatalf("the failure wording carries the password: %q / %q", f.login.notice.text(), loginErrorText(f.login.serverErr))
 	}
 }
 
@@ -155,6 +155,7 @@ func TestLoginWindowServerAddressIsNormalized(t *testing.T) {
 // A successful login lands the session on the account page, keeps the
 // confirmation line across the reload, and closes the window.
 func TestLoginWindowLoginSuccessLandsOnAccountPageAndCloses(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	acct := &stubAccount{sess: loggedInSession(), cancelSess: loggedInSession()}
 	f := newLoginFixture(t, acct)
 
@@ -191,8 +192,8 @@ func TestLoginWindowLoginFailureKeepsTheFormForRetry(t *testing.T) {
 	f.login.submit()
 	drainLogin(t, f.login)
 
-	if f.login.notice != "邮箱或主密码不正确" || f.login.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want the failure", f.login.notice, f.login.noticeOK)
+	if f.login.notice.text() != "邮箱或主密码不正确" || f.login.notice.ok {
+		t.Fatalf("notice = %q ok=%v, want the failure", f.login.notice.text(), f.login.notice.ok)
 	}
 	if !f.login.showing || f.closed != 0 {
 		t.Fatalf("window closed on a failure: showing=%v closed=%d", f.login.showing, f.closed)
@@ -215,6 +216,7 @@ func TestLoginWindowLoginFailureKeepsTheFormForRetry(t *testing.T) {
 
 // A 2FA stop renders the challenge the server sent, and keeps the window up.
 func TestLoginWindowTwoFactorStopRendersTheChallenge(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	challenge := codeChallenge(twoFactorAuthenticator, "authenticator")
 	acct := &stubAccount{sess: accountSession{
 		state:     loginNeeds2FA,
@@ -234,8 +236,8 @@ func TestLoginWindowTwoFactorStopRendersTheChallenge(t *testing.T) {
 	if m, ok := f.login.selectedMethod(); !ok || m.provider != twoFactorAuthenticator {
 		t.Fatalf("selectedMethod = %+v ok=%v, want the TOTP method", m, ok)
 	}
-	if !strings.Contains(f.login.notice, "两步验证") {
-		t.Fatalf("notice = %q, want the 2FA hint", f.login.notice)
+	if !strings.Contains(f.login.notice.text(), "两步验证") {
+		t.Fatalf("notice = %q, want the 2FA hint", f.login.notice.text())
 	}
 	if !f.login.showing || f.closed != 0 {
 		t.Fatalf("window closed at the 2FA stop: showing=%v closed=%d", f.login.showing, f.closed)
@@ -270,10 +272,13 @@ func TestLoginWindowUnsupportedMethodOffersOnlyCancel(t *testing.T) {
 	if f.acct.submitCalls != 0 {
 		t.Fatalf("submit2FA reached the backend with no code method (%d calls)", f.acct.submitCalls)
 	}
-	// The wording the unsupported panel renders is the backend's, so the
-	// message the path reports and the message the human reads do not drift.
-	if errTwoFactorUnsupported.Error() != "此方式 biowarden 暂不支持，请在账号页高级选项里用提取脚本录入密钥" {
-		t.Fatalf("errTwoFactorUnsupported = %q", errTwoFactorUnsupported)
+	// The backend reports a typed sentinel with no user-facing text; the panel
+	// wording comes from the catalog (see TestLoginErrorTextMapsSentinels).
+	if strings.ContainsAny(errTwoFactorUnsupported.Error(), "暂不支持") {
+		t.Fatalf("errTwoFactorUnsupported carries user-facing text: %q", errTwoFactorUnsupported)
+	}
+	if got := loginErrorText(errTwoFactorUnsupported); got == "" {
+		t.Fatal("loginErrorText(errTwoFactorUnsupported) is empty")
 	}
 }
 
@@ -309,6 +314,7 @@ func TestLoginWindowSubmitTwoFactorSuccess(t *testing.T) {
 // A rejected code keeps the prompt up with a corrected-code hint; the server
 // answers a rejection as the needs-2FA state, not as an error.
 func TestLoginWindowRejectedCodeKeepsThePrompt(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	challenge := codeChallenge(twoFactorAuthenticator, "authenticator")
 	acct := &stubAccount{
 		sess:       accountSession{state: loginNeeds2FA, email: "ada@example.com", serverURL: defaultServerURL, challenge: challenge},
@@ -323,8 +329,8 @@ func TestLoginWindowRejectedCodeKeepsThePrompt(t *testing.T) {
 	f.login.submit2FA()
 	drainLogin(t, f.login)
 
-	if !strings.Contains(f.login.notice, "验证码未被接受") {
-		t.Fatalf("notice = %q, want the retry hint", f.login.notice)
+	if !strings.Contains(f.login.notice.text(), "验证码未被接受") {
+		t.Fatalf("notice = %q, want the retry hint", f.login.notice.text())
 	}
 	if f.login.code != "" {
 		t.Fatal("the rejected code stayed in the field")
@@ -351,8 +357,8 @@ func TestLoginWindowHelloRefusedKeepsThePromptForRetry(t *testing.T) {
 	f.login.submit2FA()
 	drainLogin(t, f.login)
 
-	if f.login.notice != "已取消 Windows Hello 验证" {
-		t.Fatalf("notice = %q, want the consent refusal", f.login.notice)
+	if f.login.notice.text() != "已取消 Windows Hello 验证" {
+		t.Fatalf("notice = %q, want the consent refusal", f.login.notice.text())
 	}
 	if !f.login.showing || f.closed != 0 {
 		t.Fatalf("window closed on a refused consent: showing=%v closed=%d", f.login.showing, f.closed)
@@ -371,6 +377,7 @@ func TestLoginWindowHelloRefusedKeepsThePromptForRetry(t *testing.T) {
 
 // The email method's code goes out once per challenge.
 func TestLoginWindowSendEmailCodeGoesOutOnce(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	acct := &stubAccount{
 		sess:       accountSession{state: loginNeeds2FA, email: "ada@example.com", serverURL: defaultServerURL, challenge: emailChallenge("ada@example.com")},
 		cancelSess: loggedOutSession(),
@@ -385,8 +392,8 @@ func TestLoginWindowSendEmailCodeGoesOutOnce(t *testing.T) {
 	if f.acct.sendCalls != 1 {
 		t.Fatalf("sendEmailCode calls = %d, want 1", f.acct.sendCalls)
 	}
-	if !f.login.emailSent || !strings.Contains(f.login.notice, "验证码已发送到 ada@example.com") {
-		t.Fatalf("emailSent=%v notice=%q, want a visible confirmation", f.login.emailSent, f.login.notice)
+	if !f.login.emailSent || !strings.Contains(f.login.notice.text(), "验证码已发送到 ada@example.com") {
+		t.Fatalf("emailSent=%v notice=%q, want a visible confirmation", f.login.emailSent, f.login.notice.text())
 	}
 
 	f.login.sendEmailCode()
@@ -398,6 +405,7 @@ func TestLoginWindowSendEmailCodeGoesOutOnce(t *testing.T) {
 // Cancelling lands the session the backend returned on the account page and
 // closes the window, keeping the visible confirmation.
 func TestLoginWindowCancelRestoresTheSessionAndCloses(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	acct := &stubAccount{
 		sess:       accountSession{state: loginNeeds2FA, serverURL: defaultServerURL},
 		cancelSess: loggedInSession(),
@@ -439,8 +447,8 @@ func TestLoginWindowCancelFailureKeepsTheWindow(t *testing.T) {
 	f.login.cancel()
 	drainLogin(t, f.login)
 
-	if f.login.notice != "backend down" || f.login.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want the failure visible", f.login.notice, f.login.noticeOK)
+	if f.login.notice.text() != "backend down" || f.login.notice.ok {
+		t.Fatalf("notice = %q ok=%v, want the failure visible", f.login.notice.text(), f.login.notice.ok)
 	}
 	if !f.login.showing || f.closed != 0 {
 		t.Fatalf("window closed despite the failed cancel: showing=%v closed=%d", f.login.showing, f.closed)
@@ -450,6 +458,7 @@ func TestLoginWindowCancelFailureKeepsTheWindow(t *testing.T) {
 // Closing the window by hand means Cancel. While a call is in flight the
 // window stays and says so; when it settles, the cancel closes it.
 func TestLoginWindowCloseRequestMeansCancel(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	acct := &stubAccount{sess: loggedOutSession(), cancelSess: loggedInSession()}
 	f := newLoginFixture(t, acct)
 	beginLogin(f, "ada@example.com", "secret")
@@ -459,8 +468,8 @@ func TestLoginWindowCloseRequestMeansCancel(t *testing.T) {
 	if f.acct.cancelCalls != 0 {
 		t.Fatalf("a close during a call started a cancel (%d calls)", f.acct.cancelCalls)
 	}
-	if !strings.Contains(f.login.notice, "登录进行中") {
-		t.Fatalf("notice = %q, want the busy hint", f.login.notice)
+	if !strings.Contains(f.login.notice.text(), "登录进行中") {
+		t.Fatalf("notice = %q, want the busy hint", f.login.notice.text())
 	}
 	drainLogin(t, f.login)
 	if !f.login.showing || f.closed != 0 {
@@ -750,19 +759,19 @@ func TestLoginWindowResizesForTheNotice(t *testing.T) {
 	f := newLoginFixture(t, &stubAccount{sess: loggedOutSession()})
 	beginLogin(f, "ada@example.com", "secret")
 
-	f.login.notice = "邮箱或主密码不正确"
+	f.login.notice = loginNotice{kind: loginNoticeFailure, failure: errors.New("邮箱或主密码不正确")}
 	f.login.syncHeight()
 	if len(f.resizes) != 1 || f.resizes[0] != loginWindowHeight+loginWindowNoticeHeight {
 		t.Fatalf("resizes with a notice = %v, want [%d]", f.resizes, loginWindowHeight+loginWindowNoticeHeight)
 	}
 
-	f.login.notice = ""
+	f.login.notice = loginNotice{}
 	f.login.syncHeight()
 	if len(f.resizes) != 2 || f.resizes[1] != loginWindowHeight {
 		t.Fatalf("resizes after the notice cleared = %v, want the opening height back", f.resizes)
 	}
 
-	f.login.notice = strings.Repeat("测", 40)
+	f.login.notice = loginNotice{kind: loginNoticeFailure, failure: errors.New(strings.Repeat("测", 40))}
 	f.login.syncHeight()
 	want := loginWindowHeight + loginWindowNoticeHeight + loginWindowNoticeLineHeight
 	if len(f.resizes) != 3 || f.resizes[2] != want {

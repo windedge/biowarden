@@ -1,5 +1,7 @@
 package ui
 
+import "github.com/windedge/biowarden/locales"
+
 // accountCardState is which of the account card's three shapes applies. It is
 // derived from the login session plus the stored key, so the card can say
 // "configured, unlocking works" instead of "sign in" whenever a key is
@@ -68,13 +70,13 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 			title:      "已配置",
 			detail:     who + " · 密钥存储于 " + primary.created + " · 解锁可用",
 			hint:       "解锁已经可用，无需重新登录；只有主密码或 KDF 改过、需要刷新密钥时才要重新登录。",
-			loginLabel: "重新登录（用于刷新密钥）",
+			loginLabel: locales.LoginReLogin(),
 		}
 	}
 	return accountCardView{
 		state:      cardSignedOut,
 		title:      "尚未登录",
 		detail:     "登录 Bitwarden 账号后，biowarden 会自动取出并保存密钥，无需逐项手动配置。",
-		loginLabel: "登录 Bitwarden 账号",
+		loginLabel: locales.LoginTitle(),
 	}
 }

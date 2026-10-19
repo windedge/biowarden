@@ -18,25 +18,59 @@ import (
 // Deriving a real per-install id is a later ticket.
 const deviceID = "biowarden-windows"
 
-// errTwoFactorUnsupported reports a second factor biowarden has no path for:
-// Duo (providers 2 and 6) and WebAuthn (7) complete through a browser hand-off
-// whose callback the map decision deferred, so the login window points at the
-// account page's extraction script instead. The login window renders this
-// wording, so it stays one source of truth.
-var errTwoFactorUnsupported = errors.New("此方式 biowarden 暂不支持，请在账号页高级选项里用提取脚本录入密钥")
+// The backend reports failures as typed sentinels, never as user-facing text:
+// login_text.go maps each to wording in the language the app shows.
+var (
+	// errTwoFactorUnsupported reports a second factor biowarden has no path
+	// for: Duo (providers 2 and 6) and WebAuthn (7) complete through a browser
+	// hand-off whose callback the map decision deferred, so the login window
+	// points at the account page's extraction script instead.
+	errTwoFactorUnsupported = errors.New("ui: two-factor method is not supported")
+	// errNoTwoFactorChallenge reports a 2FA submission with nothing parked to
+	// answer, which a stale window can reach after the attempt was abandoned.
+	errNoTwoFactorChallenge = errors.New("ui: no pending two-factor challenge")
+	// errTwoFactorEmptyCode reports a 2FA submission without a code. The window
+	// disables its button on an empty field; this is the guard behind it.
+	errTwoFactorEmptyCode = errors.New("ui: empty two-factor code")
+	// The auth failures friendlyAuthError maps to, named for the wording the
+	// login window shows.
+	errWrongCredentials   = errors.New("ui: wrong email or master password")
+	errLoginForbidden     = errors.New("ui: login forbidden")
+	errCaptchaRequired    = errors.New("ui: captcha required")
+	errNetworkUnreachable = errors.New("ui: the server is unreachable")
+	errServerFailure      = errors.New("ui: the server returned an error")
+	errNoTwoFactorMethod  = errors.New("ui: no usable two-factor method")
+	// The failures below carry a detail their wording interpolates, through
+	// loginError.
+	errServerAddress      = errors.New("ui: invalid server address")
+	errLoginFlowStart     = errors.New("ui: unexpected login flow start state")
+	errLoginFlowState     = errors.New("ui: login did not finish")
+	errSaveKey            = errors.New("ui: saving the key failed")
+	errProviderNotOffered = errors.New("ui: provider not offered")
+	errEmailMethodMissing = errors.New("ui: email code method missing")
+	errSessionPersist     = errors.New("ui: login session could not be persisted")
+)
 
-// errNoTwoFactorChallenge reports a 2FA submission with nothing parked to
-// answer, which a stale window can reach after the attempt was abandoned.
-var errNoTwoFactorChallenge = errors.New("没有等待验证码的登录，请先输入邮箱和主密码")
+// loginError wraps a sentinel with the detail its wording interpolates, such
+// as the validator's own message for a bad server address. Unwrap keeps
+// errors.Is(err, sentinel) working for the UI's mapping.
+type loginError struct {
+	sentinel error
+	detail   string
+}
 
-// errTwoFactorEmptyCode reports a 2FA submission without a code. The window
-// disables its button on an empty field; this is the guard behind it.
-var errTwoFactorEmptyCode = errors.New("请输入两步验证码")
+// newLoginError returns sentinel with detail, said as a loginError.
+func newLoginError(sentinel error, detail any) error {
+	return &loginError{sentinel: sentinel, detail: fmt.Sprint(detail)}
+}
+
+func (e *loginError) Error() string { return e.sentinel.Error() + ": " + e.detail }
+func (e *loginError) Unwrap() error { return e.sentinel }
 
 // errEmailCodePending reports that the send-email-login request went out but
-// no code was submitted with it. It is how the "发送验证码" button drives
-// auth's email preparation without a token: the flow keeps the challenge and
-// the answer is nothing to submit yet.
+// no code was submitted with it. It is how the send-code button drives auth's
+// email preparation without a token: the flow keeps the challenge and the
+// answer is nothing to submit yet.
 var errEmailCodePending = errors.New("ui: email code requested")
 
 // accountAuth is the slice of auth.LoginFlow the account backend drives: one
@@ -150,7 +184,7 @@ func newAuthFlowFactory() accountAuthFactory {
 	return func(serverURL string) (accountAuth, error) {
 		cfg, err := auth.NewServerConfig(serverURL)
 		if err != nil {
-			return nil, fmt.Errorf("服务器地址无效：%w", err)
+			return nil, newLoginError(errServerAddress, err)
 		}
 		client := auth.NewClient(cfg, deviceID)
 		return newAuthFlowAdapter(client), nil
@@ -177,7 +211,7 @@ func (a *authFlowAdapter) start(ctx context.Context, email string) error {
 		return friendlyAuthError(err)
 	}
 	if res.State != auth.LoginNeedPassword {
-		return fmt.Errorf("登录流程起始状态异常：%s", res.State)
+		return newLoginError(errLoginFlowStart, res.State)
 	}
 	return nil
 }
@@ -268,7 +302,7 @@ func stepFromResult(res auth.LoginResult) (authStep, error) {
 			refreshToken: res.Token.RefreshToken,
 		}, nil
 	default:
-		return authStep{}, fmt.Errorf("登录未完成：%s", res.State)
+		return authStep{}, newLoginError(errLoginFlowState, res.State)
 	}
 }
 
@@ -290,23 +324,24 @@ func promptFromChallenge(c *auth.TwoFactorChallenge) *twoFactorPrompt {
 	return p
 }
 
-// friendlyAuthError turns the auth sentinels into one line a human can act on.
+// friendlyAuthError turns the auth sentinels into the typed failures the login
+// window maps to wording. It says no message itself.
 func friendlyAuthError(err error) error {
 	switch {
 	case err == nil:
 		return nil
 	case errors.Is(err, auth.ErrUnauthorized):
-		return errors.New("邮箱或主密码不正确")
+		return errWrongCredentials
 	case errors.Is(err, auth.ErrForbidden):
-		return errors.New("服务器拒绝登录：账号可能被锁定或需要额外验证")
+		return errLoginForbidden
 	case errors.Is(err, auth.ErrCaptchaRequired):
-		return errors.New("服务器要求人机验证，请先在浏览器里登录一次再重试")
+		return errCaptchaRequired
 	case errors.Is(err, auth.ErrNetwork):
-		return errors.New("无法连接服务器，请检查网络和服务器地址")
+		return errNetworkUnreachable
 	case errors.Is(err, auth.ErrServer):
-		return errors.New("服务器返回错误，请稍后重试")
+		return errServerFailure
 	case errors.Is(err, auth.ErrTwoFactorRequired):
-		return errors.New("服务器要求两步验证，但没有返回可用的验证方式")
+		return errNoTwoFactorMethod
 	case errors.Is(err, auth.ErrTwoFactorUnsupported):
 		return errTwoFactorUnsupported
 	default:
@@ -332,7 +367,7 @@ func (a *realAccount) currentSession() accountSession {
 func (a *realAccount) checkServer(serverURL string) (string, error) {
 	cfg, err := auth.NewServerConfig(serverURLOf(serverURL))
 	if err != nil {
-		return "", fmt.Errorf("服务器地址无效：%w", err)
+		return "", newLoginError(errServerAddress, err)
 	}
 	return cfg.URLs().Base, nil
 }
@@ -398,7 +433,7 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 	// even when the persisted session is gone.
 	acc.ServerURL = serverURL
 	if err := a.store.Put(acc, secrets.Key(step.userKey)); err != nil {
-		return a.stay(serverURL), fmt.Errorf("保存密钥失败：%w", err)
+		return a.stay(serverURL), newLoginError(errSaveKey, err)
 	}
 	warning := a.persistSession(sessionRecord{
 		UserID:       acc.UserID,
@@ -423,16 +458,16 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 // persistSession writes the login's refresh token and identity to the
 // credential store. An empty refresh token means the server gave nothing to
 // restore with, so there is nothing worth saving. A failure is returned as a
-// human-readable warning and never as an error: the key is already stored and
-// unlocking still works.
-func (a *realAccount) persistSession(rec sessionRecord) string {
+// typed warning and never as an error: the key is already stored and unlocking
+// still works.
+func (a *realAccount) persistSession(rec sessionRecord) error {
 	if rec.RefreshToken == "" {
-		return ""
+		return nil
 	}
 	if err := a.sessions.save(rec); err != nil {
-		return "登录会话无法持久化，下次启动需要重新登录：" + err.Error()
+		return newLoginError(errSessionPersist, err)
 	}
-	return ""
+	return nil
 }
 
 // stay keeps the previous session but records the server the attempt was
@@ -460,7 +495,7 @@ func (a *realAccount) submit2FA(provider int, code string) (accountSession, erro
 	}
 	m, ok := p.challenge.method(provider)
 	if !ok {
-		return a.currentSession(), fmt.Errorf("服务器没有提供这种方式（provider %d）", provider)
+		return a.currentSession(), newLoginError(errProviderNotOffered, provider)
 	}
 	if !m.takesCode() {
 		// Duo and WebAuthn need a browser round trip biowarden does not have;
@@ -496,7 +531,7 @@ func (a *realAccount) sendEmailCode() error {
 	}
 	m, ok := p.challenge.method(twoFactorEmail)
 	if !ok || !m.takesCode() {
-		return errors.New("服务器没有提供邮箱验证码方式")
+		return errEmailMethodMissing
 	}
 	a.mu.Lock()
 	already := p.emailSent

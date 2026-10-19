@@ -5,7 +5,7 @@ import "errors"
 // errAccountBackend marks the prototype account backend: the Account page
 // stays clickable and every action reports that the auth seam has not
 // landed yet, instead of pretending a login succeeded.
-var errAccountBackend = errors.New("ui: 账号登录后端尚未接线")
+var errAccountBackend = errors.New("ui: account login backend is not wired up")
 
 // fakeAccount stands where the real Bitwarden account backend will stand.
 // Its session stays logged out, which is what a fresh install is.

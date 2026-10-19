@@ -77,3 +77,993 @@ func TrayOpen(app string) string { return In(i18n.Locale()).TrayOpen(app) }
 func (msgs Messages) TrayOpen(app string) string {
 	return Catalog.Format(msgs.locale, "trayOpen", map[string]any{"app": app})
 }
+
+// LoginTitle says "Sign in to Bitwarden"
+// in the language the app shows.
+//
+// The login window's title, and the signed-out account card's button that
+// opens it.
+func LoginTitle() string { return In(i18n.Locale()).LoginTitle() }
+
+// LoginTitle says "Sign in to Bitwarden"
+// in the language of msgs.
+//
+// The login window's title, and the signed-out account card's button that
+// opens it.
+func (msgs Messages) LoginTitle() string {
+	return Catalog.Format(msgs.locale, "loginTitle", nil)
+}
+
+// LoginSubtitle says "Signing in connects to the Bitwarden identity server; Windows Hello must confirm before the key is written to this ma…"
+// in the language the app shows.
+//
+// The login window's line under the title, saying what signing in does.
+func LoginSubtitle() string { return In(i18n.Locale()).LoginSubtitle() }
+
+// LoginSubtitle says "Signing in connects to the Bitwarden identity server; Windows Hello must confirm before the key is written to this ma…"
+// in the language of msgs.
+//
+// The login window's line under the title, saying what signing in does.
+func (msgs Messages) LoginSubtitle() string {
+	return Catalog.Format(msgs.locale, "loginSubtitle", nil)
+}
+
+// LoginEmail says "Email"
+// in the language the app shows.
+//
+// The login form's label for the account email field.
+func LoginEmail() string { return In(i18n.Locale()).LoginEmail() }
+
+// LoginEmail says "Email"
+// in the language of msgs.
+//
+// The login form's label for the account email field.
+func (msgs Messages) LoginEmail() string {
+	return Catalog.Format(msgs.locale, "loginEmail", nil)
+}
+
+// LoginEmailPlaceholder says "you@example.com"
+// in the language the app shows.
+//
+// The login form's placeholder in the email field.
+func LoginEmailPlaceholder() string { return In(i18n.Locale()).LoginEmailPlaceholder() }
+
+// LoginEmailPlaceholder says "you@example.com"
+// in the language of msgs.
+//
+// The login form's placeholder in the email field.
+func (msgs Messages) LoginEmailPlaceholder() string {
+	return Catalog.Format(msgs.locale, "loginEmailPlaceholder", nil)
+}
+
+// LoginPassword says "Master password"
+// in the language the app shows.
+//
+// The login form's label for the master password field.
+func LoginPassword() string { return In(i18n.Locale()).LoginPassword() }
+
+// LoginPassword says "Master password"
+// in the language of msgs.
+//
+// The login form's label for the master password field.
+func (msgs Messages) LoginPassword() string {
+	return Catalog.Format(msgs.locale, "loginPassword", nil)
+}
+
+// LoginPasswordPlaceholder says "Master password"
+// in the language the app shows.
+//
+// The login form's placeholder in the master password field.
+func LoginPasswordPlaceholder() string { return In(i18n.Locale()).LoginPasswordPlaceholder() }
+
+// LoginPasswordPlaceholder says "Master password"
+// in the language of msgs.
+//
+// The login form's placeholder in the master password field.
+func (msgs Messages) LoginPasswordPlaceholder() string {
+	return Catalog.Format(msgs.locale, "loginPasswordPlaceholder", nil)
+}
+
+// LoginAdvanced says "Advanced"
+// in the language the app shows.
+//
+// The login form's disclosure that hides the server address field.
+func LoginAdvanced() string { return In(i18n.Locale()).LoginAdvanced() }
+
+// LoginAdvanced says "Advanced"
+// in the language of msgs.
+//
+// The login form's disclosure that hides the server address field.
+func (msgs Messages) LoginAdvanced() string {
+	return Catalog.Format(msgs.locale, "loginAdvanced", nil)
+}
+
+// LoginServer says "Server address"
+// in the language the app shows.
+//
+// The login form's label for the server address field, shown under
+// Advanced.
+func LoginServer() string { return In(i18n.Locale()).LoginServer() }
+
+// LoginServer says "Server address"
+// in the language of msgs.
+//
+// The login form's label for the server address field, shown under
+// Advanced.
+func (msgs Messages) LoginServer() string {
+	return Catalog.Format(msgs.locale, "loginServer", nil)
+}
+
+// LoginServerHint says "The official Bitwarden cloud is the default. For self-hosting, enter your own address, for example https://vault.exam…"
+// in the language the app shows.
+//
+// The login form's hint under the server address field.
+func LoginServerHint() string { return In(i18n.Locale()).LoginServerHint() }
+
+// LoginServerHint says "The official Bitwarden cloud is the default. For self-hosting, enter your own address, for example https://vault.exam…"
+// in the language of msgs.
+//
+// The login form's hint under the server address field.
+func (msgs Messages) LoginServerHint() string {
+	return Catalog.Format(msgs.locale, "loginServerHint", nil)
+}
+
+// LoginSubmit says "Sign in"
+// in the language the app shows.
+//
+// The login form's primary button that starts the password login.
+func LoginSubmit() string { return In(i18n.Locale()).LoginSubmit() }
+
+// LoginSubmit says "Sign in"
+// in the language of msgs.
+//
+// The login form's primary button that starts the password login.
+func (msgs Messages) LoginSubmit() string {
+	return Catalog.Format(msgs.locale, "loginSubmit", nil)
+}
+
+// LoginCancel says "Cancel"
+// in the language the app shows.
+//
+// The login window's button that abandons the attempt.
+func LoginCancel() string { return In(i18n.Locale()).LoginCancel() }
+
+// LoginCancel says "Cancel"
+// in the language of msgs.
+//
+// The login window's button that abandons the attempt.
+func (msgs Messages) LoginCancel() string {
+	return Catalog.Format(msgs.locale, "loginCancel", nil)
+}
+
+// LoginReLogin says "Sign in again (to refresh the key)"
+// in the language the app shows.
+//
+// The configured account card's button that opens the login window to
+// refresh the stored key.
+func LoginReLogin() string { return In(i18n.Locale()).LoginReLogin() }
+
+// LoginReLogin says "Sign in again (to refresh the key)"
+// in the language of msgs.
+//
+// The configured account card's button that opens the login window to
+// refresh the stored key.
+func (msgs Messages) LoginReLogin() string {
+	return Catalog.Format(msgs.locale, "loginReLogin", nil)
+}
+
+// LoginSpinnerLoggingIn says "Signing in"
+// in the language the app shows.
+//
+// The login form's spinner label while the password login runs.
+func LoginSpinnerLoggingIn() string { return In(i18n.Locale()).LoginSpinnerLoggingIn() }
+
+// LoginSpinnerLoggingIn says "Signing in"
+// in the language of msgs.
+//
+// The login form's spinner label while the password login runs.
+func (msgs Messages) LoginSpinnerLoggingIn() string {
+	return Catalog.Format(msgs.locale, "loginSpinnerLoggingIn", nil)
+}
+
+// LoginBusySigningIn says "Signing in..."
+// in the language the app shows.
+//
+// The text next to the login form's spinner, and the status line while the
+// password login runs.
+func LoginBusySigningIn() string { return In(i18n.Locale()).LoginBusySigningIn() }
+
+// LoginBusySigningIn says "Signing in..."
+// in the language of msgs.
+//
+// The text next to the login form's spinner, and the status line while the
+// password login runs.
+func (msgs Messages) LoginBusySigningIn() string {
+	return Catalog.Format(msgs.locale, "loginBusySigningIn", nil)
+}
+
+// LoginTwoFactorMethod says "Two-factor method"
+// in the language the app shows.
+//
+// The label of the segmented control that picks among offered two-factor
+// methods.
+func LoginTwoFactorMethod() string { return In(i18n.Locale()).LoginTwoFactorMethod() }
+
+// LoginTwoFactorMethod says "Two-factor method"
+// in the language of msgs.
+//
+// The label of the segmented control that picks among offered two-factor
+// methods.
+func (msgs Messages) LoginTwoFactorMethod() string {
+	return Catalog.Format(msgs.locale, "loginTwoFactorMethod", nil)
+}
+
+// LoginTwoFactorPrompt says "The server asks for two-factor authentication: {method}"
+// in the language the app shows.
+//
+// The hint above the code field, naming the selected second factor.
+func LoginTwoFactorPrompt(method string) string {
+	return In(i18n.Locale()).LoginTwoFactorPrompt(method)
+}
+
+// LoginTwoFactorPrompt says "The server asks for two-factor authentication: {method}"
+// in the language of msgs.
+//
+// The hint above the code field, naming the selected second factor.
+func (msgs Messages) LoginTwoFactorPrompt(method string) string {
+	return Catalog.Format(msgs.locale, "loginTwoFactorPrompt", map[string]any{"method": method})
+}
+
+// LoginCode says "Code"
+// in the language the app shows.
+//
+// The generic label of the two-factor code field.
+func LoginCode() string { return In(i18n.Locale()).LoginCode() }
+
+// LoginCode says "Code"
+// in the language of msgs.
+//
+// The generic label of the two-factor code field.
+func (msgs Messages) LoginCode() string {
+	return Catalog.Format(msgs.locale, "loginCode", nil)
+}
+
+// LoginCodeEmail says "Email code"
+// in the language the app shows.
+//
+// The two-factor code field's label when the code is emailed.
+func LoginCodeEmail() string { return In(i18n.Locale()).LoginCodeEmail() }
+
+// LoginCodeEmail says "Email code"
+// in the language of msgs.
+//
+// The two-factor code field's label when the code is emailed.
+func (msgs Messages) LoginCodeEmail() string {
+	return Catalog.Format(msgs.locale, "loginCodeEmail", nil)
+}
+
+// LoginCodeYubiKey says "YubiKey one-time password"
+// in the language the app shows.
+//
+// The two-factor code field's label for the YubiKey method.
+func LoginCodeYubiKey() string { return In(i18n.Locale()).LoginCodeYubiKey() }
+
+// LoginCodeYubiKey says "YubiKey one-time password"
+// in the language of msgs.
+//
+// The two-factor code field's label for the YubiKey method.
+func (msgs Messages) LoginCodeYubiKey() string {
+	return Catalog.Format(msgs.locale, "loginCodeYubiKey", nil)
+}
+
+// LoginCodeHint says "The 6-digit code from the authenticator app"
+// in the language the app shows.
+//
+// The two-factor code field's placeholder for code methods without a more
+// specific hint.
+func LoginCodeHint() string { return In(i18n.Locale()).LoginCodeHint() }
+
+// LoginCodeHint says "The 6-digit code from the authenticator app"
+// in the language of msgs.
+//
+// The two-factor code field's placeholder for code methods without a more
+// specific hint.
+func (msgs Messages) LoginCodeHint() string {
+	return Catalog.Format(msgs.locale, "loginCodeHint", nil)
+}
+
+// LoginCodeHintEmail says "The 6-digit code from the email"
+// in the language the app shows.
+//
+// The two-factor code field's placeholder when the code is emailed.
+func LoginCodeHintEmail() string { return In(i18n.Locale()).LoginCodeHintEmail() }
+
+// LoginCodeHintEmail says "The 6-digit code from the email"
+// in the language of msgs.
+//
+// The two-factor code field's placeholder when the code is emailed.
+func (msgs Messages) LoginCodeHintEmail() string {
+	return Catalog.Format(msgs.locale, "loginCodeHintEmail", nil)
+}
+
+// LoginCodeHintYubiKey says "The 44-character password the YubiKey shows after it is touched"
+// in the language the app shows.
+//
+// The two-factor code field's placeholder for the YubiKey method.
+func LoginCodeHintYubiKey() string { return In(i18n.Locale()).LoginCodeHintYubiKey() }
+
+// LoginCodeHintYubiKey says "The 44-character password the YubiKey shows after it is touched"
+// in the language of msgs.
+//
+// The two-factor code field's placeholder for the YubiKey method.
+func (msgs Messages) LoginCodeHintYubiKey() string {
+	return Catalog.Format(msgs.locale, "loginCodeHintYubiKey", nil)
+}
+
+// LoginSendEmailCode says "Send code"
+// in the language the app shows.
+//
+// The login form's button that asks the server to email the two-factor
+// code.
+func LoginSendEmailCode() string { return In(i18n.Locale()).LoginSendEmailCode() }
+
+// LoginSendEmailCode says "Send code"
+// in the language of msgs.
+//
+// The login form's button that asks the server to email the two-factor
+// code.
+func (msgs Messages) LoginSendEmailCode() string {
+	return Catalog.Format(msgs.locale, "loginSendEmailCode", nil)
+}
+
+// LoginEmailCodeSent says "Sent"
+// in the language the app shows.
+//
+// The confirmation next to the send-code button once the code went out.
+func LoginEmailCodeSent() string { return In(i18n.Locale()).LoginEmailCodeSent() }
+
+// LoginEmailCodeSent says "Sent"
+// in the language of msgs.
+//
+// The confirmation next to the send-code button once the code went out.
+func (msgs Messages) LoginEmailCodeSent() string {
+	return Catalog.Format(msgs.locale, "loginEmailCodeSent", nil)
+}
+
+// LoginEmailCodeSentTo says "The code will be sent to {email}"
+// in the language the app shows.
+//
+// The hint under the email code's send button, naming the address the code
+// goes to.
+func LoginEmailCodeSentTo(email string) string { return In(i18n.Locale()).LoginEmailCodeSentTo(email) }
+
+// LoginEmailCodeSentTo says "The code will be sent to {email}"
+// in the language of msgs.
+//
+// The hint under the email code's send button, naming the address the code
+// goes to.
+func (msgs Messages) LoginEmailCodeSentTo(email string) string {
+	return Catalog.Format(msgs.locale, "loginEmailCodeSentTo", map[string]any{"email": email})
+}
+
+// LoginUnsupportedAlso says "The server also offers {methods}; {note}"
+// in the language the app shows.
+//
+// The hint naming the offered methods biowarden cannot answer, after the
+// ones it can.
+func LoginUnsupportedAlso(methods string, note string) string {
+	return In(i18n.Locale()).LoginUnsupportedAlso(methods, note)
+}
+
+// LoginUnsupportedAlso says "The server also offers {methods}; {note}"
+// in the language of msgs.
+//
+// The hint naming the offered methods biowarden cannot answer, after the
+// ones it can.
+func (msgs Messages) LoginUnsupportedAlso(methods string, note string) string {
+	return Catalog.Format(msgs.locale, "loginUnsupportedAlso", map[string]any{"methods": methods, "note": note})
+}
+
+// LoginUnsupportedOffered says "Methods the server offers: {methods}"
+// in the language the app shows.
+//
+// The panel's line listing every method the server offered, when none can
+// be answered.
+func LoginUnsupportedOffered(methods string) string {
+	return In(i18n.Locale()).LoginUnsupportedOffered(methods)
+}
+
+// LoginUnsupportedOffered says "Methods the server offers: {methods}"
+// in the language of msgs.
+//
+// The panel's line listing every method the server offered, when none can
+// be answered.
+func (msgs Messages) LoginUnsupportedOffered(methods string) string {
+	return Catalog.Format(msgs.locale, "loginUnsupportedOffered", map[string]any{"methods": methods})
+}
+
+// LoginUnsupportedTitle says "This method is not supported by biowarden yet. Use the extraction script under Advanced on the account page to enter …"
+// in the language the app shows.
+//
+// The panel shown when the server offers only methods biowarden cannot
+// answer.
+func LoginUnsupportedTitle() string { return In(i18n.Locale()).LoginUnsupportedTitle() }
+
+// LoginUnsupportedTitle says "This method is not supported by biowarden yet. Use the extraction script under Advanced on the account page to enter …"
+// in the language of msgs.
+//
+// The panel shown when the server offers only methods biowarden cannot
+// answer.
+func (msgs Messages) LoginUnsupportedTitle() string {
+	return Catalog.Format(msgs.locale, "loginUnsupportedTitle", nil)
+}
+
+// LoginUnsupportedNote says "this method is not supported by biowarden yet, so use the extraction script under Advanced on the account page to ent…"
+// in the language the app shows.
+//
+// The same explanation as loginUnsupportedTitle, worded to follow the
+// semicolon in loginUnsupportedAlso.
+func LoginUnsupportedNote() string { return In(i18n.Locale()).LoginUnsupportedNote() }
+
+// LoginUnsupportedNote says "this method is not supported by biowarden yet, so use the extraction script under Advanced on the account page to ent…"
+// in the language of msgs.
+//
+// The same explanation as loginUnsupportedTitle, worded to follow the
+// semicolon in loginUnsupportedAlso.
+func (msgs Messages) LoginUnsupportedNote() string {
+	return Catalog.Format(msgs.locale, "loginUnsupportedNote", nil)
+}
+
+// LoginSubmitCode says "Submit code"
+// in the language the app shows.
+//
+// The login form's primary button that answers the two-factor challenge.
+func LoginSubmitCode() string { return In(i18n.Locale()).LoginSubmitCode() }
+
+// LoginSubmitCode says "Submit code"
+// in the language of msgs.
+//
+// The login form's primary button that answers the two-factor challenge.
+func (msgs Messages) LoginSubmitCode() string {
+	return Catalog.Format(msgs.locale, "loginSubmitCode", nil)
+}
+
+// LoginSpinnerVerifying says "Verifying"
+// in the language the app shows.
+//
+// The two-factor form's spinner label while the code is submitted.
+func LoginSpinnerVerifying() string { return In(i18n.Locale()).LoginSpinnerVerifying() }
+
+// LoginSpinnerVerifying says "Verifying"
+// in the language of msgs.
+//
+// The two-factor form's spinner label while the code is submitted.
+func (msgs Messages) LoginSpinnerVerifying() string {
+	return Catalog.Format(msgs.locale, "loginSpinnerVerifying", nil)
+}
+
+// LoginSpinnerCancelling says "Cancelling"
+// in the language the app shows.
+//
+// The unsupported-method panel's spinner label while the attempt is
+// cancelled.
+func LoginSpinnerCancelling() string { return In(i18n.Locale()).LoginSpinnerCancelling() }
+
+// LoginSpinnerCancelling says "Cancelling"
+// in the language of msgs.
+//
+// The unsupported-method panel's spinner label while the attempt is
+// cancelled.
+func (msgs Messages) LoginSpinnerCancelling() string {
+	return Catalog.Format(msgs.locale, "loginSpinnerCancelling", nil)
+}
+
+// LoginMethodAuthenticator says "Authenticator app (TOTP)"
+// in the language the app shows.
+//
+// The name of the authenticator-app second factor.
+func LoginMethodAuthenticator() string { return In(i18n.Locale()).LoginMethodAuthenticator() }
+
+// LoginMethodAuthenticator says "Authenticator app (TOTP)"
+// in the language of msgs.
+//
+// The name of the authenticator-app second factor.
+func (msgs Messages) LoginMethodAuthenticator() string {
+	return Catalog.Format(msgs.locale, "loginMethodAuthenticator", nil)
+}
+
+// LoginMethodEmail says "Email code"
+// in the language the app shows.
+//
+// The name of the emailed-code second factor.
+func LoginMethodEmail() string { return In(i18n.Locale()).LoginMethodEmail() }
+
+// LoginMethodEmail says "Email code"
+// in the language of msgs.
+//
+// The name of the emailed-code second factor.
+func (msgs Messages) LoginMethodEmail() string {
+	return Catalog.Format(msgs.locale, "loginMethodEmail", nil)
+}
+
+// LoginMethodYubiKey says "YubiKey"
+// in the language the app shows.
+//
+// The name of the YubiKey second factor.
+func LoginMethodYubiKey() string { return In(i18n.Locale()).LoginMethodYubiKey() }
+
+// LoginMethodYubiKey says "YubiKey"
+// in the language of msgs.
+//
+// The name of the YubiKey second factor.
+func (msgs Messages) LoginMethodYubiKey() string {
+	return Catalog.Format(msgs.locale, "loginMethodYubiKey", nil)
+}
+
+// LoginMethodDuo says "Duo"
+// in the language the app shows.
+//
+// The name of the Duo second factor.
+func LoginMethodDuo() string { return In(i18n.Locale()).LoginMethodDuo() }
+
+// LoginMethodDuo says "Duo"
+// in the language of msgs.
+//
+// The name of the Duo second factor.
+func (msgs Messages) LoginMethodDuo() string {
+	return Catalog.Format(msgs.locale, "loginMethodDuo", nil)
+}
+
+// LoginMethodWebAuthn says "Security key (WebAuthn)"
+// in the language the app shows.
+//
+// The name of the WebAuthn second factor.
+func LoginMethodWebAuthn() string { return In(i18n.Locale()).LoginMethodWebAuthn() }
+
+// LoginMethodWebAuthn says "Security key (WebAuthn)"
+// in the language of msgs.
+//
+// The name of the WebAuthn second factor.
+func (msgs Messages) LoginMethodWebAuthn() string {
+	return Catalog.Format(msgs.locale, "loginMethodWebAuthn", nil)
+}
+
+// LoginMethodRecoveryCode says "Recovery code"
+// in the language the app shows.
+//
+// The name of the recovery-code second factor.
+func LoginMethodRecoveryCode() string { return In(i18n.Locale()).LoginMethodRecoveryCode() }
+
+// LoginMethodRecoveryCode says "Recovery code"
+// in the language of msgs.
+//
+// The name of the recovery-code second factor.
+func (msgs Messages) LoginMethodRecoveryCode() string {
+	return Catalog.Format(msgs.locale, "loginMethodRecoveryCode", nil)
+}
+
+// LoginMethodListSeparator says ", "
+// in the language the app shows.
+//
+// The separator between second-factor method names in a list: a comma in
+// English, an enumeration comma in Chinese.
+func LoginMethodListSeparator() string { return In(i18n.Locale()).LoginMethodListSeparator() }
+
+// LoginMethodListSeparator says ", "
+// in the language of msgs.
+//
+// The separator between second-factor method names in a list: a comma in
+// English, an enumeration comma in Chinese.
+func (msgs Messages) LoginMethodListSeparator() string {
+	return Catalog.Format(msgs.locale, "loginMethodListSeparator", nil)
+}
+
+// LoginNoticeBadServer says "The server address is invalid; fix it and try again."
+// in the language the app shows.
+//
+// The login window's status line when the server address was refused.
+func LoginNoticeBadServer() string { return In(i18n.Locale()).LoginNoticeBadServer() }
+
+// LoginNoticeBadServer says "The server address is invalid; fix it and try again."
+// in the language of msgs.
+//
+// The login window's status line when the server address was refused.
+func (msgs Messages) LoginNoticeBadServer() string {
+	return Catalog.Format(msgs.locale, "loginNoticeBadServer", nil)
+}
+
+// LoginNoticeTwoFactor says "The server asks for two-factor authentication; enter the code."
+// in the language the app shows.
+//
+// The login window's status line when the password step stopped for a
+// second factor.
+func LoginNoticeTwoFactor() string { return In(i18n.Locale()).LoginNoticeTwoFactor() }
+
+// LoginNoticeTwoFactor says "The server asks for two-factor authentication; enter the code."
+// in the language of msgs.
+//
+// The login window's status line when the password step stopped for a
+// second factor.
+func (msgs Messages) LoginNoticeTwoFactor() string {
+	return Catalog.Format(msgs.locale, "loginNoticeTwoFactor", nil)
+}
+
+// LoginNoticeCodeRejected says "The code was not accepted; check it and try again."
+// in the language the app shows.
+//
+// The login window's status line when the server rejected the two-factor
+// code.
+func LoginNoticeCodeRejected() string { return In(i18n.Locale()).LoginNoticeCodeRejected() }
+
+// LoginNoticeCodeRejected says "The code was not accepted; check it and try again."
+// in the language of msgs.
+//
+// The login window's status line when the server rejected the two-factor
+// code.
+func (msgs Messages) LoginNoticeCodeRejected() string {
+	return Catalog.Format(msgs.locale, "loginNoticeCodeRejected", nil)
+}
+
+// LoginNoticeVerifying says "Verifying..."
+// in the language the app shows.
+//
+// The login window's status line while a two-factor code is submitted.
+func LoginNoticeVerifying() string { return In(i18n.Locale()).LoginNoticeVerifying() }
+
+// LoginNoticeVerifying says "Verifying..."
+// in the language of msgs.
+//
+// The login window's status line while a two-factor code is submitted.
+func (msgs Messages) LoginNoticeVerifying() string {
+	return Catalog.Format(msgs.locale, "loginNoticeVerifying", nil)
+}
+
+// LoginNoticeEmailSent says "The code was sent."
+// in the language the app shows.
+//
+// The login window's status line after the code email went out.
+func LoginNoticeEmailSent() string { return In(i18n.Locale()).LoginNoticeEmailSent() }
+
+// LoginNoticeEmailSent says "The code was sent."
+// in the language of msgs.
+//
+// The login window's status line after the code email went out.
+func (msgs Messages) LoginNoticeEmailSent() string {
+	return Catalog.Format(msgs.locale, "loginNoticeEmailSent", nil)
+}
+
+// LoginNoticeEmailSentTo says "The code was sent to {email}."
+// in the language the app shows.
+//
+// The login window's status line after the code email went out, naming the
+// address.
+func LoginNoticeEmailSentTo(email string) string {
+	return In(i18n.Locale()).LoginNoticeEmailSentTo(email)
+}
+
+// LoginNoticeEmailSentTo says "The code was sent to {email}."
+// in the language of msgs.
+//
+// The login window's status line after the code email went out, naming the
+// address.
+func (msgs Messages) LoginNoticeEmailSentTo(email string) string {
+	return Catalog.Format(msgs.locale, "loginNoticeEmailSentTo", map[string]any{"email": email})
+}
+
+// LoginNoticeLoggedIn says "Signed in as {email}."
+// in the language the app shows.
+//
+// The account page's notice after a login succeeded.
+func LoginNoticeLoggedIn(email string) string { return In(i18n.Locale()).LoginNoticeLoggedIn(email) }
+
+// LoginNoticeLoggedIn says "Signed in as {email}."
+// in the language of msgs.
+//
+// The account page's notice after a login succeeded.
+func (msgs Messages) LoginNoticeLoggedIn(email string) string {
+	return Catalog.Format(msgs.locale, "loginNoticeLoggedIn", map[string]any{"email": email})
+}
+
+// LoginNoticeCancelled says "Login cancelled."
+// in the language the app shows.
+//
+// The account page's notice after the login attempt was cancelled.
+func LoginNoticeCancelled() string { return In(i18n.Locale()).LoginNoticeCancelled() }
+
+// LoginNoticeCancelled says "Login cancelled."
+// in the language of msgs.
+//
+// The account page's notice after the login attempt was cancelled.
+func (msgs Messages) LoginNoticeCancelled() string {
+	return Catalog.Format(msgs.locale, "loginNoticeCancelled", nil)
+}
+
+// LoginNoticeBusy says "A login is in progress; wait or click Cancel."
+// in the language the app shows.
+//
+// The login window's status line when it is closed while a call is in
+// flight.
+func LoginNoticeBusy() string { return In(i18n.Locale()).LoginNoticeBusy() }
+
+// LoginNoticeBusy says "A login is in progress; wait or click Cancel."
+// in the language of msgs.
+//
+// The login window's status line when it is closed while a call is in
+// flight.
+func (msgs Messages) LoginNoticeBusy() string {
+	return Catalog.Format(msgs.locale, "loginNoticeBusy", nil)
+}
+
+// LoginErrorBadCredentials says "The email or master password is incorrect"
+// in the language the app shows.
+//
+// The login failure when the server rejected the password.
+func LoginErrorBadCredentials() string { return In(i18n.Locale()).LoginErrorBadCredentials() }
+
+// LoginErrorBadCredentials says "The email or master password is incorrect"
+// in the language of msgs.
+//
+// The login failure when the server rejected the password.
+func (msgs Messages) LoginErrorBadCredentials() string {
+	return Catalog.Format(msgs.locale, "loginErrorBadCredentials", nil)
+}
+
+// LoginErrorForbidden says "The server refused the login: the account may be locked or need extra verification"
+// in the language the app shows.
+//
+// The login failure when the server forbade the attempt.
+func LoginErrorForbidden() string { return In(i18n.Locale()).LoginErrorForbidden() }
+
+// LoginErrorForbidden says "The server refused the login: the account may be locked or need extra verification"
+// in the language of msgs.
+//
+// The login failure when the server forbade the attempt.
+func (msgs Messages) LoginErrorForbidden() string {
+	return Catalog.Format(msgs.locale, "loginErrorForbidden", nil)
+}
+
+// LoginErrorCaptcha says "The server asks for a CAPTCHA; sign in once in the browser and try again"
+// in the language the app shows.
+//
+// The login failure when the server demanded a CAPTCHA.
+func LoginErrorCaptcha() string { return In(i18n.Locale()).LoginErrorCaptcha() }
+
+// LoginErrorCaptcha says "The server asks for a CAPTCHA; sign in once in the browser and try again"
+// in the language of msgs.
+//
+// The login failure when the server demanded a CAPTCHA.
+func (msgs Messages) LoginErrorCaptcha() string {
+	return Catalog.Format(msgs.locale, "loginErrorCaptcha", nil)
+}
+
+// LoginErrorNetwork says "Cannot reach the server; check the network and the server address"
+// in the language the app shows.
+//
+// The login failure when the server could not be reached.
+func LoginErrorNetwork() string { return In(i18n.Locale()).LoginErrorNetwork() }
+
+// LoginErrorNetwork says "Cannot reach the server; check the network and the server address"
+// in the language of msgs.
+//
+// The login failure when the server could not be reached.
+func (msgs Messages) LoginErrorNetwork() string {
+	return Catalog.Format(msgs.locale, "loginErrorNetwork", nil)
+}
+
+// LoginErrorServer says "The server returned an error; try again later"
+// in the language the app shows.
+//
+// The login failure when the server answered with an error.
+func LoginErrorServer() string { return In(i18n.Locale()).LoginErrorServer() }
+
+// LoginErrorServer says "The server returned an error; try again later"
+// in the language of msgs.
+//
+// The login failure when the server answered with an error.
+func (msgs Messages) LoginErrorServer() string {
+	return Catalog.Format(msgs.locale, "loginErrorServer", nil)
+}
+
+// LoginErrorNoTwoFactorMethod says "The server asks for two-factor authentication but offered no usable method"
+// in the language the app shows.
+//
+// The login failure when the server required a second factor but returned
+// no methods.
+func LoginErrorNoTwoFactorMethod() string { return In(i18n.Locale()).LoginErrorNoTwoFactorMethod() }
+
+// LoginErrorNoTwoFactorMethod says "The server asks for two-factor authentication but offered no usable method"
+// in the language of msgs.
+//
+// The login failure when the server required a second factor but returned
+// no methods.
+func (msgs Messages) LoginErrorNoTwoFactorMethod() string {
+	return Catalog.Format(msgs.locale, "loginErrorNoTwoFactorMethod", nil)
+}
+
+// LoginErrorNoChallenge says "There is no login waiting for a code; enter the email and master password first"
+// in the language the app shows.
+//
+// The two-factor submission failure when no challenge is parked.
+func LoginErrorNoChallenge() string { return In(i18n.Locale()).LoginErrorNoChallenge() }
+
+// LoginErrorNoChallenge says "There is no login waiting for a code; enter the email and master password first"
+// in the language of msgs.
+//
+// The two-factor submission failure when no challenge is parked.
+func (msgs Messages) LoginErrorNoChallenge() string {
+	return Catalog.Format(msgs.locale, "loginErrorNoChallenge", nil)
+}
+
+// LoginErrorEmptyCode says "Enter the two-factor code"
+// in the language the app shows.
+//
+// The two-factor submission failure when the code is empty.
+func LoginErrorEmptyCode() string { return In(i18n.Locale()).LoginErrorEmptyCode() }
+
+// LoginErrorEmptyCode says "Enter the two-factor code"
+// in the language of msgs.
+//
+// The two-factor submission failure when the code is empty.
+func (msgs Messages) LoginErrorEmptyCode() string {
+	return Catalog.Format(msgs.locale, "loginErrorEmptyCode", nil)
+}
+
+// LoginErrorServerAddress says "Invalid server address: {detail}"
+// in the language the app shows.
+//
+// The server-address refusal, with the validator's own explanation.
+func LoginErrorServerAddress(detail string) string {
+	return In(i18n.Locale()).LoginErrorServerAddress(detail)
+}
+
+// LoginErrorServerAddress says "Invalid server address: {detail}"
+// in the language of msgs.
+//
+// The server-address refusal, with the validator's own explanation.
+func (msgs Messages) LoginErrorServerAddress(detail string) string {
+	return Catalog.Format(msgs.locale, "loginErrorServerAddress", map[string]any{"detail": detail})
+}
+
+// LoginErrorFlowState says "The login did not finish: {state}"
+// in the language the app shows.
+//
+// The login failure when the flow stopped in a state the UI cannot use.
+func LoginErrorFlowState(state string) string { return In(i18n.Locale()).LoginErrorFlowState(state) }
+
+// LoginErrorFlowState says "The login did not finish: {state}"
+// in the language of msgs.
+//
+// The login failure when the flow stopped in a state the UI cannot use.
+func (msgs Messages) LoginErrorFlowState(state string) string {
+	return Catalog.Format(msgs.locale, "loginErrorFlowState", map[string]any{"state": state})
+}
+
+// LoginErrorFlowStart says "The login flow started in an unexpected state: {state}"
+// in the language the app shows.
+//
+// The login failure when the start step answered with an unexpected state.
+func LoginErrorFlowStart(state string) string { return In(i18n.Locale()).LoginErrorFlowStart(state) }
+
+// LoginErrorFlowStart says "The login flow started in an unexpected state: {state}"
+// in the language of msgs.
+//
+// The login failure when the start step answered with an unexpected state.
+func (msgs Messages) LoginErrorFlowStart(state string) string {
+	return Catalog.Format(msgs.locale, "loginErrorFlowStart", map[string]any{"state": state})
+}
+
+// LoginErrorSaveKey says "Saving the key failed: {detail}"
+// in the language the app shows.
+//
+// The login failure when the credential store refused the key write.
+func LoginErrorSaveKey(detail string) string { return In(i18n.Locale()).LoginErrorSaveKey(detail) }
+
+// LoginErrorSaveKey says "Saving the key failed: {detail}"
+// in the language of msgs.
+//
+// The login failure when the credential store refused the key write.
+func (msgs Messages) LoginErrorSaveKey(detail string) string {
+	return Catalog.Format(msgs.locale, "loginErrorSaveKey", map[string]any{"detail": detail})
+}
+
+// LoginErrorProviderNotOffered says "The server did not offer this method (provider {provider})"
+// in the language the app shows.
+//
+// The two-factor submission failure when the provider was never offered.
+func LoginErrorProviderNotOffered(provider string) string {
+	return In(i18n.Locale()).LoginErrorProviderNotOffered(provider)
+}
+
+// LoginErrorProviderNotOffered says "The server did not offer this method (provider {provider})"
+// in the language of msgs.
+//
+// The two-factor submission failure when the provider was never offered.
+func (msgs Messages) LoginErrorProviderNotOffered(provider string) string {
+	return Catalog.Format(msgs.locale, "loginErrorProviderNotOffered", map[string]any{"provider": provider})
+}
+
+// LoginErrorEmailMethodMissing says "The server did not offer the email code method"
+// in the language the app shows.
+//
+// The send-email failure when the pending challenge has no email method.
+func LoginErrorEmailMethodMissing() string { return In(i18n.Locale()).LoginErrorEmailMethodMissing() }
+
+// LoginErrorEmailMethodMissing says "The server did not offer the email code method"
+// in the language of msgs.
+//
+// The send-email failure when the pending challenge has no email method.
+func (msgs Messages) LoginErrorEmailMethodMissing() string {
+	return Catalog.Format(msgs.locale, "loginErrorEmailMethodMissing", nil)
+}
+
+// LoginErrorSessionPersist says "The login session could not be persisted; the next start needs a fresh sign-in: {detail}"
+// in the language the app shows.
+//
+// The non-fatal warning when the refresh token could not be stored.
+func LoginErrorSessionPersist(detail string) string {
+	return In(i18n.Locale()).LoginErrorSessionPersist(detail)
+}
+
+// LoginErrorSessionPersist says "The login session could not be persisted; the next start needs a fresh sign-in: {detail}"
+// in the language of msgs.
+//
+// The non-fatal warning when the refresh token could not be stored.
+func (msgs Messages) LoginErrorSessionPersist(detail string) string {
+	return Catalog.Format(msgs.locale, "loginErrorSessionPersist", map[string]any{"detail": detail})
+}
+
+// LoginStateLoggedOut says "Signed out"
+// in the language the app shows.
+//
+// The account page's label for the signed-out login state.
+func LoginStateLoggedOut() string { return In(i18n.Locale()).LoginStateLoggedOut() }
+
+// LoginStateLoggedOut says "Signed out"
+// in the language of msgs.
+//
+// The account page's label for the signed-out login state.
+func (msgs Messages) LoginStateLoggedOut() string {
+	return Catalog.Format(msgs.locale, "loginStateLoggedOut", nil)
+}
+
+// LoginStateLoggingIn says "Signing in"
+// in the language the app shows.
+//
+// The account page's label for the in-progress login state.
+func LoginStateLoggingIn() string { return In(i18n.Locale()).LoginStateLoggingIn() }
+
+// LoginStateLoggingIn says "Signing in"
+// in the language of msgs.
+//
+// The account page's label for the in-progress login state.
+func (msgs Messages) LoginStateLoggingIn() string {
+	return Catalog.Format(msgs.locale, "loginStateLoggingIn", nil)
+}
+
+// LoginStateNeeds2FA says "Waiting for a two-factor code"
+// in the language the app shows.
+//
+// The account page's label for the login state parked on a second factor.
+func LoginStateNeeds2FA() string { return In(i18n.Locale()).LoginStateNeeds2FA() }
+
+// LoginStateNeeds2FA says "Waiting for a two-factor code"
+// in the language of msgs.
+//
+// The account page's label for the login state parked on a second factor.
+func (msgs Messages) LoginStateNeeds2FA() string {
+	return Catalog.Format(msgs.locale, "loginStateNeeds2FA", nil)
+}
+
+// LoginStateLoggedIn says "Signed in"
+// in the language the app shows.
+//
+// The account page's label for the signed-in login state.
+func LoginStateLoggedIn() string { return In(i18n.Locale()).LoginStateLoggedIn() }
+
+// LoginStateLoggedIn says "Signed in"
+// in the language of msgs.
+//
+// The account page's label for the signed-in login state.
+func (msgs Messages) LoginStateLoggedIn() string {
+	return Catalog.Format(msgs.locale, "loginStateLoggedIn", nil)
+}

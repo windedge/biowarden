@@ -14,5 +14,310 @@
     "placeholders": {
       "app": { "type": "String", "example": "biowarden" }
     }
+  },
+  "loginTitle": "Sign in to Bitwarden",
+  "@loginTitle": {
+    "description": "The login window's title, and the signed-out account card's button that opens it."
+  },
+  "loginSubtitle": "Signing in connects to the Bitwarden identity server; Windows Hello must confirm before the key is written to this machine's credential manager.",
+  "@loginSubtitle": {
+    "description": "The login window's line under the title, saying what signing in does."
+  },
+  "loginEmail": "Email",
+  "@loginEmail": {
+    "description": "The login form's label for the account email field."
+  },
+  "loginEmailPlaceholder": "you@example.com",
+  "@loginEmailPlaceholder": {
+    "description": "The login form's placeholder in the email field."
+  },
+  "loginPassword": "Master password",
+  "@loginPassword": {
+    "description": "The login form's label for the master password field."
+  },
+  "loginPasswordPlaceholder": "Master password",
+  "@loginPasswordPlaceholder": {
+    "description": "The login form's placeholder in the master password field."
+  },
+  "loginAdvanced": "Advanced",
+  "@loginAdvanced": {
+    "description": "The login form's disclosure that hides the server address field."
+  },
+  "loginServer": "Server address",
+  "@loginServer": {
+    "description": "The login form's label for the server address field, shown under Advanced."
+  },
+  "loginServerHint": "The official Bitwarden cloud is the default. For self-hosting, enter your own address, for example https://vault.example.com; it is normalized by the official rules on submit.",
+  "@loginServerHint": {
+    "description": "The login form's hint under the server address field."
+  },
+  "loginSubmit": "Sign in",
+  "@loginSubmit": {
+    "description": "The login form's primary button that starts the password login."
+  },
+  "loginCancel": "Cancel",
+  "@loginCancel": {
+    "description": "The login window's button that abandons the attempt."
+  },
+  "loginReLogin": "Sign in again (to refresh the key)",
+  "@loginReLogin": {
+    "description": "The configured account card's button that opens the login window to refresh the stored key."
+  },
+  "loginSpinnerLoggingIn": "Signing in",
+  "@loginSpinnerLoggingIn": {
+    "description": "The login form's spinner label while the password login runs."
+  },
+  "loginBusySigningIn": "Signing in...",
+  "@loginBusySigningIn": {
+    "description": "The text next to the login form's spinner, and the status line while the password login runs."
+  },
+  "loginTwoFactorMethod": "Two-factor method",
+  "@loginTwoFactorMethod": {
+    "description": "The label of the segmented control that picks among offered two-factor methods."
+  },
+  "loginTwoFactorPrompt": "The server asks for two-factor authentication: {method}",
+  "@loginTwoFactorPrompt": {
+    "description": "The hint above the code field, naming the selected second factor.",
+    "placeholders": {
+      "method": { "type": "String", "example": "Authenticator app (TOTP)" }
+    }
+  },
+  "loginCode": "Code",
+  "@loginCode": {
+    "description": "The generic label of the two-factor code field."
+  },
+  "loginCodeEmail": "Email code",
+  "@loginCodeEmail": {
+    "description": "The two-factor code field's label when the code is emailed."
+  },
+  "loginCodeYubiKey": "YubiKey one-time password",
+  "@loginCodeYubiKey": {
+    "description": "The two-factor code field's label for the YubiKey method."
+  },
+  "loginCodeHint": "The 6-digit code from the authenticator app",
+  "@loginCodeHint": {
+    "description": "The two-factor code field's placeholder for code methods without a more specific hint."
+  },
+  "loginCodeHintEmail": "The 6-digit code from the email",
+  "@loginCodeHintEmail": {
+    "description": "The two-factor code field's placeholder when the code is emailed."
+  },
+  "loginCodeHintYubiKey": "The 44-character password the YubiKey shows after it is touched",
+  "@loginCodeHintYubiKey": {
+    "description": "The two-factor code field's placeholder for the YubiKey method."
+  },
+  "loginSendEmailCode": "Send code",
+  "@loginSendEmailCode": {
+    "description": "The login form's button that asks the server to email the two-factor code."
+  },
+  "loginEmailCodeSent": "Sent",
+  "@loginEmailCodeSent": {
+    "description": "The confirmation next to the send-code button once the code went out."
+  },
+  "loginEmailCodeSentTo": "The code will be sent to {email}",
+  "@loginEmailCodeSentTo": {
+    "description": "The hint under the email code's send button, naming the address the code goes to.",
+    "placeholders": {
+      "email": { "type": "String", "example": "ada@example.com" }
+    }
+  },
+  "loginUnsupportedAlso": "The server also offers {methods}; {note}",
+  "@loginUnsupportedAlso": {
+    "description": "The hint naming the offered methods biowarden cannot answer, after the ones it can.",
+    "placeholders": {
+      "methods": { "type": "String", "example": "Duo, Security key (WebAuthn)" },
+      "note": { "type": "String", "example": "this method is not supported by biowarden yet" }
+    }
+  },
+  "loginUnsupportedOffered": "Methods the server offers: {methods}",
+  "@loginUnsupportedOffered": {
+    "description": "The panel's line listing every method the server offered, when none can be answered.",
+    "placeholders": {
+      "methods": { "type": "String", "example": "Duo, Security key (WebAuthn)" }
+    }
+  },
+  "loginUnsupportedTitle": "This method is not supported by biowarden yet. Use the extraction script under Advanced on the account page to enter the key.",
+  "@loginUnsupportedTitle": {
+    "description": "The panel shown when the server offers only methods biowarden cannot answer."
+  },
+  "loginUnsupportedNote": "this method is not supported by biowarden yet, so use the extraction script under Advanced on the account page to enter the key",
+  "@loginUnsupportedNote": {
+    "description": "The same explanation as loginUnsupportedTitle, worded to follow the semicolon in loginUnsupportedAlso."
+  },
+  "loginSubmitCode": "Submit code",
+  "@loginSubmitCode": {
+    "description": "The login form's primary button that answers the two-factor challenge."
+  },
+  "loginSpinnerVerifying": "Verifying",
+  "@loginSpinnerVerifying": {
+    "description": "The two-factor form's spinner label while the code is submitted."
+  },
+  "loginSpinnerCancelling": "Cancelling",
+  "@loginSpinnerCancelling": {
+    "description": "The unsupported-method panel's spinner label while the attempt is cancelled."
+  },
+  "loginMethodAuthenticator": "Authenticator app (TOTP)",
+  "@loginMethodAuthenticator": {
+    "description": "The name of the authenticator-app second factor."
+  },
+  "loginMethodEmail": "Email code",
+  "@loginMethodEmail": {
+    "description": "The name of the emailed-code second factor."
+  },
+  "loginMethodYubiKey": "YubiKey",
+  "@loginMethodYubiKey": {
+    "description": "The name of the YubiKey second factor."
+  },
+  "loginMethodDuo": "Duo",
+  "@loginMethodDuo": {
+    "description": "The name of the Duo second factor."
+  },
+  "loginMethodWebAuthn": "Security key (WebAuthn)",
+  "@loginMethodWebAuthn": {
+    "description": "The name of the WebAuthn second factor."
+  },
+  "loginMethodRecoveryCode": "Recovery code",
+  "@loginMethodRecoveryCode": {
+    "description": "The name of the recovery-code second factor."
+  },
+  "loginMethodListSeparator": ", ",
+  "@loginMethodListSeparator": {
+    "description": "The separator between second-factor method names in a list: a comma in English, an enumeration comma in Chinese."
+  },
+  "loginNoticeBadServer": "The server address is invalid; fix it and try again.",
+  "@loginNoticeBadServer": {
+    "description": "The login window's status line when the server address was refused."
+  },
+  "loginNoticeTwoFactor": "The server asks for two-factor authentication; enter the code.",
+  "@loginNoticeTwoFactor": {
+    "description": "The login window's status line when the password step stopped for a second factor."
+  },
+  "loginNoticeCodeRejected": "The code was not accepted; check it and try again.",
+  "@loginNoticeCodeRejected": {
+    "description": "The login window's status line when the server rejected the two-factor code."
+  },
+  "loginNoticeVerifying": "Verifying...",
+  "@loginNoticeVerifying": {
+    "description": "The login window's status line while a two-factor code is submitted."
+  },
+  "loginNoticeEmailSent": "The code was sent.",
+  "@loginNoticeEmailSent": {
+    "description": "The login window's status line after the code email went out."
+  },
+  "loginNoticeEmailSentTo": "The code was sent to {email}.",
+  "@loginNoticeEmailSentTo": {
+    "description": "The login window's status line after the code email went out, naming the address.",
+    "placeholders": {
+      "email": { "type": "String", "example": "ada@example.com" }
+    }
+  },
+  "loginNoticeLoggedIn": "Signed in as {email}.",
+  "@loginNoticeLoggedIn": {
+    "description": "The account page's notice after a login succeeded.",
+    "placeholders": {
+      "email": { "type": "String", "example": "ada@example.com" }
+    }
+  },
+  "loginNoticeCancelled": "Login cancelled.",
+  "@loginNoticeCancelled": {
+    "description": "The account page's notice after the login attempt was cancelled."
+  },
+  "loginNoticeBusy": "A login is in progress; wait or click Cancel.",
+  "@loginNoticeBusy": {
+    "description": "The login window's status line when it is closed while a call is in flight."
+  },
+  "loginErrorBadCredentials": "The email or master password is incorrect",
+  "@loginErrorBadCredentials": {
+    "description": "The login failure when the server rejected the password."
+  },
+  "loginErrorForbidden": "The server refused the login: the account may be locked or need extra verification",
+  "@loginErrorForbidden": {
+    "description": "The login failure when the server forbade the attempt."
+  },
+  "loginErrorCaptcha": "The server asks for a CAPTCHA; sign in once in the browser and try again",
+  "@loginErrorCaptcha": {
+    "description": "The login failure when the server demanded a CAPTCHA."
+  },
+  "loginErrorNetwork": "Cannot reach the server; check the network and the server address",
+  "@loginErrorNetwork": {
+    "description": "The login failure when the server could not be reached."
+  },
+  "loginErrorServer": "The server returned an error; try again later",
+  "@loginErrorServer": {
+    "description": "The login failure when the server answered with an error."
+  },
+  "loginErrorNoTwoFactorMethod": "The server asks for two-factor authentication but offered no usable method",
+  "@loginErrorNoTwoFactorMethod": {
+    "description": "The login failure when the server required a second factor but returned no methods."
+  },
+  "loginErrorNoChallenge": "There is no login waiting for a code; enter the email and master password first",
+  "@loginErrorNoChallenge": {
+    "description": "The two-factor submission failure when no challenge is parked."
+  },
+  "loginErrorEmptyCode": "Enter the two-factor code",
+  "@loginErrorEmptyCode": {
+    "description": "The two-factor submission failure when the code is empty."
+  },
+  "loginErrorServerAddress": "Invalid server address: {detail}",
+  "@loginErrorServerAddress": {
+    "description": "The server-address refusal, with the validator's own explanation.",
+    "placeholders": {
+      "detail": { "type": "String", "example": "auth: base URL \"http://bad host\" has no host" }
+    }
+  },
+  "loginErrorFlowState": "The login did not finish: {state}",
+  "@loginErrorFlowState": {
+    "description": "The login failure when the flow stopped in a state the UI cannot use.",
+    "placeholders": {
+      "state": { "type": "String", "example": "loginNeedPassword" }
+    }
+  },
+  "loginErrorFlowStart": "The login flow started in an unexpected state: {state}",
+  "@loginErrorFlowStart": {
+    "description": "The login failure when the start step answered with an unexpected state.",
+    "placeholders": {
+      "state": { "type": "String", "example": "loginNeedPassword" }
+    }
+  },
+  "loginErrorSaveKey": "Saving the key failed: {detail}",
+  "@loginErrorSaveKey": {
+    "description": "The login failure when the credential store refused the key write.",
+    "placeholders": {
+      "detail": { "type": "String", "example": "credential write failed" }
+    }
+  },
+  "loginErrorProviderNotOffered": "The server did not offer this method (provider {provider})",
+  "@loginErrorProviderNotOffered": {
+    "description": "The two-factor submission failure when the provider was never offered.",
+    "placeholders": {
+      "provider": { "type": "String", "example": "3" }
+    }
+  },
+  "loginErrorEmailMethodMissing": "The server did not offer the email code method",
+  "@loginErrorEmailMethodMissing": {
+    "description": "The send-email failure when the pending challenge has no email method."
+  },
+  "loginErrorSessionPersist": "The login session could not be persisted; the next start needs a fresh sign-in: {detail}",
+  "@loginErrorSessionPersist": {
+    "description": "The non-fatal warning when the refresh token could not be stored.",
+    "placeholders": {
+      "detail": { "type": "String", "example": "credential write failed" }
+    }
+  },
+  "loginStateLoggedOut": "Signed out",
+  "@loginStateLoggedOut": {
+    "description": "The account page's label for the signed-out login state."
+  },
+  "loginStateLoggingIn": "Signing in",
+  "@loginStateLoggingIn": {
+    "description": "The account page's label for the in-progress login state."
+  },
+  "loginStateNeeds2FA": "Waiting for a two-factor code",
+  "@loginStateNeeds2FA": {
+    "description": "The account page's label for the login state parked on a second factor."
+  },
+  "loginStateLoggedIn": "Signed in",
+  "@loginStateLoggedIn": {
+    "description": "The account page's label for the signed-in login state."
   }
 }

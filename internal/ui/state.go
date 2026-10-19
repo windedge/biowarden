@@ -41,6 +41,9 @@ type appState struct {
 	firstRun firstRunState
 	// loginWin is the native window while it is up; nil once it closed.
 	loginWin *mygo.Window
+	// loginLocaleOff stops the login window's language listener; nil while no
+	// window is up. The window is rebuilt per attempt, so its listener is too.
+	loginLocaleOff func()
 	// browsersWin is the bulk-overwrite confirmation dialog while it is up;
 	// nil once it closed.
 	browsersWin *mygo.Window
