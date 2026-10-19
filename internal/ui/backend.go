@@ -17,8 +17,8 @@ type browsersBackend interface {
 	uninstall(row browserRow) error
 }
 
-// keysBackend is what the Account page's key card and manual entry need from
-// the world.
+// keysBackend is what the Account page's account card and manual entry need
+// from the world.
 type keysBackend interface {
 	// accounts lists the stored accounts, without their keys.
 	accounts() ([]accountRow, error)

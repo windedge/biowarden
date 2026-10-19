@@ -34,8 +34,8 @@ type realKeys struct {
 
 // newRealKeysWith injects the two seams so tests can drive consent outcomes
 // without touching the real credential store or prompting a human. The account
-// backend builds it with the same store box it uses, so the key card and the
-// login path share one instance.
+// backend builds it with the same store box it uses, so the account card and
+// the login path share one instance.
 func newRealKeysWith(store secrets.Store, verifier hello.Verifier) *realKeys {
 	return &realKeys{store: store, verifier: verifier}
 }
@@ -94,8 +94,8 @@ func (k *realKeys) verify(reason string) error {
 
 // verifyHello turns a Hello outcome into the typed sentinel the UI words. A
 // refused or unusable check must read differently from a broken call. It is
-// shared by the key card and the account backend so both write gates behave
-// and word their failures the same way.
+// shared by the account card's delete and the account backend so both write
+// gates behave and word their failures the same way.
 func verifyHello(verifier hello.Verifier, reason string) error {
 	result, err := verifier.Verify(reason)
 	if err != nil {

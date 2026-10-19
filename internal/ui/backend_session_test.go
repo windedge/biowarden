@@ -394,27 +394,34 @@ func TestRemoveAccountKeepsSessionWhenKeyRemovalFails(t *testing.T) {
 // key, with the wording the ticket asks for.
 func TestAccountCardStates(t *testing.T) {
 	appLanguage(t, "zh-Hans")
-	row := &accountRow{userID: "user-1", email: "ada@example.com", created: "2026-01-12 09:24"}
+	row := &accountRow{userID: "user-1", email: "ada@example.com", created: "2026-01-12 09:24", serverURL: defaultServerURL}
 
 	signedOut := accountCardViewFor(accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil)
 	if signedOut.state != cardSignedOut || signedOut.title != locales.AccountCardSignedOut() {
 		t.Fatalf("signed-out view = %+v", signedOut)
 	}
-	if signedOut.loginLabel != locales.LoginTitle() {
-		t.Fatalf("signed-out button = %q", signedOut.loginLabel)
+	if signedOut.loginLabel != locales.LoginTitle() || !signedOut.primary {
+		t.Fatalf("signed-out button = %q primary=%v", signedOut.loginLabel, signedOut.primary)
+	}
+	if signedOut.deletable {
+		t.Fatal("a card without a stored key must not offer delete")
 	}
 
 	configured := accountCardViewFor(accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, row)
 	if configured.state != cardConfigured || configured.title != locales.AccountCardConfigured() {
 		t.Fatalf("configured view = %+v", configured)
 	}
-	for _, want := range []string{"ada@example.com", "2026-01-12 09:24", locales.AccountCardConfiguredDetail("ada@example.com", "2026-01-12 09:24")} {
+	for _, want := range []string{"ada@example.com", defaultServerURL, "2026-01-12 09:24",
+		locales.AccountCardConfiguredDetail("ada@example.com", defaultServerURL, "2026-01-12 09:24")} {
 		if !strings.Contains(configured.detail, want) {
 			t.Fatalf("configured detail = %q, want it to contain %q", configured.detail, want)
 		}
 	}
-	if configured.loginLabel != locales.AccountCardReLogin() {
-		t.Fatalf("configured button = %q", configured.loginLabel)
+	if configured.loginLabel != locales.AccountCardReLogin() || configured.primary {
+		t.Fatalf("configured button = %q primary=%v", configured.loginLabel, configured.primary)
+	}
+	if !configured.deletable {
+		t.Fatal("a configured card with a stored key must offer delete")
 	}
 
 	signedIn := accountCardViewFor(loggedInSession(), row)
@@ -426,8 +433,16 @@ func TestAccountCardStates(t *testing.T) {
 			t.Fatalf("signed-in detail = %q, want it to contain %q", signedIn.detail, want)
 		}
 	}
-	if !signedIn.logout {
-		t.Fatal("a signed-in card must offer logout")
+	if signedIn.loginLabel != locales.AccountCardReLogin() || signedIn.primary {
+		t.Fatalf("signed-in button = %q primary=%v", signedIn.loginLabel, signedIn.primary)
+	}
+	if !signedIn.deletable {
+		t.Fatal("a signed-in card with a stored key must offer delete")
+	}
+
+	noKey := accountCardViewFor(loggedInSession(), nil)
+	if noKey.deletable || noKey.detail != locales.AccountCardSignedInNoKey("ada@example.com", defaultServerURL) {
+		t.Fatalf("signed-in without a key = %+v", noKey)
 	}
 }
 

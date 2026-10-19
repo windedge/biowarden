@@ -19,8 +19,8 @@ import (
 // log, an error message, or the disk.
 type loginWindow struct {
 	// page is the account page the outcome lands on; its backend runs the
-	// calls, so the login window and the key card share one auth session and
-	// one credential store.
+	// calls, so the login window and the account card share one auth session
+	// and one credential store.
 	page *accountState
 
 	// showing tells whether the window is up. begin sets it; a successful

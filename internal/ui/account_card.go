@@ -25,57 +25,63 @@ type accountCardView struct {
 	title  string
 	detail string
 	hint   string
-	// loginLabel is the button that opens the sign-in window. The configured
-	// state words it as a re-login, because refreshing the key is the only
-	// reason to sign in again when a key is already stored.
+	// loginLabel is the secondary button that opens the login window. The
+	// configured state words it as a re-login, because refreshing the key is
+	// the only reason to sign in again when a key is already stored.
 	loginLabel string
-	// logout offers the destructive button that deletes the stored key.
-	logout bool
+	// primary marks the login button as the card's primary action, which only
+	// the signed-out state needs; the other states lead with the stored key.
+	primary bool
+	// deletable offers the dangerous delete button for the stored key. Only a
+	// stored key can be deleted, so the signed-out state hides it.
+	deletable bool
 	// identity draws the avatar row from the session's email.
 	identity bool
 }
 
 // accountCardViewFor picks the card's state and wording from the login session
-// and the account the key card foregrounds (which may be nil). A signed-in
+// and the stored account the card describes (which may be nil). A signed-in
 // session wins; otherwise a stored key means "configured"; otherwise the page
 // asks the user to sign in. The wording comes from the catalog here, at draw
 // time, so a language change moves the card with it.
 func accountCardViewFor(sess accountSession, primary *accountRow) accountCardView {
-	switch sess.state {
-	case loginLoggedIn, loginLoggingIn:
+	if sess.state == loginLoggedIn || sess.state == loginLoggingIn {
 		detail := locales.AccountCardSignedInNoKey(sess.email, sess.serverURL)
 		if primary != nil {
 			detail = locales.AccountCardSignedInKey(sess.email, sess.serverURL, primary.created)
 		}
 		return accountCardView{
-			state:    cardSignedIn,
-			title:    locales.AccountCardSignedIn(),
-			detail:   detail,
-			logout:   true,
-			identity: true,
+			state:      cardSignedIn,
+			title:      locales.AccountCardSignedIn(),
+			detail:     detail,
+			loginLabel: locales.AccountCardReLogin(),
+			deletable:  primary != nil,
+			identity:   true,
 		}
-	case loginNeeds2FA:
-		// The 2FA branch renders its own prompt; this keeps the pure function
-		// total for callers that ask anyway.
-		return accountCardView{state: cardSignedIn, title: locales.AccountCard2FATitle(), identity: true}
 	}
 	if primary != nil {
 		who := primary.email
 		if who == "" {
 			who = shortID(primary.userID)
 		}
+		server := primary.serverURL
+		if server == "" {
+			server = defaultServerURL
+		}
 		return accountCardView{
 			state:      cardConfigured,
 			title:      locales.AccountCardConfigured(),
-			detail:     locales.AccountCardConfiguredDetail(who, primary.created),
+			detail:     locales.AccountCardConfiguredDetail(who, server, primary.created),
 			hint:       locales.AccountCardConfiguredHint(),
 			loginLabel: locales.AccountCardReLogin(),
+			deletable:  true,
 		}
 	}
 	return accountCardView{
 		state:      cardSignedOut,
 		title:      locales.AccountCardSignedOut(),
-		detail:     locales.AccountCardSignedOutDetail(),
+		hint:       locales.AccountNoKeyHint(),
 		loginLabel: locales.LoginTitle(),
+		primary:    true,
 	}
 }

@@ -31,8 +31,7 @@ func (f *realFirstRun) done() (bool, error) { return f.marker.Done() }
 func (f *realFirstRun) mark() error { return f.marker.Mark() }
 
 // storedKeys reads the credential store, which is the same source the Account
-// page's key card shows, so "no keys stored" means the same thing in both
-// places.
+// page's card shows, so "no keys stored" means the same thing in both places.
 func (f *realFirstRun) storedKeys() (int, error) {
 	accounts, err := f.store.List()
 	if err != nil {

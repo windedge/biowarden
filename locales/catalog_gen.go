@@ -236,22 +236,6 @@ func (msgs Messages) LoginCancel() string {
 	return Catalog.Format(msgs.locale, "loginCancel", nil)
 }
 
-// LoginReLogin says "Sign in again (to refresh the key)"
-// in the language the app shows.
-//
-// The configured account card's button that opens the login window to
-// refresh the stored key.
-func LoginReLogin() string { return In(i18n.Locale()).LoginReLogin() }
-
-// LoginReLogin says "Sign in again (to refresh the key)"
-// in the language of msgs.
-//
-// The configured account card's button that opens the login window to
-// refresh the stored key.
-func (msgs Messages) LoginReLogin() string {
-	return Catalog.Format(msgs.locale, "loginReLogin", nil)
-}
-
 // LoginSpinnerLoggingIn says "Signing in"
 // in the language the app shows.
 //
@@ -1386,36 +1370,6 @@ func (msgs Messages) AccountCardReLogin() string {
 	return Catalog.Format(msgs.locale, "accountCardReLogin", nil)
 }
 
-// AccountCardSignOut says "Sign out"
-// in the language the app shows.
-//
-// The signed-in account card's button that deletes the stored key and
-// session.
-func AccountCardSignOut() string { return In(i18n.Locale()).AccountCardSignOut() }
-
-// AccountCardSignOut says "Sign out"
-// in the language of msgs.
-//
-// The signed-in account card's button that deletes the stored key and
-// session.
-func (msgs Messages) AccountCardSignOut() string {
-	return Catalog.Format(msgs.locale, "accountCardSignOut", nil)
-}
-
-// AccountCardWindowHint says "Signing in happens in a separate login window; Windows Hello must confirm before the key is written."
-// in the language the app shows.
-//
-// The hint under the signed-out card's sign-in button.
-func AccountCardWindowHint() string { return In(i18n.Locale()).AccountCardWindowHint() }
-
-// AccountCardWindowHint says "Signing in happens in a separate login window; Windows Hello must confirm before the key is written."
-// in the language of msgs.
-//
-// The hint under the signed-out card's sign-in button.
-func (msgs Messages) AccountCardWindowHint() string {
-	return Catalog.Format(msgs.locale, "accountCardWindowHint", nil)
-}
-
 // AccountCardConfigured says "Configured"
 // in the language the app shows.
 //
@@ -1430,20 +1384,20 @@ func (msgs Messages) AccountCardConfigured() string {
 	return Catalog.Format(msgs.locale, "accountCardConfigured", nil)
 }
 
-// AccountCardConfiguredDetail says "{who} · key stored {created} · unlocking works"
+// AccountCardConfiguredDetail says "{who} · server {server} · key stored {created} · unlocking works"
 // in the language the app shows.
 //
 // The configured card's detail line.
-func AccountCardConfiguredDetail(who string, created string) string {
-	return In(i18n.Locale()).AccountCardConfiguredDetail(who, created)
+func AccountCardConfiguredDetail(who string, server string, created string) string {
+	return In(i18n.Locale()).AccountCardConfiguredDetail(who, server, created)
 }
 
-// AccountCardConfiguredDetail says "{who} · key stored {created} · unlocking works"
+// AccountCardConfiguredDetail says "{who} · server {server} · key stored {created} · unlocking works"
 // in the language of msgs.
 //
 // The configured card's detail line.
-func (msgs Messages) AccountCardConfiguredDetail(who string, created string) string {
-	return Catalog.Format(msgs.locale, "accountCardConfiguredDetail", map[string]any{"who": who, "created": created})
+func (msgs Messages) AccountCardConfiguredDetail(who string, server string, created string) string {
+	return Catalog.Format(msgs.locale, "accountCardConfiguredDetail", map[string]any{"who": who, "server": server, "created": created})
 }
 
 // AccountCardConfiguredHint says "Unlocking already works, no need to sign in again; sign in only after the master password or KDF changed and the key …"
@@ -1474,20 +1428,6 @@ func (msgs Messages) AccountCardSignedOut() string {
 	return Catalog.Format(msgs.locale, "accountCardSignedOut", nil)
 }
 
-// AccountCardSignedOutDetail says "After signing in to Bitwarden, biowarden fetches and stores the key automatically; no per-item setup is needed."
-// in the language the app shows.
-//
-// The signed-out card's detail line.
-func AccountCardSignedOutDetail() string { return In(i18n.Locale()).AccountCardSignedOutDetail() }
-
-// AccountCardSignedOutDetail says "After signing in to Bitwarden, biowarden fetches and stores the key automatically; no per-item setup is needed."
-// in the language of msgs.
-//
-// The signed-out card's detail line.
-func (msgs Messages) AccountCardSignedOutDetail() string {
-	return Catalog.Format(msgs.locale, "accountCardSignedOutDetail", nil)
-}
-
 // AccountServerLabel says "Server {server}"
 // in the language the app shows.
 //
@@ -1502,76 +1442,18 @@ func (msgs Messages) AccountServerLabel(server string) string {
 	return Catalog.Format(msgs.locale, "accountServerLabel", map[string]any{"server": server})
 }
 
-// AccountKeyGroup says "Key status"
+// AccountNoKeyHint says "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually."
 // in the language the app shows.
 //
-// The stored-key card's group title.
-func AccountKeyGroup() string { return In(i18n.Locale()).AccountKeyGroup() }
+// The account card's hint when nothing is stored.
+func AccountNoKeyHint() string { return In(i18n.Locale()).AccountNoKeyHint() }
 
-// AccountKeyGroup says "Key status"
+// AccountNoKeyHint says "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually."
 // in the language of msgs.
 //
-// The stored-key card's group title.
-func (msgs Messages) AccountKeyGroup() string {
-	return Catalog.Format(msgs.locale, "accountKeyGroup", nil)
-}
-
-// AccountKeyNone says "Not stored"
-// in the language the app shows.
-//
-// The key card's title when no key is stored on this machine.
-func AccountKeyNone() string { return In(i18n.Locale()).AccountKeyNone() }
-
-// AccountKeyNone says "Not stored"
-// in the language of msgs.
-//
-// The key card's title when no key is stored on this machine.
-func (msgs Messages) AccountKeyNone() string {
-	return Catalog.Format(msgs.locale, "accountKeyNone", nil)
-}
-
-// AccountKeyNoneHint says "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually."
-// in the language the app shows.
-//
-// The key card's hint when no key is stored.
-func AccountKeyNoneHint() string { return In(i18n.Locale()).AccountKeyNoneHint() }
-
-// AccountKeyNoneHint says "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually."
-// in the language of msgs.
-//
-// The key card's hint when no key is stored.
-func (msgs Messages) AccountKeyNoneHint() string {
-	return Catalog.Format(msgs.locale, "accountKeyNoneHint", nil)
-}
-
-// AccountKeyStored says "Stored"
-// in the language the app shows.
-//
-// The key card's title when a key is stored.
-func AccountKeyStored() string { return In(i18n.Locale()).AccountKeyStored() }
-
-// AccountKeyStored says "Stored"
-// in the language of msgs.
-//
-// The key card's title when a key is stored.
-func (msgs Messages) AccountKeyStored() string {
-	return Catalog.Format(msgs.locale, "accountKeyStored", nil)
-}
-
-// AccountKeyDetail says "Account {id} · stored {created}"
-// in the language the app shows.
-//
-// The key card's detail line.
-func AccountKeyDetail(id string, created string) string {
-	return In(i18n.Locale()).AccountKeyDetail(id, created)
-}
-
-// AccountKeyDetail says "Account {id} · stored {created}"
-// in the language of msgs.
-//
-// The key card's detail line.
-func (msgs Messages) AccountKeyDetail(id string, created string) string {
-	return Catalog.Format(msgs.locale, "accountKeyDetail", map[string]any{"id": id, "created": created})
+// The account card's hint when nothing is stored.
+func (msgs Messages) AccountNoKeyHint() string {
+	return Catalog.Format(msgs.locale, "accountNoKeyHint", nil)
 }
 
 // AccountAdvanced says "Advanced"
@@ -1976,7 +1858,7 @@ func (msgs Messages) AccountNoticeSessionRevoked() string {
 	return Catalog.Format(msgs.locale, "accountNoticeSessionRevoked", nil)
 }
 
-// AccountNoticeSessionUnverified says "The login session cannot be verified right now (network or server problem) and is conservatively shown as signed out;…"
+// AccountNoticeSessionUnverified says "The login session cannot be verified right now (network or server problem); the key is still stored and unlocking works."
 // in the language the app shows.
 //
 // The account page's status line when the persisted session could not be
@@ -1985,7 +1867,7 @@ func AccountNoticeSessionUnverified() string {
 	return In(i18n.Locale()).AccountNoticeSessionUnverified()
 }
 
-// AccountNoticeSessionUnverified says "The login session cannot be verified right now (network or server problem) and is conservatively shown as signed out;…"
+// AccountNoticeSessionUnverified says "The login session cannot be verified right now (network or server problem); the key is still stored and unlocking works."
 // in the language of msgs.
 //
 // The account page's status line when the persisted session could not be

@@ -62,10 +62,6 @@
   "@loginCancel": {
     "description": "The login window's button that abandons the attempt."
   },
-  "loginReLogin": "Sign in again (to refresh the key)",
-  "@loginReLogin": {
-    "description": "The configured account card's button that opens the login window to refresh the stored key."
-  },
   "loginSpinnerLoggingIn": "Signing in",
   "@loginSpinnerLoggingIn": {
     "description": "The login form's spinner label while the password login runs."
@@ -480,25 +476,21 @@
   "@accountCardReLogin": {
     "description": "The signed-in account card's button that opens the login window to refresh the key."
   },
-  "accountCardSignOut": "Sign out",
-  "@accountCardSignOut": {
-    "description": "The signed-in account card's button that deletes the stored key and session."
-  },
-  "accountCardWindowHint": "Signing in happens in a separate login window; Windows Hello must confirm before the key is written.",
-  "@accountCardWindowHint": {
-    "description": "The hint under the signed-out card's sign-in button."
-  },
   "accountCardConfigured": "Configured",
   "@accountCardConfigured": {
     "description": "The account card's title when a key is stored but no session is verified."
   },
-  "accountCardConfiguredDetail": "{who} · key stored {created} · unlocking works",
+  "accountCardConfiguredDetail": "{who} · server {server} · key stored {created} · unlocking works",
   "@accountCardConfiguredDetail": {
     "description": "The configured card's detail line.",
     "placeholders": {
       "who": {
         "type": "String",
         "example": "ada@example.com"
+      },
+      "server": {
+        "type": "String",
+        "example": "https://vault.bitwarden.com"
       },
       "created": {
         "type": "String",
@@ -514,10 +506,6 @@
   "@accountCardSignedOut": {
     "description": "The account card's title when there is no session and no stored key."
   },
-  "accountCardSignedOutDetail": "After signing in to Bitwarden, biowarden fetches and stores the key automatically; no per-item setup is needed.",
-  "@accountCardSignedOutDetail": {
-    "description": "The signed-out card's detail line."
-  },
   "accountServerLabel": "Server {server}",
   "@accountServerLabel": {
     "description": "The identity row's line naming the server.",
@@ -528,35 +516,9 @@
       }
     }
   },
-  "accountKeyGroup": "Key status",
-  "@accountKeyGroup": {
-    "description": "The stored-key card's group title."
-  },
-  "accountKeyNone": "Not stored",
-  "@accountKeyNone": {
-    "description": "The key card's title when no key is stored on this machine."
-  },
-  "accountKeyNoneHint": "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually.",
-  "@accountKeyNoneHint": {
-    "description": "The key card's hint when no key is stored."
-  },
-  "accountKeyStored": "Stored",
-  "@accountKeyStored": {
-    "description": "The key card's title when a key is stored."
-  },
-  "accountKeyDetail": "Account {id} · stored {created}",
-  "@accountKeyDetail": {
-    "description": "The key card's detail line.",
-    "placeholders": {
-      "id": {
-        "type": "String",
-        "example": "6f1c9a04..."
-      },
-      "created": {
-        "type": "String",
-        "example": "2026-03-10 12:00"
-      }
-    }
+  "accountNoKeyHint": "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually.",
+  "@accountNoKeyHint": {
+    "description": "The account card's hint when nothing is stored."
   },
   "accountAdvanced": "Advanced",
   "@accountAdvanced": {
@@ -704,7 +666,7 @@
   "@accountNoticeSessionRevoked": {
     "description": "The account page's status line when the persisted session was revoked."
   },
-  "accountNoticeSessionUnverified": "The login session cannot be verified right now (network or server problem) and is conservatively shown as signed out; the key is still stored.",
+  "accountNoticeSessionUnverified": "The login session cannot be verified right now (network or server problem); the key is still stored and unlocking works.",
   "@accountNoticeSessionUnverified": {
     "description": "The account page's status line when the persisted session could not be checked."
   },

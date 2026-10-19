@@ -522,8 +522,8 @@ func TestRealKeysListsAllStoredAccounts(t *testing.T) {
 	}
 }
 
-// The account card can switch which stored account the key card describes;
-// the sign-in session is not touched, because there are no parallel sessions.
+// The account card can switch which stored account the card describes; the
+// sign-in session is not touched, because there are no parallel sessions.
 func TestAccountStatePrimaryFollowsSelection(t *testing.T) {
 	s := newAccountStateWith(fakeKeys{}, fakeAccount{})
 	waitRestore(t, &s)

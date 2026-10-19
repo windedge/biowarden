@@ -171,7 +171,7 @@ func newRealAccountWith(store secrets.Store, verifier hello.Verifier, factory ac
 }
 
 // newRealAccountState wires the account page onto the real store, verifier and
-// auth flow; newAccountState in state_account.go calls it. The key card and
+// auth flow; newAccountState in state_account.go calls it. The account card and
 // the login path share one store instance so their views cannot diverge.
 func newRealAccountState() accountState {
 	store := secrets.New()

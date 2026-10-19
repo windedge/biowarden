@@ -23,7 +23,6 @@ func (app *appState) accountPage(c *ui.Context) {
 				notice(c, a.notice.text(), a.notice.ok)
 
 				a.accountCard(c, &app.login)
-				a.keyCard(c)
 				a.advanced(c)
 			})
 		})
@@ -34,7 +33,8 @@ func (app *appState) accountPage(c *ui.Context) {
 // stored-key "configured" state when a key exists without a live session, and
 // the sign-in guidance with nothing stored. The wording for all three comes
 // from accountCardViewFor; the login window owns the form and the two-factor
-// prompt, so the card only mirrors the session the backend reports.
+// prompt, so the card only mirrors the session the backend reports. Delete is
+// the card's destructive action, gated by Windows Hello inside removeAccount.
 func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 	t := c.Theme()
 	groupBox(c, locales.AccountCardGroup(), func() {
@@ -63,34 +63,49 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		if a.verifying {
 			muted(c, locales.AccountCardVerifying())
 		}
-		v := accountCardViewFor(a.session, a.primary())
+		primary := a.primary()
+		v := accountCardViewFor(a.session, primary)
 		a.accountIdentity(c, v, t)
 		switch v.state {
 		case cardSignedIn:
 			ui.Row(c).Gap(10).Children(func() {
-				if ui.PrimaryButton(c, locales.AccountCardReLogin()).Disabled(a.busy).Clicked() {
+				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
 					// Re-login re-derives the key, which always needs the master
 					// password (a restored session kept only the refresh token),
 					// so the login window is the one path that always works.
 					login.begin()
 					c.Invalidate()
 				}
-				if ui.Button(c, locales.AccountCardSignOut()).Disabled(a.busy).Clicked() {
-					a.logout()
+			})
+		case cardConfigured:
+			ui.Row(c).Gap(10).Children(func() {
+				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
+					login.begin()
 					c.Invalidate()
 				}
 			})
-		case cardConfigured:
-			if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
-				login.begin()
-				c.Invalidate()
-			}
 		default:
-			if ui.PrimaryButton(c, v.loginLabel).Disabled(a.busy).Clicked() {
-				login.begin()
-				c.Invalidate()
-			}
-			muted(c, locales.AccountCardWindowHint())
+			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+				if ui.PrimaryButton(c, v.loginLabel).Disabled(a.busy).Clicked() {
+					login.begin()
+					c.Invalidate()
+				}
+				// No key is stored here, so re-read the local credential store,
+				// e.g. after the host saved one outside the GUI.
+				if ui.Button(c, locales.Refresh()).Disabled(a.busy).Clicked() {
+					a.reload()
+					c.Invalidate()
+				}
+			})
+		}
+		if v.deletable {
+			ui.Row(c).Gap(10).Children(func() {
+				if ui.Button(c, locales.Delete()).Disabled(a.busy).
+					TextColor(t.Danger).Clicked() {
+					a.removeAccount(primary)
+					c.Invalidate()
+				}
+			})
 		}
 	})
 }
@@ -132,45 +147,6 @@ func (a *accountState) identityRow(c *ui.Context, stateColor ui.Color) {
 			muted(c, locales.AccountServerLabel(a.session.serverURL))
 		})
 		ui.Text(c, a.session.state.label()).FontSize(12).TextColor(stateColor)
-	})
-}
-
-// keyCard is the stored-key status: whether a key exists, when it was stored,
-// and delete. Refreshing the key is the account card's re-login, so a second
-// button here would only duplicate it. It reads the local store, so it stays
-// meaningful whether or not the login backend is wired.
-func (a *accountState) keyCard(c *ui.Context) {
-	t := c.Theme()
-	groupBox(c, locales.AccountKeyGroup(), func() {
-		acc := a.primary()
-		ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-			if acc == nil {
-				ui.Column(c).Grow(1).Gap(2).Children(func() {
-					ui.Text(c, locales.AccountKeyNone()).Bold().TextColor(t.Warning)
-					muted(c, locales.AccountKeyNoneHint())
-				})
-				// No key is stored here, so re-read the local credential store,
-				// e.g. after the host saved one outside the GUI.
-				if ui.Button(c, locales.Refresh()).Disabled(a.busy).Clicked() {
-					a.reload()
-					c.Invalidate()
-				}
-				return
-			}
-			ui.Column(c).Grow(1).Gap(2).Children(func() {
-				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-					ui.Text(c, locales.AccountKeyStored()).Bold().TextColor(t.Success)
-					if acc.email != "" {
-						ui.Text(c, acc.email).FontSize(12)
-					}
-				})
-				muted(c, locales.AccountKeyDetail(shortID(acc.userID), acc.created))
-			})
-			if ui.Button(c, locales.Delete()).Disabled(a.busy).Clicked() {
-				a.removeAccount(acc)
-				c.Invalidate()
-			}
-		})
 	})
 }
 
@@ -260,7 +236,7 @@ func (a *accountState) manualEntry(c *ui.Context) {
 				a.testUnlock(acc)
 				c.Invalidate()
 			}
-			// Selecting a row foregrounds it in the key card; it is the
+			// Selecting a row foregrounds it in the account card; it is the
 			// whole of account switching without parallel sessions.
 			if primary := a.primary(); primary == nil || primary.userID != acc.userID {
 				if ui.Button(c, locales.AccountSetCurrent()).Disabled(a.busy).Clicked() {

@@ -72,7 +72,7 @@ type accountRow struct {
 
 // newAccountState wires the page onto the real credential store and the real
 // account backend; newRealAccountState builds both on one shared store so the
-// key card and the login path agree.
+// account card and the login path agree.
 func newAccountState() accountState {
 	return newRealAccountState()
 }
@@ -135,7 +135,7 @@ func (s *accountState) async(work func() func(*accountState)) {
 	go func() { s.results <- work() }()
 }
 
-// primary is the account the key status card describes: the one the human
+// primary is the account the card's detail line describes: the one the human
 // selected, otherwise the signed-in account, otherwise the first stored one.
 func (s *accountState) primary() *accountRow {
 	for _, want := range []string{s.selectedUserID, s.session.userID} {
@@ -171,7 +171,7 @@ func (s *accountState) effectiveServerURL() string {
 }
 
 // selectAccount foregrounds one stored account, which is what "switching"
-// means without parallel sessions: the key card and its actions follow it.
+// means without parallel sessions: the account card and its actions follow it.
 func (s *accountState) selectAccount(userID string) {
 	s.selectedUserID = userID
 }
