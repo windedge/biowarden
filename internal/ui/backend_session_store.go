@@ -19,13 +19,13 @@ var errNoStoredSession = errors.New("ui: no stored session")
 // errSessionRevoked reports a persisted login the server rejected. The stored
 // session credential is cleared, but the key is left alone so unlocking keeps
 // working.
-var errSessionRevoked = errors.New("ui: 登录会话已失效")
+var errSessionRevoked = errors.New("ui: login session revoked")
 
 // errSessionUnverified reports a persisted login that could not be checked
 // because the network or the server failed. The session credential is kept,
 // and the page conservatively shows the configured state instead of claiming
 // a login it could not confirm.
-var errSessionUnverified = errors.New("ui: 登录会话暂未验证")
+var errSessionUnverified = errors.New("ui: login session not verified yet")
 
 // sessionRecord is the persisted login: the only thing biowarden keeps between
 // runs besides the key. It carries the refresh token so a restart can verify

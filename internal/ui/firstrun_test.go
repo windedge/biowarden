@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/windedge/biowarden/internal/registry"
+	"github.com/windedge/biowarden/locales"
 )
 
 // fakeFirstRun is an in-memory firstRunBackend: it records the calls the setup
@@ -142,14 +143,17 @@ func TestFirstRunSetupSkipsForeignAndHijacked(t *testing.T) {
 		t.Fatalf("mark calls = %d, want 1", backend.markCalls)
 	}
 
-	notice, ok := result.notice()
-	for _, want := range []string{"已注册 1 个浏览器（Chrome）", "跳过 2 个", "Edge、Firefox"} {
-		if !strings.Contains(notice, want) {
-			t.Fatalf("notice %q does not contain %q", notice, want)
+	notice := result.notice()
+	for _, want := range []string{
+		locales.FirstRunNoticeIntro(1) + locales.FirstRunNoticeNamed("Chrome"),
+		locales.FirstRunNoticeSkipped(2, "Edge"+locales.ListSeparator()+"Firefox"),
+	} {
+		if !strings.Contains(notice.text(), want) {
+			t.Fatalf("notice %q does not contain %q", notice.text(), want)
 		}
 	}
-	if ok {
-		t.Fatalf("notice %q was marked as good news despite the skips", notice)
+	if notice.ok {
+		t.Fatalf("notice %q was marked as good news despite the skips", notice.text())
 	}
 }
 
@@ -175,12 +179,12 @@ func TestFirstRunSetupRegistersOnlyInstalledBrowsers(t *testing.T) {
 			t.Fatalf("absent = %v, want %v", result.absent, wantAbsent)
 		}
 	}
-	notice, ok := result.notice()
-	if !ok {
-		t.Fatalf("notice %q was not good news, but nothing needs a human", notice)
+	notice := result.notice()
+	if !notice.ok {
+		t.Fatalf("notice %q was not good news, but nothing needs a human", notice.text())
 	}
-	if !strings.Contains(notice, "未安装：Chrome、Firefox") {
-		t.Fatalf("notice %q does not name the missing browsers", notice)
+	if want := locales.FirstRunNoticeAbsent("Chrome" + locales.ListSeparator() + "Firefox"); !strings.Contains(notice.text(), want) {
+		t.Fatalf("notice %q does not name the missing browsers as %q", notice.text(), want)
 	}
 }
 
@@ -193,20 +197,21 @@ func TestFirstRunNoticeRendersEveryOutcome(t *testing.T) {
 		absent:     []string{"Chrome"},
 		markErr:    errors.New("access denied"),
 	}
-	notice, ok := result.notice()
+	notice := result.notice()
+	sep := locales.ListSeparator()
 	for _, want := range []string{
-		"首启自动配置",
-		"已注册 2 个浏览器（Chrome、Edge）",
-		"跳过 1 个（注册可能属于官方客户端，未覆盖：Firefox）",
-		"失败：Edge",
-		"未安装：Chrome",
-		"首启标记异常：access denied",
+		locales.FirstRunNoticeIntro(2),
+		locales.FirstRunNoticeNamed("Chrome" + sep + "Edge"),
+		locales.FirstRunNoticeSkipped(1, "Firefox"),
+		locales.FirstRunNoticeFailed("Edge"),
+		locales.FirstRunNoticeAbsent("Chrome"),
+		locales.FirstRunNoticeMarkerError("access denied"),
 	} {
-		if !strings.Contains(notice, want) {
-			t.Fatalf("notice %q does not contain %q", notice, want)
+		if !strings.Contains(notice.text(), want) {
+			t.Fatalf("notice %q does not contain %q", notice.text(), want)
 		}
 	}
-	if ok {
+	if notice.ok {
 		t.Fatal("a result with skips and failures was marked as good news")
 	}
 }
@@ -291,9 +296,9 @@ func TestFirstRunSetupReportsFailuresAndStillMarks(t *testing.T) {
 	if backend.markCalls != 1 {
 		t.Fatalf("mark calls = %d, want 1 even after a failed write", backend.markCalls)
 	}
-	notice, ok := result.notice()
-	if ok || !strings.Contains(notice, "失败：Edge") {
-		t.Fatalf("notice = %q ok = %v, want a visible failure", notice, ok)
+	notice := result.notice()
+	if notice.ok || !strings.Contains(notice.text(), locales.FirstRunNoticeFailed("Edge")) {
+		t.Fatalf("notice = %q ok = %v, want a visible failure", notice.text(), notice.ok)
 	}
 }
 
@@ -304,10 +309,10 @@ func TestFirstRunSetupReportsMarkerFailure(t *testing.T) {
 		name    string
 		doneErr error
 		markErr error
-		want    string
+		message string
 	}{
-		{"read failure", errors.New("cannot open key"), nil, "首启标记异常：cannot open key"},
-		{"write failure", nil, errors.New("cannot write value"), "首启标记异常：cannot write value"},
+		{"read failure", errors.New("cannot open key"), nil, "cannot open key"},
+		{"write failure", nil, errors.New("cannot write value"), "cannot write value"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -324,9 +329,10 @@ func TestFirstRunSetupReportsMarkerFailure(t *testing.T) {
 			if len(backend.installs) != 1 {
 				t.Fatalf("installs = %v, want [chrome]", backend.installs)
 			}
-			notice, ok := result.notice()
-			if ok || !strings.Contains(notice, tt.want) {
-				t.Fatalf("notice = %q ok = %v, want %q visible", notice, ok, tt.want)
+			notice := result.notice()
+			want := locales.FirstRunNoticeMarkerError(tt.message)
+			if notice.ok || !strings.Contains(notice.text(), want) {
+				t.Fatalf("notice = %q ok = %v, want %q visible", notice.text(), notice.ok, want)
 			}
 		})
 	}
@@ -368,8 +374,8 @@ func TestRunFirstRunOpensTheLoginWindowOnce(t *testing.T) {
 	if len(backend.installs) != 1 || backend.markCalls != 1 {
 		t.Fatalf("installs = %v, mark calls = %d, want one of each", backend.installs, backend.markCalls)
 	}
-	if !strings.Contains(app.browsers.notice, "首启自动配置") {
-		t.Fatalf("browsers notice = %q, want the first-run summary", app.browsers.notice)
+	if !strings.Contains(app.browsers.notice.text(), locales.FirstRunNoticeIntro(1)) {
+		t.Fatalf("browsers notice = %q, want the first-run summary", app.browsers.notice.text())
 	}
 }
 
@@ -387,8 +393,8 @@ func TestRunFirstRunOpensLoginWindowAfterFailures(t *testing.T) {
 	if *opened != 1 || !app.login.showing {
 		t.Fatalf("login window opened %d times, showing = %v; want it up exactly once", *opened, app.login.showing)
 	}
-	if app.browsers.noticeOK {
-		t.Fatalf("notice %q was marked as good news despite the failures", app.browsers.notice)
+	if app.browsers.notice.ok {
+		t.Fatalf("notice %q was marked as good news despite the failures", app.browsers.notice.text())
 	}
 }
 
@@ -403,7 +409,7 @@ func TestRunFirstRunLeavesConfiguredMachinesAlone(t *testing.T) {
 	if *opened != 0 || app.login.showing {
 		t.Fatalf("login window opened on a configured machine: opened = %d, showing = %v", *opened, app.login.showing)
 	}
-	if app.browsers.notice != "" {
-		t.Fatalf("browsers notice = %q, want none", app.browsers.notice)
+	if app.browsers.notice.text() != "" {
+		t.Fatalf("browsers notice = %q, want none", app.browsers.notice.text())
 	}
 }

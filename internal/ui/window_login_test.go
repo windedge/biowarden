@@ -27,6 +27,7 @@ func renderedContentHeight(t *testing.T, s *loginWindow) float32 {
 // same prompt has without one: that loss is what put the screenshot's scroll
 // bar on the window. Counting the notice in the target restores it.
 func TestLoginWindowTwoFactorNoticeFitsMeasuredContent(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	acct := &stubAccount{sess: accountSession{
 		state:     loginNeeds2FA,
 		email:     "ada@example.com",

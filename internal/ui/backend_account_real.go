@@ -10,6 +10,7 @@ import (
 	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/secrets"
+	"github.com/windedge/biowarden/locales"
 )
 
 // deviceID is the deviceIdentifier biowarden sends to Bitwarden. The official
@@ -49,6 +50,9 @@ var (
 	errProviderNotOffered = errors.New("ui: provider not offered")
 	errEmailMethodMissing = errors.New("ui: email code method missing")
 	errSessionPersist     = errors.New("ui: login session could not be persisted")
+	errSessionRead        = errors.New("ui: login session could not be read")
+	errRemoveKey          = errors.New("ui: deleting the key failed")
+	errClearSession       = errors.New("ui: clearing the login session failed")
 )
 
 // loginError wraps a sentinel with the detail its wording interpolates, such
@@ -373,7 +377,7 @@ func (a *realAccount) checkServer(serverURL string) (string, error) {
 }
 
 func (a *realAccount) login(email, password, serverURL string) (accountSession, error) {
-	return a.runLogin(strings.TrimSpace(email), password, serverURLOf(serverURL), "保存 biowarden 密钥")
+	return a.runLogin(strings.TrimSpace(email), password, serverURLOf(serverURL), locales.HelloReasonSaveKey())
 }
 
 // runLogin drives one full attempt. On success it asks for Hello consent
@@ -516,7 +520,7 @@ func (a *realAccount) submit2FA(provider int, code string) (accountSession, erro
 		a.parkTwoFactor(p.auth, p.serverURL, p.email, step.challenge)
 		return a.currentSession(), nil
 	}
-	return a.completeLogin(step, p.serverURL, p.email, "保存 biowarden 密钥")
+	return a.completeLogin(step, p.serverURL, p.email, locales.HelloReasonSaveKey())
 }
 
 // sendEmailCode asks the server to mail the code for the pending email
@@ -574,11 +578,11 @@ func (a *realAccount) logout() error {
 	}
 	var clearErr error
 	if sess.userID != "" {
-		if err := verifyHello(a.verifier, "删除 biowarden 密钥"); err != nil {
+		if err := verifyHello(a.verifier, locales.HelloReasonRemoveKey()); err != nil {
 			return err
 		}
 		if err := a.store.Remove(sess.userID); err != nil {
-			return fmt.Errorf("删除密钥失败：%w", err)
+			return newLoginError(errRemoveKey, err)
 		}
 		// The key is gone, so the persisted login for it must go too. A failed
 		// clear is reported but does not keep the session alive in memory.
@@ -590,7 +594,7 @@ func (a *realAccount) logout() error {
 	a.pending = nil
 	a.mu.Unlock()
 	if clearErr != nil {
-		return fmt.Errorf("清除登录会话失败：%w", clearErr)
+		return newLoginError(errClearSession, clearErr)
 	}
 	return nil
 }
@@ -601,8 +605,8 @@ func (a *realAccount) logout() error {
 // prove the sign-in but cannot re-derive the key without a fresh sign-in.
 //
 // Three outcomes:
-//   - valid: the signed-in session is restored (account page: 已登录)
-//   - rejected: the stored session is cleared, the key is kept (已配置)
+//   - valid: the signed-in session is restored (account page: signed in)
+//   - rejected: the stored session is cleared, the key is kept (configured)
 //   - unreachable: the stored session is kept, the page stays configured
 func (a *realAccount) restoreSession() (accountSession, error) {
 	rec, err := a.sessions.load()
@@ -610,7 +614,7 @@ func (a *realAccount) restoreSession() (accountSession, error) {
 		if errors.Is(err, errNoStoredSession) {
 			return a.currentSession(), nil
 		}
-		return a.currentSession(), err
+		return a.currentSession(), newLoginError(errSessionRead, err)
 	}
 	fallback := accountSession{state: loginLoggedOut, serverURL: serverURLOf(rec.ServerURL)}
 	if rec.RefreshToken == "" {

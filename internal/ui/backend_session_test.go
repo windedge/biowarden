@@ -11,6 +11,7 @@ import (
 	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/secrets"
+	"github.com/windedge/biowarden/locales"
 )
 
 // fakeSessionStore is an in-memory sessionStore, so these tests never touch
@@ -396,28 +397,28 @@ func TestAccountCardStates(t *testing.T) {
 	row := &accountRow{userID: "user-1", email: "ada@example.com", created: "2026-01-12 09:24"}
 
 	signedOut := accountCardViewFor(accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, nil)
-	if signedOut.state != cardSignedOut || signedOut.title != "尚未登录" {
+	if signedOut.state != cardSignedOut || signedOut.title != locales.AccountCardSignedOut() {
 		t.Fatalf("signed-out view = %+v", signedOut)
 	}
-	if signedOut.loginLabel != "登录 Bitwarden 账号" {
+	if signedOut.loginLabel != locales.LoginTitle() {
 		t.Fatalf("signed-out button = %q", signedOut.loginLabel)
 	}
 
 	configured := accountCardViewFor(accountSession{state: loginLoggedOut, serverURL: defaultServerURL}, row)
-	if configured.state != cardConfigured || configured.title != "已配置" {
+	if configured.state != cardConfigured || configured.title != locales.AccountCardConfigured() {
 		t.Fatalf("configured view = %+v", configured)
 	}
-	for _, want := range []string{"ada@example.com", "2026-01-12 09:24", "解锁可用"} {
+	for _, want := range []string{"ada@example.com", "2026-01-12 09:24", locales.AccountCardConfiguredDetail("ada@example.com", "2026-01-12 09:24")} {
 		if !strings.Contains(configured.detail, want) {
 			t.Fatalf("configured detail = %q, want it to contain %q", configured.detail, want)
 		}
 	}
-	if configured.loginLabel != "重新登录（用于刷新密钥）" {
+	if configured.loginLabel != locales.AccountCardReLogin() {
 		t.Fatalf("configured button = %q", configured.loginLabel)
 	}
 
 	signedIn := accountCardViewFor(loggedInSession(), row)
-	if signedIn.state != cardSignedIn || signedIn.title != "已登录" {
+	if signedIn.state != cardSignedIn || signedIn.title != locales.AccountCardSignedIn() {
 		t.Fatalf("signed-in view = %+v", signedIn)
 	}
 	for _, want := range []string{"ada@example.com", defaultServerURL, "2026-01-12 09:24"} {
@@ -464,8 +465,8 @@ func TestAccountStateShowsConfiguredAfterRevokedSession(t *testing.T) {
 	if s.session.state != loginLoggedOut {
 		t.Fatalf("session = %+v, want signed out", s.session)
 	}
-	if !strings.Contains(s.notice, "登录会话已失效") {
-		t.Fatalf("notice = %q, want the revoked-session wording", s.notice)
+	if !strings.Contains(s.notice.text(), locales.AccountNoticeSessionRevoked()) {
+		t.Fatalf("notice = %q, want the revoked-session wording", s.notice.text())
 	}
 	if v := accountCardViewFor(s.session, s.primary()); v.state != cardConfigured {
 		t.Fatalf("card state = %v, want configured (the key is still stored)", v.state)
@@ -482,8 +483,8 @@ func TestAccountStateShowsUnverifiedNotice(t *testing.T) {
 	if s.session.state != loginLoggedOut {
 		t.Fatalf("session = %+v, want signed out", s.session)
 	}
-	if !strings.Contains(s.notice, "无法验证登录会话") {
-		t.Fatalf("notice = %q, want the unverified wording", s.notice)
+	if !strings.Contains(s.notice.text(), locales.AccountNoticeSessionUnverified()) {
+		t.Fatalf("notice = %q, want the unverified wording", s.notice.text())
 	}
 }
 

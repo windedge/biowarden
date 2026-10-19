@@ -58,7 +58,7 @@ func (app *appState) view(c *ui.Context) {
 func start() {
 	app := newAppState()
 	win := mygo.NewWindow(mygo.WindowOptions{
-		Title:     appName,
+		Title:     locales.AppTitle(),
 		Width:     960,
 		Height:    640,
 		MinWidth:  800,
@@ -94,13 +94,13 @@ func start() {
 		// it the moment start returns.
 		mygo.App.OnWillQuit(func(*mygo.QuitEvent) { tray.Destroy() })
 	}
-	// What the app set once, its tray menu's own label, is set again in the new
-	// language. The window's title is the app's name, which is not translated.
+	// What the app set once - the window title and its tray menu's own label -
+	// is set again in the new language.
 	mygo.App.OnLocaleChanged(func(string) {
-		if tray == nil {
-			return
+		win.SetTitle(locales.AppTitle())
+		if tray != nil {
+			tray.SetMenu(trayMenu(win))
 		}
-		tray.SetMenu(trayMenu(win))
 	})
 	win.Show()
 	// Zero-configuration first launch: register the browsers this machine has,

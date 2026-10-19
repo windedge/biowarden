@@ -11,6 +11,7 @@ import (
 )
 
 func TestRelativeTime(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
 	cases := []struct {
 		at   time.Time
@@ -36,6 +37,7 @@ func TestRelativeTime(t *testing.T) {
 }
 
 func TestConnectionLabel(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
 	if got := connectionLabel(now, time.Time{}); got != "扩展未连接" {
 		t.Fatalf("connectionLabel(zero) = %q, want the placeholder", got)
@@ -88,6 +90,7 @@ func TestLastConnectedForTakesNewestID(t *testing.T) {
 // A browser this machine does not have is marked "未安装" by its name, and its
 // install action is disabled: there is no registration point to write.
 func TestBrowsersRowMarksAndDisablesAbsentBrowser(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	backend := &recordingBrowsersBackend{rows: []browserRow{
 		{browser: registry.Firefox, name: "Firefox", path: `C:\official\firefox.json`, state: browserForeign},
 	}}
@@ -108,6 +111,7 @@ func TestBrowsersRowMarksAndDisablesAbsentBrowser(t *testing.T) {
 
 // The marker belongs only to absent browsers: an installed one is not marked.
 func TestBrowsersRowDoesNotMarkInstalledBrowser(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	backend := &recordingBrowsersBackend{rows: []browserRow{
 		{browser: registry.Firefox, name: "Firefox", path: `C:\official\firefox.json`, state: browserForeign, installed: true},
 	}}
@@ -129,6 +133,7 @@ func TestBrowsersRowDoesNotMarkInstalledBrowser(t *testing.T) {
 // The plain "安装" button is the disabled one on a row with no registration,
 // so the click never reaches the registry.
 func TestBrowsersRowDisablesInstallForAbsentBrowser(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	backend := &recordingBrowsersBackend{rows: []browserRow{
 		{browser: registry.Firefox, name: "Firefox", state: browserMissing},
 	}}
@@ -146,6 +151,7 @@ func TestBrowsersRowDisablesInstallForAbsentBrowser(t *testing.T) {
 
 // An installed row keeps the working "安装" button.
 func TestBrowsersRowInstallsWhenBrowserPresent(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	backend := &recordingBrowsersBackend{rows: []browserRow{
 		{browser: registry.Firefox, name: "Firefox", state: browserMissing, installed: true},
 	}}

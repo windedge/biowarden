@@ -10,6 +10,7 @@ import (
 // the close-to-tray window makes the deliberate exit. A second exit in the nav
 // would only be easier to hit by accident, so the sidebar must not offer one.
 func TestSidebarKeepsTheVersionWithoutAQuitButton(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	app := &appState{}
 	tester := ui.NewTester(func(c *ui.Context) { app.sidebar(c) }, sidebarWidth, 400)
 

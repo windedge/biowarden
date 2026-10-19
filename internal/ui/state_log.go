@@ -7,10 +7,9 @@ const logTailBytes = 64 * 1024
 // logState is the Log page's working data: a tail of the host's log file,
 // already redacted by the host that wrote it.
 type logState struct {
-	backend  settingsBackend
-	text     string
-	notice   string
-	noticeOK bool
+	backend settingsBackend
+	text    string
+	notice  pageNotice
 }
 
 func newLogState() logState {
@@ -22,14 +21,13 @@ func newLogState() logState {
 // load replaces the view with a fresh tail. A missing file reads as empty, so
 // the page shows its placeholder until the host has run.
 func (s *logState) load() {
-	s.notice = ""
+	s.notice = pageNotice{}
 	if s.backend == nil {
 		return
 	}
 	text, err := s.backend.logTail(logTailBytes)
 	if err != nil {
-		s.notice = "读取日志失败：" + err.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeLogReadFailed, err: err}
 		return
 	}
 	s.text = text
@@ -37,9 +35,8 @@ func (s *logState) load() {
 
 func (s *logState) refresh() {
 	s.load()
-	if s.notice == "" {
-		s.notice = "已刷新"
-		s.noticeOK = true
+	if s.notice.text() == "" {
+		s.notice = pageNotice{kind: noticeLogRefreshed, ok: true}
 	}
 }
 

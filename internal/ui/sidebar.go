@@ -2,11 +2,12 @@ package ui
 
 import (
 	"github.com/egoist/mygo/ui"
+	"github.com/windedge/biowarden/locales"
 )
 
 // sidebarWidth is the nav column's fixed width. The reference desktop client
 // keeps its nav narrow so a 960-wide window leaves the content most of the
-// room, and 200 still fits the longest label ("浏览器").
+// room, and 200 still fits the longest label ("browsers").
 const sidebarWidth = 200
 
 // The nav IDs double as the Sidebar's selection keys. Keeping them as
@@ -70,10 +71,10 @@ func (app *appState) sidebar(c *ui.Context) {
 	ui.Column(c).Width(sidebarWidth).FillHeight().Shrink(0).
 		Background(t.Surface).Children(func() {
 		sb := ui.Sidebar(c, &selected, func() {
-			ui.SidebarItem(c, navIDAccount, iconAccount, "账号")
-			ui.SidebarItem(c, navIDBrowsers, iconBrowsers, "浏览器")
-			ui.SidebarItem(c, navIDSettings, iconSettings, "设置")
-			ui.SidebarItem(c, navIDLog, iconLog, "日志")
+			ui.SidebarItem(c, navIDAccount, iconAccount, locales.SidebarAccount())
+			ui.SidebarItem(c, navIDBrowsers, iconBrowsers, locales.SidebarBrowsers())
+			ui.SidebarItem(c, navIDSettings, iconSettings, locales.SidebarSettings())
+			ui.SidebarItem(c, navIDLog, iconLog, locales.SidebarLog())
 		})
 		sb.Grow(1)
 		if sb.Changed() {

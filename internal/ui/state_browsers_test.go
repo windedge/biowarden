@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/windedge/biowarden/internal/registry"
+	"github.com/windedge/biowarden/locales"
 )
 
 // recordingBrowsersBackend records which rows a bulk install touched, so the
@@ -53,8 +54,8 @@ func TestBrowsersStateInstallAllDefersTakeoversToConfirm(t *testing.T) {
 	if len(s.bulk) != 1 || s.bulk[0].name != "Edge" {
 		t.Fatalf("bulk = %+v, want the Edge takeover", s.bulk)
 	}
-	if s.notice != "" {
-		t.Fatalf("notice = %q while the dialog owns the wording", s.notice)
+	if s.notice.text() != "" {
+		t.Fatalf("notice = %q while the dialog owns the wording", s.notice.text())
 	}
 
 	s.confirmBulk()
@@ -68,8 +69,8 @@ func TestBrowsersStateInstallAllDefersTakeoversToConfirm(t *testing.T) {
 			t.Fatalf("installs = %v, want %v", backend.installs, want)
 		}
 	}
-	if s.notice != "已安装 3 个" || !s.noticeOK {
-		t.Fatalf("after confirm notice = %q ok=%v, want the full summary", s.notice, s.noticeOK)
+	if got, want := s.notice.text(), locales.BrowsersNoticeInstalled(3); got != want || !s.notice.ok {
+		t.Fatalf("after confirm notice = %q ok=%v, want %q", got, s.notice.ok, want)
 	}
 	if len(s.bulk) != 0 {
 		t.Fatalf("bulk survived the confirm: %+v", s.bulk)
@@ -107,13 +108,13 @@ func TestBrowsersStateInstallAllCancelLeavesTakeoversAlone(t *testing.T) {
 	if got := strings.Join(backend.installs, ","); got != "Chrome" {
 		t.Fatalf("installs = %v, want only the safe row", backend.installs)
 	}
-	for _, want := range []string{"已安装 1 个", "跳过 1 个"} {
-		if !strings.Contains(s.notice, want) {
-			t.Fatalf("cancel notice %q does not contain %q", s.notice, want)
+	for _, want := range []string{locales.BrowsersNoticeInstalled(1), locales.BrowsersNoticeSkippedCancelled(1)} {
+		if !strings.Contains(s.notice.text(), want) {
+			t.Fatalf("cancel notice %q does not contain %q", s.notice.text(), want)
 		}
 	}
-	if s.noticeOK {
-		t.Fatalf("noticeOK = true after cancelling a takeover")
+	if s.notice.ok {
+		t.Fatalf("notice.ok = true after cancelling a takeover")
 	}
 	if len(s.bulk) != 0 {
 		t.Fatalf("bulk survived the cancel: %+v", s.bulk)
@@ -135,8 +136,8 @@ func TestBrowsersStateInstallAllWithoutTakeoversWritesDirectly(t *testing.T) {
 	if opened {
 		t.Fatalf("installAll opened a dialog with no takeover rows")
 	}
-	if s.notice != "已安装 2 个" || !s.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want a clean summary", s.notice, s.noticeOK)
+	if got, want := s.notice.text(), locales.BrowsersNoticeInstalled(2); got != want || !s.notice.ok {
+		t.Fatalf("notice = %q ok=%v, want %q", got, s.notice.ok, want)
 	}
 }
 
@@ -157,16 +158,13 @@ func TestBrowsersStateInstallAllReportsFailureAcrossConfirm(t *testing.T) {
 	s.installAll()
 	s.confirmBulk()
 
-	if s.noticeOK {
-		t.Fatalf("noticeOK = true with a failed write")
+	if s.notice.ok {
+		t.Fatalf("notice.ok = true with a failed write")
 	}
-	for _, want := range []string{"已安装 2 个", "失败：Firefox"} {
-		if !strings.Contains(s.notice, want) {
-			t.Fatalf("notice %q does not contain %q", s.notice, want)
+	for _, want := range []string{locales.BrowsersNoticeInstalled(2), locales.BrowsersNoticeFailed("Firefox")} {
+		if !strings.Contains(s.notice.text(), want) {
+			t.Fatalf("notice %q does not contain %q", s.notice.text(), want)
 		}
-	}
-	if strings.Contains(s.notice, "逐行") {
-		t.Fatalf("notice %q still asks for a per-row confirmation", s.notice)
 	}
 }
 
@@ -199,13 +197,13 @@ func TestBrowsersStateInstallAllSkipsAbsentBrowsers(t *testing.T) {
 	if got := strings.Join(backend.installs, ","); got != "Chrome,Edge" {
 		t.Fatalf("installs = %v, want the installed rows only", backend.installs)
 	}
-	for _, want := range []string{"已安装 2 个", "未安装，跳过：Firefox"} {
-		if !strings.Contains(s.notice, want) {
-			t.Fatalf("notice %q does not contain %q", s.notice, want)
+	for _, want := range []string{locales.BrowsersNoticeInstalled(2), locales.BrowsersNoticeSkippedAbsent("Firefox")} {
+		if !strings.Contains(s.notice.text(), want) {
+			t.Fatalf("notice %q does not contain %q", s.notice.text(), want)
 		}
 	}
-	if !s.noticeOK {
-		t.Fatalf("notice = %q ok = false, want a clean summary", s.notice)
+	if !s.notice.ok {
+		t.Fatalf("notice = %q ok = false, want a clean summary", s.notice.text())
 	}
 }
 
@@ -227,12 +225,13 @@ func TestBrowsersStateInstallAllWithNoBrowsersInstalled(t *testing.T) {
 	if len(backend.installs) != 0 {
 		t.Fatalf("installs = %v, want none", backend.installs)
 	}
-	for _, want := range []string{"已安装 0 个", "未安装，跳过：Chrome、Firefox"} {
-		if !strings.Contains(s.notice, want) {
-			t.Fatalf("notice %q does not contain %q", s.notice, want)
+	absent := "Chrome" + locales.ListSeparator() + "Firefox"
+	for _, want := range []string{locales.BrowsersNoticeInstalled(0), locales.BrowsersNoticeSkippedAbsent(absent)} {
+		if !strings.Contains(s.notice.text(), want) {
+			t.Fatalf("notice %q does not contain %q", s.notice.text(), want)
 		}
 	}
-	if !s.noticeOK {
-		t.Fatalf("notice = %q ok = false, want a missing browser to read as information", s.notice)
+	if !s.notice.ok {
+		t.Fatalf("notice = %q ok = false, want a missing browser to read as information", s.notice.text())
 	}
 }

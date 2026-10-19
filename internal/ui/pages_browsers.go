@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/windedge/biowarden/locales"
 )
 
 // browsersPage mirrors the reference BrowserTab: one row per browser with its
@@ -24,32 +25,29 @@ func (app *appState) browsersPage(c *ui.Context) {
 	}
 	ui.Column(c).Grow(1).Padding(16).Gap(10).Children(func() {
 		ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, "浏览器 (Browsers)").FontSize(18).Bold()
+			ui.Text(c, locales.BrowsersTitle()).FontSize(18).Bold()
 			ui.Spacer(c)
-			if ui.PrimaryButton(c, "一键全部安装").Disabled(len(app.browsers.rows) == 0).Clicked() {
+			if ui.PrimaryButton(c, locales.BrowsersInstallAll()).Disabled(len(app.browsers.rows) == 0).Clicked() {
 				bs.installAll()
 			}
 		})
-		muted(c, "已配置 "+itoa(configured)+" / "+itoa(len(app.browsers.rows))+" 个浏览器 · 已存 "+
-			itoa(len(app.account.accounts))+" 个密钥。没有 manifest 的浏览器无法拉起生物识别解锁。"+
-			"「一键全部安装」直接写入本机已安装且没有 manifest 或属于我们的行；本机未安装的浏览器会跳过；"+
-			"可能属于官方客户端或被覆盖的注册会先列出确认，确认后一并覆盖。")
+		muted(c, locales.BrowsersSummary(configured, len(app.browsers.rows), len(app.account.accounts)))
 		switch {
 		case len(bs.bulk) > 0:
-			notice(c, "有 "+itoa(len(bs.bulk))+" 个注册需要确认，请在确认对话框中处理。", false)
+			notice(c, locales.BrowsersBulkConfirm(len(bs.bulk)), false)
 		case bs.confirmCover >= 0:
-			notice(c, "覆盖前确认：该 manifest 可能属于 Bitwarden 官方桌面客户端，覆盖后官方生物解锁会失效。", false)
+			notice(c, locales.BrowsersConfirmCover(), false)
 		case hijacked > 0:
-			notice(c, "检测到 "+itoa(hijacked)+" 个浏览器的配置被其他程序覆盖（官方桌面端每次启动都会重写注册表）。恢复后建议关闭或卸载官方桌面客户端，否则会再次被覆盖。", false)
+			notice(c, locales.BrowsersHijacked(hijacked), false)
 		default:
-			notice(c, bs.notice, bs.noticeOK)
+			notice(c, bs.notice.text(), bs.notice.ok)
 		}
 		ui.Divider(c)
 		ui.List(c, nil, len(app.browsers.rows), func(i int) {
 			app.browserRow(c, i)
 		}).Grow(1)
 		ui.Divider(c)
-		muted(c, "manifest 记录本工具 exe 的绝对路径；移动程序位置后到对应行点「修复」重写。")
+		muted(c, locales.BrowsersManifestHint())
 	})
 }
 
@@ -62,7 +60,7 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, b.name).Bold()
 				if !b.installed {
-					ui.Text(c, "未安装").FontSize(11).TextColor(t.TextMuted).Tooltip(browserAbsentHint())
+					ui.Text(c, locales.BrowserNotInstalled()).FontSize(11).TextColor(t.TextMuted).Tooltip(browserAbsentHint())
 				}
 			})
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
@@ -78,58 +76,58 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 		case bs.confirmCover == i:
 			// The overwrite needs a second click: the reference only writes
 			// over a foreign manifest after a human confirms.
-			ui.Button(c, "取消").OnClick(func() { bs.confirmCover = -1 })
-			confirm := "确认覆盖"
+			ui.Button(c, locales.LoginCancel()).OnClick(func() { bs.confirmCover = -1 })
+			confirm := locales.BrowsersActionConfirmOverwrite()
 			if b.state == browserHijacked {
-				confirm = "确认恢复"
+				confirm = locales.BrowsersActionConfirmRestore()
 			}
 			ui.PrimaryButton(c, confirm).OnClick(func() {
 				bs.confirmCover = -1
 				bs.install(b)
 			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
 		case b.state == browserOurs:
-			ui.Button(c, "修复").OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
-			ui.Button(c, "卸载").OnClick(func() { bs.uninstall(b) })
+			ui.Button(c, locales.BrowsersActionRepair()).OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
+			ui.Button(c, locales.BrowsersActionUninstall()).OnClick(func() { bs.uninstall(b) })
 		case b.state == browserForeign:
-			ui.Button(c, "覆盖安装").OnClick(func() {
+			ui.Button(c, locales.BrowsersActionOverwrite()).OnClick(func() {
 				bs.confirmCover = i
-				bs.notice = ""
+				bs.notice = pageNotice{}
 			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
 			if bs.confirmUninstall == i {
 				// Deleting a manifest that may be the official client's deserves
 				// the same second click as overwriting one.
-				ui.Button(c, "取消").OnClick(func() { bs.confirmUninstall = -1 })
-				ui.PrimaryButton(c, "确认卸载").OnClick(func() {
+				ui.Button(c, locales.LoginCancel()).OnClick(func() { bs.confirmUninstall = -1 })
+				ui.PrimaryButton(c, locales.BrowsersActionConfirmUninstall()).OnClick(func() {
 					bs.confirmUninstall = -1
 					bs.uninstall(b)
 				})
 				break
 			}
-			ui.Button(c, "卸载").OnClick(func() {
+			ui.Button(c, locales.BrowsersActionUninstall()).OnClick(func() {
 				bs.confirmUninstall = i
-				bs.notice = ""
+				bs.notice = pageNotice{}
 			})
 		case b.state == browserHijacked:
 			// Recovery is an overwrite of a foreign value, so it gets the same
 			// two-step confirmation as the foreign row.
-			ui.PrimaryButton(c, "恢复安装").OnClick(func() {
+			ui.PrimaryButton(c, locales.BrowsersActionRestore()).OnClick(func() {
 				bs.confirmCover = i
-				bs.notice = ""
+				bs.notice = pageNotice{}
 			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
 			if bs.confirmUninstall == i {
-				ui.Button(c, "取消").OnClick(func() { bs.confirmUninstall = -1 })
-				ui.PrimaryButton(c, "确认卸载").OnClick(func() {
+				ui.Button(c, locales.LoginCancel()).OnClick(func() { bs.confirmUninstall = -1 })
+				ui.PrimaryButton(c, locales.BrowsersActionConfirmUninstall()).OnClick(func() {
 					bs.confirmUninstall = -1
 					bs.uninstall(b)
 				})
 				break
 			}
-			ui.Button(c, "卸载").OnClick(func() {
+			ui.Button(c, locales.BrowsersActionUninstall()).OnClick(func() {
 				bs.confirmUninstall = i
-				bs.notice = ""
+				bs.notice = pageNotice{}
 			})
 		default:
-			ui.Button(c, "安装").OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
+			ui.Button(c, locales.BrowsersActionInstall()).OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
 		}
 	})
 }
@@ -137,19 +135,19 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 // browserAbsentHint explains a disabled write action: a browser this machine
 // does not have has no registration point to write.
 func browserAbsentHint() string {
-	return "本机未检测到该浏览器，没有可写入的注册点"
+	return locales.BrowserAbsentHint()
 }
 
 func browserStatusLabel(state int) string {
 	switch state {
 	case browserOurs:
-		return "已安装（biowarden）"
+		return locales.BrowserStatusOurs()
 	case browserHijacked:
-		return "已被其他程序覆盖（可能是官方 Bitwarden 桌面客户端）"
+		return locales.BrowserStatusHijacked()
 	case browserForeign:
-		return "已存在（可能是官方 Bitwarden 桌面客户端的配置）"
+		return locales.BrowserStatusForeign()
 	default:
-		return "未安装"
+		return locales.BrowserStatusMissing()
 	}
 }
 
@@ -171,25 +169,25 @@ func browserStatusColor(t *ui.Theme, state int) ui.Color {
 // the placeholder the page has always shown.
 func connectionLabel(now, at time.Time) string {
 	if at.IsZero() {
-		return "扩展未连接"
+		return locales.BrowserConnectionNever()
 	}
-	return "已连接过 · " + relativeTime(now, at)
+	return locales.BrowserConnectionConnected(relativeTime(now, at))
 }
 
 // relativeTime renders a past instant as a short phrase. It is pure so the
 // thresholds can be tested without a clock, and it clamps a future stamp (a
-// clock that jumped) to "刚刚" rather than printing a negative age.
+// clock that jumped) to "just now" rather than printing a negative age.
 func relativeTime(now, at time.Time) string {
 	d := now.Sub(at)
 	switch {
 	case d < time.Minute:
-		return "刚刚"
+		return locales.BrowserRelativeJustNow()
 	case d < time.Hour:
-		return itoa(int(d.Minutes())) + " 分钟前"
+		return locales.BrowserRelativeMinutes(int(d.Minutes()))
 	case d < 24*time.Hour:
-		return itoa(int(d.Hours())) + " 小时前"
+		return locales.BrowserRelativeHours(int(d.Hours()))
 	case d < 30*24*time.Hour:
-		return itoa(int(d.Hours()/24)) + " 天前"
+		return locales.BrowserRelativeDays(int(d.Hours() / 24))
 	default:
 		return at.Format("2006-01-02")
 	}

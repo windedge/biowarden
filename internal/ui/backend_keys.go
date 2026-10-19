@@ -3,12 +3,25 @@ package ui
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/secrets"
+	"github.com/windedge/biowarden/locales"
+)
+
+// The Hello failures are typed sentinels, never user-facing text: errorText
+// maps each to wording in the language the app shows, and every caller that
+// puts one on screen goes through it.
+var (
+	errHelloCallFailed  = errors.New("ui: windows hello call failed")
+	errHelloCanceled    = errors.New("ui: windows hello canceled")
+	errHelloUnavailable = errors.New("ui: windows hello unavailable")
+	errHelloLocked      = errors.New("ui: windows hello locked")
+	errHelloBusy        = errors.New("ui: windows hello busy")
+	errHelloUnknown     = errors.New("ui: windows hello unknown result")
+	errKeyNotBase64     = errors.New("ui: key is not valid base64")
 )
 
 // realKeys is the Keys page against the real seams: the Credential Manager
@@ -52,9 +65,9 @@ func (k *realKeys) accounts() ([]accountRow, error) {
 func (k *realKeys) save(userID, keyB64 string) error {
 	key, err := base64.StdEncoding.DecodeString(strings.TrimSpace(keyB64))
 	if err != nil {
-		return fmt.Errorf("密钥不是合法的 base64：%v", err)
+		return newLoginError(errKeyNotBase64, err)
 	}
-	if err := k.verify("保存 biowarden 密钥"); err != nil {
+	if err := k.verify(locales.HelloReasonSaveKey()); err != nil {
 		return err
 	}
 	acc := secrets.Account{UserID: strings.TrimSpace(userID), CreatedAt: time.Now()}
@@ -65,7 +78,7 @@ func (k *realKeys) save(userID, keyB64 string) error {
 // reference unlocks before it touches stored key material, so deletion is not
 // a silent bypass of the gate.
 func (k *realKeys) remove(userID string) error {
-	if err := k.verify("删除 biowarden 密钥"); err != nil {
+	if err := k.verify(locales.HelloReasonRemoveKey()); err != nil {
 		return err
 	}
 	return k.store.Remove(userID)
@@ -79,27 +92,27 @@ func (k *realKeys) verify(reason string) error {
 	return verifyHello(k.verifier, reason)
 }
 
-// verifyHello turns a Hello outcome into one line a human can act on. A
+// verifyHello turns a Hello outcome into the typed sentinel the UI words. A
 // refused or unusable check must read differently from a broken call. It is
 // shared by the key card and the account backend so both write gates behave
 // and word their failures the same way.
 func verifyHello(verifier hello.Verifier, reason string) error {
 	result, err := verifier.Verify(reason)
 	if err != nil {
-		return fmt.Errorf("Windows Hello 调用失败：%v", err)
+		return newLoginError(errHelloCallFailed, err)
 	}
 	switch result {
 	case hello.Verified:
 		return nil
 	case hello.Canceled:
-		return errors.New("已取消 Windows Hello 验证")
+		return errHelloCanceled
 	case hello.Unavailable:
-		return errors.New("此电脑未配置 Windows Hello")
+		return errHelloUnavailable
 	case hello.Locked:
-		return errors.New("Windows Hello 已被锁定，请稍后再试")
+		return errHelloLocked
 	case hello.Busy:
-		return errors.New("Windows Hello 暂时不可用（设备忙）")
+		return errHelloBusy
 	default:
-		return fmt.Errorf("Windows Hello 返回未知结果：%v", result)
+		return newLoginError(errHelloUnknown, result)
 	}
 }

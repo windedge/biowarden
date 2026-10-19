@@ -55,7 +55,7 @@ func (s *loginWindow) credentialsForm(c *ui.Context) {
 			ui.Field(c, locales.LoginServer(), func() {
 				entered = ui.TextInput(c.Key("login-server"), &s.serverURL).
 					Placeholder(defaultServerURL).Disabled(s.busy).Submitted() || entered
-			}).Error(loginErrorText(s.serverErr))
+			}).Error(errorText(s.serverErr))
 		})
 		muted(c, locales.LoginServerHint())
 	})

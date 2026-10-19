@@ -47,6 +47,10 @@ type appState struct {
 	// browsersWin is the bulk-overwrite confirmation dialog while it is up;
 	// nil once it closed.
 	browsersWin *mygo.Window
+	// browsersConfirmLocaleOff stops the confirmation dialog's language
+	// listener; nil while no dialog is up. Like the login window, the dialog
+	// is rebuilt per bulk install, so its listener is too.
+	browsersConfirmLocaleOff func()
 
 	// mainWindow is the window start creates; the login window is its modal
 	// child, and the login state needs it to open one.

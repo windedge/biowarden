@@ -2,7 +2,6 @@ package ui
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -31,7 +30,7 @@ type browsersState struct {
 	confirmCover     int
 	confirmUninstall int
 
-	// bulk holds the foreign and hijacked rows "一键全部安装" collected into
+	// bulk holds the foreign and hijacked rows "Install all" collected into
 	// one confirmation, instead of skipping them row by row. Empty when no
 	// dialog is up. bulkInstalled, bulkFailed and bulkAbsent carry the rest of
 	// the button's summary (written, failed, and not installed), so the dialog
@@ -46,8 +45,7 @@ type browsersState struct {
 	openConfirmWindow  func()
 	closeConfirmWindow func()
 
-	notice   string
-	noticeOK bool
+	notice pageNotice
 }
 
 type browserRow struct {
@@ -65,7 +63,8 @@ type browserRow struct {
 
 	// lastConnectedAt is when this browser's extension last reached the host,
 	// zero when it never has. The host writes it per connection; the row shows
-	// "已连接过 · <relative time>" from it and "扩展未连接" while zero.
+	// "connected · <relative time>" from it and "extension never connected"
+	// while zero.
 	lastConnectedAt time.Time
 }
 
@@ -95,8 +94,7 @@ func (s *browsersState) tick(c *ui.Context) {
 func (s *browsersState) reload() {
 	rows, err := s.backend.refresh()
 	if err != nil {
-		s.notice = "读取浏览器注册状态失败：" + err.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeBrowsersReadFailed, err: err}
 		return
 	}
 	s.rows = rows
@@ -137,12 +135,12 @@ func (s *browsersState) installAll() {
 	s.bulk = takeovers
 	s.bulkInstalled, s.bulkFailed, s.bulkAbsent = installed, failed, absent
 	if len(takeovers) == 0 {
-		s.notice, s.noticeOK = bulkInstallNotice(installed, failed, absent, 0)
+		s.notice = bulkNotice(installed, failed, absent, 0)
 		return
 	}
 	// The dialog owns the wording while it is up; the click that opened it
 	// must not leave a summary that reads as if the takeovers were skipped.
-	s.notice, s.noticeOK = "", false
+	s.notice = pageNotice{}
 	if s.openConfirmWindow != nil {
 		s.openConfirmWindow()
 	}
@@ -163,7 +161,7 @@ func (s *browsersState) confirmBulk() {
 	installed := s.bulkInstalled + taken
 	s.bulk, s.bulkInstalled, s.bulkFailed, s.bulkAbsent = nil, 0, nil, nil
 	s.reload()
-	s.notice, s.noticeOK = bulkInstallNotice(installed, failed, absent, 0)
+	s.notice = bulkNotice(installed, failed, absent, 0)
 	s.closeConfirm()
 }
 
@@ -182,10 +180,10 @@ func (s *browsersState) applyBulkCancel() {
 	installed, failed, absent, left := s.bulkInstalled, s.bulkFailed, s.bulkAbsent, len(s.bulk)
 	s.bulk, s.bulkInstalled, s.bulkFailed, s.bulkAbsent = nil, 0, nil, nil
 	if left == 0 {
-		s.notice, s.noticeOK = "", true
+		s.notice = pageNotice{ok: true}
 		return
 	}
-	s.notice, s.noticeOK = bulkInstallNotice(installed, failed, absent, left)
+	s.notice = bulkNotice(installed, failed, absent, left)
 }
 
 // closeConfirm asks the GUI to destroy the dialog. It is a no-op in tests.
@@ -195,34 +193,28 @@ func (s *browsersState) closeConfirm() {
 	}
 }
 
-// bulkInstallNotice is the one summary the bulk install keeps: what was
-// written, what failed, the browsers this machine does not have, and the
-// takeover rows a cancel left untouched (zero once the dialog was confirmed).
-// A missing browser is not a failure, so it does not turn the line orange.
-func bulkInstallNotice(installed int, failed, absent []string, left int) (string, bool) {
-	parts := []string{"已安装 " + itoa(installed) + " 个"}
-	if len(failed) > 0 {
-		parts = append(parts, "失败："+strings.Join(failed, "、"))
-	}
-	if len(absent) > 0 {
-		parts = append(parts, "未安装，跳过："+strings.Join(absent, "、"))
-	}
-	if left > 0 {
-		parts = append(parts, "跳过 "+itoa(left)+" 个（已取消覆盖，未改动）")
-	}
-	return strings.Join(parts, "；"), len(failed) == 0 && left == 0
+// bulkNotice is the one summary the bulk install keeps: what was written,
+// what failed, the browsers this machine does not have, and the takeover rows
+// a cancel left untouched (zero once the dialog was confirmed). A missing
+// browser is not a failure, so it does not turn the line orange.
+func bulkNotice(installed int, failed, absent []string, left int) pageNotice {
+	ok := len(failed) == 0 && left == 0
+	return pageNotice{kind: noticeBrowsersBulk, ok: ok, bulk: &bulkSummary{
+		installed: installed,
+		failed:    failed,
+		absent:    absent,
+		left:      left,
+	}}
 }
 
 // install writes our manifest for the row, replacing whatever was registered.
 func (s *browsersState) install(row *browserRow) {
 	if err := s.backend.install(*row); err != nil {
-		s.notice = "写入 " + row.name + " 的 manifest 失败：" + err.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeBrowsersManifestWriteFailed, args: []string{row.name}, err: err}
 		return
 	}
 	s.reload()
-	s.notice = "已为 " + row.name + " 写入 manifest"
-	s.noticeOK = true
+	s.notice = pageNotice{kind: noticeBrowsersManifestWritten, args: []string{row.name}, ok: true}
 }
 
 // uninstall removes our manifest, unless the registration is foreign: then the
@@ -232,13 +224,10 @@ func (s *browsersState) uninstall(row *browserRow) {
 	s.reload()
 	switch {
 	case errors.Is(err, errForeignRegistration):
-		s.notice = "未删除 " + row.name + " 的注册：它可能属于官方 Bitwarden 桌面客户端"
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeBrowsersUninstallForeign, args: []string{row.name}}
 	case err != nil:
-		s.notice = "删除 " + row.name + " 的 manifest 失败：" + err.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeBrowsersManifestDeleteFailed, args: []string{row.name}, err: err}
 	default:
-		s.notice = "已删除 " + row.name + " 的 manifest"
-		s.noticeOK = true
+		s.notice = pageNotice{kind: noticeBrowsersManifestDeleted, args: []string{row.name}, ok: true}
 	}
 }

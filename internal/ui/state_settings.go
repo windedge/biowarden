@@ -10,7 +10,30 @@ import (
 	"github.com/windedge/biowarden/locales"
 )
 
-var logLevels = []string{"错误", "信息", "调试"}
+var logLevels = []logLevel{logLevelError, logLevelInfo, logLevelDebug}
+
+// logLevel is the Settings page's log-level choice. It is an enum, not a
+// display string, so its label follows the language and choosing one never
+// writes a translated label back as the value.
+type logLevel int
+
+const (
+	logLevelError logLevel = iota
+	logLevelInfo
+	logLevelDebug
+)
+
+// label names the level in the language the app shows.
+func (l logLevel) label() string {
+	switch l {
+	case logLevelError:
+		return locales.SettingsLogLevelError()
+	case logLevelDebug:
+		return locales.SettingsLogLevelDebug()
+	default:
+		return locales.SettingsLogLevelInfo()
+	}
+}
 
 // helloOutcome is one background Available result, handed to tick through a
 // channel so the blocking COM call never runs on the UI thread.
@@ -26,9 +49,13 @@ type settingsState struct {
 	hello   hello.Verifier
 	// locale is the app's language, which the Language row reads and sets.
 	locale localeBackend
+	// marker records whether the Language row's choice was explicit, so the
+	// row can tell it apart from the system's own languages on the next launch.
+	marker localeMarker
 	// languageTag is the Language row's choice: "" follows the system's
 	// languages. mygo keeps the choice across launches and reports only the
-	// language it shows, so newSettingsState guesses it back from those two.
+	// language it shows, so newSettingsState guesses it back from the marker
+	// when there is one, and from mygo's shown language otherwise.
 	languageTag string
 
 	launchAtLogin bool
@@ -38,11 +65,10 @@ type settingsState struct {
 	helloOK       bool
 	helloResult   chan helloOutcome
 
-	logLevel string
+	logLevel logLevel
 	logPath  string
 
-	notice   string
-	noticeOK bool
+	notice pageNotice
 }
 
 func newSettingsState() settingsState {
@@ -51,15 +77,15 @@ func newSettingsState() settingsState {
 		backend:     backend,
 		hello:       backend.Verifier,
 		locale:      mygoLocale{},
+		marker:      registryLocaleMarker{},
 		helloResult: make(chan helloOutcome, 1),
 		showTray:    true,
-		logLevel:    "信息",
+		logLevel:    logLevelInfo,
 		logPath:     backend.logPath(),
 	}
 	s.languageTag = s.guessLanguageTag()
 	if on, err := backend.autostart(); err != nil {
-		s.notice = "读取自启动设置失败：" + err.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeSettingsAutostartReadFailed, err: err}
 	} else {
 		s.launchAtLogin = on
 	}
@@ -81,14 +107,11 @@ func (s *settingsState) tick(c *ui.Context) {
 		s.helloOK = r.err == nil && r.ok
 		switch {
 		case r.err != nil:
-			s.notice = "Windows Hello 检测失败：" + r.err.Error()
-			s.noticeOK = false
+			s.notice = pageNotice{kind: noticeSettingsHelloCheckFailed, err: r.err}
 		case r.ok:
-			s.notice = "Windows Hello 可用"
-			s.noticeOK = true
+			s.notice = pageNotice{kind: noticeSettingsHelloAvailable, ok: true}
 		default:
-			s.notice = "Windows Hello 不可用：尚未配置人脸 / 指纹 / PIN"
-			s.noticeOK = false
+			s.notice = pageNotice{kind: noticeSettingsHelloUnavailable}
 		}
 	default:
 		c.After(100 * time.Millisecond)
@@ -112,16 +135,42 @@ func (s *settingsState) startHelloCheck() {
 func (s *settingsState) setAutostart() {
 	if err := s.backend.setAutostart(s.launchAtLogin); err != nil {
 		s.launchAtLogin = !s.launchAtLogin
-		s.notice = "设置自启动失败：" + err.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeSettingsAutostartWriteFailed, err: err}
 		return
 	}
 	if s.launchAtLogin {
-		s.notice = "已开启登录时自动启动"
+		s.notice = pageNotice{kind: noticeSettingsAutostartOn, ok: true}
 	} else {
-		s.notice = "已关闭登录时自动启动"
+		s.notice = pageNotice{kind: noticeSettingsAutostartOff, ok: true}
 	}
-	s.noticeOK = true
+}
+
+// logLevelSelect renders the log-level row with the enum's labels, as
+// languageSelect does, so the options follow the language while the value
+// stays an enum the page can read back.
+func (s *settingsState) logLevelSelect(c *ui.Context) {
+	t := c.Theme()
+	sel := ui.SelectBase(c, &s.logLevel)
+	sel.Trigger.Gap(6).Padding(4, 10).Radius(t.Radius).
+		Background(t.Surface).Border(1, t.Border).
+		Justify(ui.SpaceBetween).Width(settingsSelectWidth).
+		Label(locales.SettingsLogLevelLabel()).
+		Children(func() {
+			ui.Text(c, s.logLevel.label()).SingleLine()
+			ui.Text(c, "▾").TextColor(t.TextMuted)
+		})
+	sel.Popup(func(panel ui.Element) {
+		panel.Margin(4, 0, 0, 0).Padding(4).Radius(t.Radius+2).
+			Background(t.Background).Border(1, t.Border).
+			Shadow(0, 6, 20, 0, ui.RGBA(0, 0, 0, 0.18))
+		for _, lv := range logLevels {
+			item := sel.Item(lv).Padding(6, 10).Radius(t.Radius)
+			if item.Highlighted() {
+				item.Background(t.Accent).TextColor(t.AccentText)
+			}
+			item.Children(func() { ui.Text(c, lv.label()).SingleLine() })
+		}
+	})
 }
 
 // languageOptions returns the Language row's choices: "" for the system's
@@ -190,8 +239,14 @@ func (s *settingsState) languageLabelFor(tag string) string {
 }
 
 // guessLanguageTag reports in which language the app shows a choice of its
-// own: it follows the system's languages while it shows the one they ask for.
+// own: the persisted marker when a human chose one, otherwise it follows the
+// system's languages while the app shows the one they ask for.
 func (s *settingsState) guessLanguageTag() string {
+	if s.marker != nil {
+		if tag, ok := s.marker.load(); ok {
+			return tag
+		}
+	}
 	if s.locale == nil {
 		return ""
 	}
@@ -202,10 +257,18 @@ func (s *settingsState) guessLanguageTag() string {
 }
 
 // setLanguage shows tag at once, "" for the system's languages again. mygo
-// keeps it for the next launches, so the page stores nothing.
+// keeps it for the next launches; the marker is what tells a later launch the
+// choice was explicit rather than the system guess.
 func (s *settingsState) setLanguage(tag string) {
 	s.languageTag = tag
 	if s.locale != nil {
 		s.locale.setLocale(tag)
+	}
+	if s.marker != nil {
+		if tag == "" {
+			s.marker.clear()
+		} else {
+			s.marker.save(tag)
+		}
 	}
 }

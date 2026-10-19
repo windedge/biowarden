@@ -5,6 +5,7 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+	"github.com/windedge/biowarden/locales"
 )
 
 // The bulk-overwrite confirmation is a modal child of the main window, like
@@ -17,7 +18,7 @@ const (
 
 // showBrowsersConfirmWindow creates the confirmation dialog, or brings the one
 // already up to the front. It runs on the main thread, in the click on
-// "一键全部安装".
+// "Install all".
 func (app *appState) showBrowsersConfirmWindow() {
 	if app.browsersWin != nil {
 		app.browsersWin.Focus()
@@ -26,11 +27,11 @@ func (app *appState) showBrowsersConfirmWindow() {
 	if app.mainWindow == nil {
 		// Without a parent the dialog would not be modal; the tray app always
 		// builds one first, so this only guards an early or failed start.
-		log.Println("biowarden: 覆盖确认窗缺少主窗口，未创建")
+		log.Println("biowarden: the confirm window has no main window; not creating it")
 		return
 	}
 	win := mygo.NewWindow(mygo.WindowOptions{
-		Title:           "确认覆盖浏览器注册",
+		Title:           locales.BrowsersConfirmTitle(),
 		Width:           browsersConfirmWidth,
 		Height:          browsersConfirmHeight,
 		MinWidth:        browsersConfirmWidth,
@@ -41,12 +42,19 @@ func (app *appState) showBrowsersConfirmWindow() {
 		Content:         ui.View(app.browsers.confirmView),
 	})
 	app.browsersWin = win
+	// The dialog is built once per bulk install, so its title follows the app's
+	// language through a listener that is dropped with the window, as the login
+	// window's does.
+	app.browsersConfirmLocaleOff = mygo.App.OnLocaleChanged(func(string) {
+		win.SetTitle(locales.BrowsersConfirmTitle())
+	})
 	win.OnClose(func(e *mygo.CloseEvent) {
 		// Closing the dialog means Cancel: nothing is written. The window
 		// closes on its own, and OnClosed drops the handle.
 		app.browsers.applyBulkCancel()
 	})
 	win.OnClosed(func() {
+		app.unsubscribeBrowsersConfirmLocale()
 		app.browsersWin = nil
 		// The page behind was disabled while the modal was up, so it has to
 		// redraw with whatever the decision landed.
@@ -64,6 +72,16 @@ func (app *appState) hideBrowsersConfirmWindow() {
 	}
 }
 
+// unsubscribeBrowsersConfirmLocale drops the confirmation dialog's language
+// listener. The dialog is destroyed once per bulk install, so the off function
+// runs with it; nil-ing the field keeps a second call a no-op.
+func (app *appState) unsubscribeBrowsersConfirmLocale() {
+	if app.browsersConfirmLocaleOff != nil {
+		app.browsersConfirmLocaleOff()
+		app.browsersConfirmLocaleOff = nil
+	}
+}
+
 // confirmView is the dialog's page: the intro, one card per registration the
 // bulk install would take over, and the two decisions. The column sits in a
 // Scroll so a machine with several rows never clips the buttons.
@@ -72,21 +90,21 @@ func (s *browsersState) confirmView(c *ui.Context) {
 	ui.Column(c).Fill().Background(t.Background).Children(func() {
 		ui.Scroll(c).Grow(1).Children(func() {
 			ui.Column(c).Padding(16).Gap(12).Children(func() {
-				ui.Text(c, "确认覆盖浏览器注册").FontSize(16).Bold()
+				ui.Text(c, locales.BrowsersConfirmTitle()).FontSize(16).Bold()
 				muted(c, s.confirmIntro())
 				for _, row := range s.bulk {
 					s.confirmRow(c, row)
 				}
-				muted(c, "覆盖只写本机注册表与 manifest 文件，不涉及密钥，不需要 Windows Hello 确认。")
+				muted(c, locales.BrowsersConfirmNote())
 				if s.hasForeign() {
-					muted(c, "官方 Bitwarden 桌面端每次启动可能再次重写注册表；不再使用它时建议关闭或卸载。")
+					muted(c, locales.BrowsersConfirmOfficialNote())
 				}
 				ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 					if ui.PrimaryButton(c, s.confirmLabel()).Clicked() {
 						s.confirmBulk()
 						c.Invalidate()
 					}
-					if ui.Button(c, "取消").Clicked() {
+					if ui.Button(c, locales.LoginCancel()).Clicked() {
 						s.cancelBulk()
 						c.Invalidate()
 					}
@@ -100,10 +118,9 @@ func (s *browsersState) confirmView(c *ui.Context) {
 // worded as a recovery rather than a takeover of someone else's registration.
 func (s *browsersState) confirmIntro() string {
 	if s.hasForeign() {
-		return "以下注册当前不属于 biowarden，可能来自官方 Bitwarden 桌面端或其他工具。" +
-			"确认后改由 biowarden 接管，官方桌面端的生物解锁将失效；取消则不做任何改动。"
+		return locales.BrowsersConfirmIntroForeign()
 	}
-	return "以下浏览器里 biowarden 的配置已被其他程序覆盖。确认后恢复为 biowarden 的 manifest；取消则不做任何改动。"
+	return locales.BrowsersConfirmIntroHijacked()
 }
 
 // hasForeign reports whether the dialog lists a plain foreign registration,
@@ -121,9 +138,9 @@ func (s *browsersState) hasForeign() bool {
 // hijacked-only list is a recovery, anything else is a takeover.
 func (s *browsersState) confirmLabel() string {
 	if s.hasForeign() {
-		return "确认覆盖"
+		return locales.BrowsersActionConfirmOverwrite()
 	}
-	return "确认恢复"
+	return locales.BrowsersActionConfirmRestore()
 }
 
 // confirmRow is one registration card: whose it is now, what it points at, and
@@ -133,11 +150,11 @@ func (s *browsersState) confirmRow(c *ui.Context, row browserRow) {
 	ui.Column(c).Padding(10, 8).Gap(4).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).Children(func() {
 		ui.Text(c, row.name+" · "+takeoverActionLabel(row.state)).Bold()
-		current := "当前指向：" + row.path + takeoverOwnerHint(row.state)
+		current := locales.BrowsersConfirmCurrent(row.path, takeoverOwnerHint(row.state))
 		ui.Text(c, current).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(current)
-		target := "覆盖后指向：" + row.installPath
+		target := locales.BrowsersConfirmTarget(row.installPath)
 		if row.state == browserHijacked {
-			target = "恢复为：" + row.installPath
+			target = locales.BrowsersConfirmRestoreTarget(row.installPath)
 		}
 		ui.Text(c, target).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(target)
 	})
@@ -147,9 +164,9 @@ func (s *browsersState) confirmRow(c *ui.Context, row browserRow) {
 // else's registration being taken over, a hijacked one is ours being restored.
 func takeoverActionLabel(state int) string {
 	if state == browserHijacked {
-		return "恢复 biowarden 的配置"
+		return locales.BrowsersTakeoverRestore()
 	}
-	return "接管此前属于其他程序的注册"
+	return locales.BrowsersTakeoverForeign()
 }
 
 // takeoverOwnerHint says who the current value likely belongs to. A hijacked
@@ -157,7 +174,7 @@ func takeoverActionLabel(state int) string {
 // worry from a value we never wrote.
 func takeoverOwnerHint(state int) string {
 	if state == browserHijacked {
-		return "（biowarden 的配置已被它覆盖）"
+		return locales.BrowsersTakeoverOwnerHijacked()
 	}
-	return "（可能是官方 Bitwarden 桌面端）"
+	return locales.BrowsersTakeoverOwnerForeign()
 }

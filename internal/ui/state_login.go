@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
-
-	"github.com/windedge/biowarden/locales"
 )
 
 // loginWindow is the login window's working data: the form, the pending
@@ -35,7 +33,7 @@ type loginWindow struct {
 	// cloud, and checkServer normalizes whatever the human typed.
 	serverURL string
 	// serverErr is the checkServer refusal, shown under the address field so
-	// a typo is visible where it was made; loginErrorText says it at draw time.
+	// a typo is visible where it was made; errorText says it at draw time.
 	serverErr    error
 	advancedOpen bool
 
@@ -192,11 +190,13 @@ func (s *loginWindow) noticeHeight() int {
 
 // noticeLines is how many lines text wraps to at the notice's width, which is
 // the window minus the column's 16 DIP padding on both sides. The renderer's
-// 12 DIP font fits 32 wide glyphs (CJK) or 64 half-width characters on that
-// line, so the estimate counts a wide rune as two cells and any other as one.
-// The Scroll view still catches a text this estimate undercounts.
+// 12 DIP font fits 32 wide glyphs (CJK) or 56 half-width characters on that
+// line: proportional Latin text is wider than a monospace cell, so the estimate
+// uses 56 rather than the 64 a pure cell count would allow. The estimate counts
+// a wide rune as two cells and any other as one, and the Scroll view still
+// catches a text this estimate undercounts.
 func noticeLines(text string) int {
-	const cellsPerLine = 64
+	const cellsPerLine = 56
 	cells := 0
 	for _, r := range text {
 		if isWideRune(r) {
@@ -417,11 +417,9 @@ func (s *loginWindow) finishLogin(sess accountSession) {
 	s.page.reload()
 	if sess.warning != nil {
 		// The login itself succeeded; only keeping the session failed.
-		s.page.notice = loginErrorText(sess.warning)
-		s.page.noticeOK = false
+		s.page.notice = failureNotice(sess.warning)
 	} else {
-		s.page.notice = locales.LoginNoticeLoggedIn(sess.email)
-		s.page.noticeOK = true
+		s.page.notice = pageNotice{kind: noticeAccountLoggedIn, args: []string{sess.email}, ok: true}
 	}
 	s.clearSecrets()
 	s.showing = false
@@ -444,8 +442,7 @@ func (s *loginWindow) applyCancel(sess accountSession, err error) {
 		return
 	}
 	s.page.session = sess
-	s.page.notice = locales.LoginNoticeCancelled()
-	s.page.noticeOK = true
+	s.page.notice = pageNotice{kind: noticeAccountCancelled, ok: true}
 	s.clearSecrets()
 	s.showing = false
 	s.close()

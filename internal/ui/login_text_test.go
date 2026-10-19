@@ -37,21 +37,21 @@ func TestLoginErrorTextMapsSentinels(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			appLanguage(t, "en")
-			if got := loginErrorText(tc.err); !strings.Contains(got, tc.en) {
-				t.Errorf("en loginErrorText(%v) = %q, want it to contain %q", tc.err, got, tc.en)
+			if got := errorText(tc.err); !strings.Contains(got, tc.en) {
+				t.Errorf("en errorText(%v) = %q, want it to contain %q", tc.err, got, tc.en)
 			}
 			appLanguage(t, "zh-Hans")
-			if got := loginErrorText(tc.err); !strings.Contains(got, tc.zh) {
-				t.Errorf("zh loginErrorText(%v) = %q, want it to contain %q", tc.err, got, tc.zh)
+			if got := errorText(tc.err); !strings.Contains(got, tc.zh) {
+				t.Errorf("zh errorText(%v) = %q, want it to contain %q", tc.err, got, tc.zh)
 			}
 		})
 	}
-	if got := loginErrorText(nil); got != "" {
-		t.Errorf("loginErrorText(nil) = %q, want empty", got)
+	if got := errorText(nil); got != "" {
+		t.Errorf("errorText(nil) = %q, want empty", got)
 	}
 	other := errors.New("login failed hard")
-	if got := loginErrorText(other); got != "login failed hard" {
-		t.Errorf("loginErrorText(unknown) = %q, want the error's own message", got)
+	if got := errorText(other); got != "login failed hard" {
+		t.Errorf("errorText(unknown) = %q, want the error's own message", got)
 	}
 }
 
@@ -103,26 +103,29 @@ func TestLoginNoticeFollowsTheLanguage(t *testing.T) {
 	}
 }
 
-// The height target and the drawing share loginNotice.text, so a language
-// change moves both: the line's estimated height follows the text it renders.
+// The height target and the drawing share loginNotice.text, so the height
+// follows the wording the current language draws: a longer English notice
+// wraps to another row where the Chinese one fits on one.
 func TestLoginNoticeHeightFollowsTheLanguage(t *testing.T) {
 	appLanguage(t, "zh-Hans")
 	f := newLoginFixture(t, &stubAccount{sess: loggedOutSession()})
 	beginLogin(f, "ada@example.com", "secret")
 	f.login.notice = loginNotice{kind: loginNoticeTwoFactor}
-	zhHeight := f.login.targetHeight()
+	zhText, zhHeight := f.login.notice.text(), f.login.targetHeight()
 
 	appLanguage(t, "en")
-	enHeight := f.login.targetHeight()
+	enText, enHeight := f.login.notice.text(), f.login.targetHeight()
 
+	if zhText == enText {
+		t.Fatal("the notice says the same thing in both languages")
+	}
 	if zhHeight != loginWindowHeight+loginWindowNoticeHeight {
 		t.Errorf("zh target = %d, want the opening height plus one notice row", zhHeight)
 	}
-	if enHeight != zhHeight {
-		t.Errorf("target moved from %d to %d on a language change; height must come from the drawn text", zhHeight, enHeight)
-	}
-	if want := f.login.noticeHeight(); enHeight != loginWindowHeight+want {
-		t.Errorf("target %d, want the opening height plus noticeHeight() %d", enHeight, want)
+	// The English wording is longer and wraps to a second line, so the target
+	// grows with it: the height comes from the drawn text, not the state.
+	if want := loginWindowHeight + loginWindowNoticeHeight + loginWindowNoticeLineHeight; enHeight != want {
+		t.Errorf("en target = %d, want the opening height plus two notice rows (%d)", enHeight, want)
 	}
 }
 

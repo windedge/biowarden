@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/windedge/biowarden/locales"
 )
 
 // accountState is the Account page's working data: the login session the UI
@@ -57,8 +58,7 @@ type accountState struct {
 	busy    bool
 	results chan func(*accountState)
 
-	notice   string
-	noticeOK bool
+	notice pageNotice
 }
 
 type accountRow struct {
@@ -131,7 +131,7 @@ func (s *accountState) async(work func() func(*accountState)) {
 		return
 	}
 	s.busy = true
-	s.notice = ""
+	s.notice = pageNotice{}
 	go func() { s.results <- work() }()
 }
 
@@ -218,14 +218,11 @@ func (s *accountState) applyReload(rows []accountRow, err error, available bool,
 func (s *accountState) applyLocal(rows []accountRow, err error, available bool, availErr error) {
 	switch {
 	case err != nil:
-		s.notice = "读取已保存账户失败：" + err.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeAccountKeysReadFailed, err: err}
 	case availErr != nil:
-		s.notice = "检查 Windows Hello 失败：" + availErr.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeAccountHelloCheckFailed, err: availErr}
 	case !available:
-		s.notice = "此电脑未配置 Windows Hello，无法保存或删除密钥。"
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeAccountHelloUnavailable}
 	}
 	s.accounts = s.accounts[:0]
 	for i := range rows {
@@ -253,14 +250,11 @@ func (s *accountState) applyLocal(rows []accountRow, err error, available bool, 
 func (s *accountState) applySession(sess accountSession, sessErr error) {
 	switch {
 	case errors.Is(sessErr, errSessionRevoked):
-		s.notice = "登录会话已失效，已清除本地会话；密钥仍已保存，解锁不受影响。"
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeAccountSessionRevoked}
 	case errors.Is(sessErr, errSessionUnverified):
-		s.notice = "暂时无法验证登录会话（网络或服务器问题），已保守显示为未登录；密钥仍已保存。"
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeAccountSessionUnverified}
 	case sessErr != nil:
-		s.notice = "读取登录状态失败：" + sessErr.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeAccountSessionReadFailed, err: sessErr}
 	}
 	if sessErr == nil || errors.Is(sessErr, errSessionRevoked) || errors.Is(sessErr, errSessionUnverified) {
 		s.session = sess
@@ -282,12 +276,10 @@ func (s *accountState) saveKey() {
 
 func (s *accountState) applySave(err error) {
 	if err != nil {
-		s.notice = err.Error()
-		s.noticeOK = false
+		s.notice = failureNotice(err)
 		return
 	}
-	s.notice = "密钥已保存，Windows Hello 验证通过。"
-	s.noticeOK = true
+	s.notice = pageNotice{kind: noticeAccountKeySaved, ok: true}
 	s.userId, s.keyB64 = "", ""
 	s.reload()
 }
@@ -296,19 +288,17 @@ func (s *accountState) testUnlock(acc *accountRow) {
 	keys := s.keys
 	id := acc.userID
 	s.async(func() func(*accountState) {
-		err := keys.verify("测试解锁 biowarden 密钥")
+		err := keys.verify(locales.HelloReasonTestUnlock())
 		return func(st *accountState) { st.applyUnlock(id, err) }
 	})
 }
 
 func (s *accountState) applyUnlock(id string, err error) {
 	if err != nil {
-		s.notice = err.Error()
-		s.noticeOK = false
+		s.notice = failureNotice(err)
 		return
 	}
-	s.notice = "验证通过：Windows Hello 已确认身份（userId=" + shortID(id) + "）"
-	s.noticeOK = true
+	s.notice = pageNotice{kind: noticeAccountVerified, args: []string{shortID(id)}, ok: true}
 }
 
 func (s *accountState) removeAccount(target *accountRow) {
@@ -330,8 +320,7 @@ func (s *accountState) removeAccount(target *accountRow) {
 
 func (s *accountState) applyRemove(id string, err, clearErr error) {
 	if err != nil {
-		s.notice = err.Error()
-		s.noticeOK = false
+		s.notice = failureNotice(err)
 		return
 	}
 	out := s.accounts[:0]
@@ -343,12 +332,10 @@ func (s *accountState) applyRemove(id string, err, clearErr error) {
 	s.accounts = out
 	if clearErr != nil {
 		// The key is deleted either way; only the session cleanup failed.
-		s.notice = "已删除该账户的密钥，但清除登录会话失败：" + clearErr.Error()
-		s.noticeOK = false
+		s.notice = pageNotice{kind: noticeAccountRemoveSessionFailed, err: clearErr}
 		return
 	}
-	s.notice = "已删除该账户的密钥。"
-	s.noticeOK = true
+	s.notice = pageNotice{kind: noticeAccountKeyRemoved, ok: true}
 }
 
 func (s *accountState) logout() {
@@ -357,8 +344,7 @@ func (s *accountState) logout() {
 		err := account.logout()
 		return func(st *accountState) {
 			if err != nil {
-				st.notice = err.Error()
-				st.noticeOK = false
+				st.notice = failureNotice(err)
 				return
 			}
 			st.session = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
@@ -366,10 +352,9 @@ func (s *accountState) logout() {
 			// not wait for any restore that could still be on the wire.
 			st.verified = true
 			// Reload first: a local read error it reports must not clobber
-			// the "已退出登录" line, so the line is set after it.
+			// the logged-out line, so the line is set after it.
 			st.reload()
-			st.notice = "已退出登录"
-			st.noticeOK = true
+			st.notice = pageNotice{kind: noticeAccountLoggedOut, ok: true}
 		}
 	})
 }

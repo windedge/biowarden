@@ -65,7 +65,7 @@ func cachedDetect(detect func() []registry.Browser) func() []registry.Browser {
 
 func (b *realBrowsers) refresh() ([]browserRow, error) {
 	// A state read failure is not worth failing the page: the row's indicator
-	// just stays at "扩展未连接" until the host has something to say.
+	// just stays at "extension never connected" until the host has something to say.
 	connections, _ := b.connections()
 	installed := make(map[registry.Browser]bool)
 	for _, br := range b.detect() {

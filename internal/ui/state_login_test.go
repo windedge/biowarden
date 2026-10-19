@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/windedge/biowarden/locales"
 )
 
 // loginFixture drives the login window's state machine without a window
@@ -116,7 +118,7 @@ func TestLoginWindowBadServerAddressShowsOnTheField(t *testing.T) {
 	if f.acct.loginCalls != 0 {
 		t.Fatalf("login ran despite the bad address (%d calls)", f.acct.loginCalls)
 	}
-	if got := loginErrorText(f.login.serverErr); !strings.Contains(got, "服务器地址无效") {
+	if got := errorText(f.login.serverErr); !strings.Contains(got, "服务器地址无效") {
 		t.Fatalf("serverErr = %q, want the validator's refusal", got)
 	}
 	if !f.login.advancedOpen {
@@ -129,8 +131,8 @@ func TestLoginWindowBadServerAddressShowsOnTheField(t *testing.T) {
 		t.Fatalf("window closed on a bad address: showing=%v closed=%d", f.login.showing, f.closed)
 	}
 	// The password must not leak into the wording.
-	if strings.Contains(f.login.notice.text(), "secret") || strings.Contains(loginErrorText(f.login.serverErr), "secret") {
-		t.Fatalf("the failure wording carries the password: %q / %q", f.login.notice.text(), loginErrorText(f.login.serverErr))
+	if strings.Contains(f.login.notice.text(), "secret") || strings.Contains(errorText(f.login.serverErr), "secret") {
+		t.Fatalf("the failure wording carries the password: %q / %q", f.login.notice.text(), errorText(f.login.serverErr))
 	}
 }
 
@@ -166,8 +168,8 @@ func TestLoginWindowLoginSuccessLandsOnAccountPageAndCloses(t *testing.T) {
 	if f.page.session.state != loginLoggedIn || f.page.session.userID != "user-1" {
 		t.Fatalf("session = %+v, want the logged-in session", f.page.session)
 	}
-	if f.page.notice != "已登录 ada@example.com" || !f.page.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want the success line", f.page.notice, f.page.noticeOK)
+	if got, want := f.page.notice.text(), locales.LoginNoticeLoggedIn("ada@example.com"); got != want || !f.page.notice.ok {
+		t.Fatalf("notice = %q ok=%v, want %q", got, f.page.notice.ok, want)
 	}
 	if f.login.password != "" {
 		t.Fatal("the master password stayed in the form after a successful login")
@@ -177,8 +179,8 @@ func TestLoginWindowLoginSuccessLandsOnAccountPageAndCloses(t *testing.T) {
 	}
 	// The reload finishLogin ran is synchronous, so the success line is
 	// already the page's only notice.
-	if f.page.notice != "已登录 ada@example.com" {
-		t.Fatalf("notice after reload = %q, want the success line", f.page.notice)
+	if got, want := f.page.notice.text(), locales.LoginNoticeLoggedIn("ada@example.com"); got != want {
+		t.Fatalf("notice after reload = %q, want %q", got, want)
 	}
 }
 
@@ -236,8 +238,8 @@ func TestLoginWindowTwoFactorStopRendersTheChallenge(t *testing.T) {
 	if m, ok := f.login.selectedMethod(); !ok || m.provider != twoFactorAuthenticator {
 		t.Fatalf("selectedMethod = %+v ok=%v, want the TOTP method", m, ok)
 	}
-	if !strings.Contains(f.login.notice.text(), "两步验证") {
-		t.Fatalf("notice = %q, want the 2FA hint", f.login.notice.text())
+	if got, want := f.login.notice.text(), locales.LoginNoticeTwoFactor(); got != want {
+		t.Fatalf("notice = %q, want %q", got, want)
 	}
 	if !f.login.showing || f.closed != 0 {
 		t.Fatalf("window closed at the 2FA stop: showing=%v closed=%d", f.login.showing, f.closed)
@@ -277,8 +279,8 @@ func TestLoginWindowUnsupportedMethodOffersOnlyCancel(t *testing.T) {
 	if strings.ContainsAny(errTwoFactorUnsupported.Error(), "暂不支持") {
 		t.Fatalf("errTwoFactorUnsupported carries user-facing text: %q", errTwoFactorUnsupported)
 	}
-	if got := loginErrorText(errTwoFactorUnsupported); got == "" {
-		t.Fatal("loginErrorText(errTwoFactorUnsupported) is empty")
+	if got := errorText(errTwoFactorUnsupported); got == "" {
+		t.Fatal("errorText(errTwoFactorUnsupported) is empty")
 	}
 }
 
@@ -300,7 +302,7 @@ func TestLoginWindowSubmitTwoFactorSuccess(t *testing.T) {
 	if f.acct.submitCalls != 1 || f.acct.lastProvider != twoFactorAuthenticator || f.acct.lastCode != "123456" {
 		t.Fatalf("submit2FA call = (%d, %s) after %d calls", f.acct.lastProvider, f.acct.lastCode, f.acct.submitCalls)
 	}
-	if f.page.session.state != loginLoggedIn || !f.page.noticeOK {
+	if f.page.session.state != loginLoggedIn || !f.page.notice.ok {
 		t.Fatalf("session = %+v, want the logged-in session", f.page.session)
 	}
 	if f.login.code != "" || f.login.challenge != nil {
@@ -329,8 +331,8 @@ func TestLoginWindowRejectedCodeKeepsThePrompt(t *testing.T) {
 	f.login.submit2FA()
 	drainLogin(t, f.login)
 
-	if !strings.Contains(f.login.notice.text(), "验证码未被接受") {
-		t.Fatalf("notice = %q, want the retry hint", f.login.notice.text())
+	if got, want := f.login.notice.text(), locales.LoginNoticeCodeRejected(); got != want {
+		t.Fatalf("notice = %q, want %q", got, want)
 	}
 	if f.login.code != "" {
 		t.Fatal("the rejected code stayed in the field")
@@ -392,7 +394,7 @@ func TestLoginWindowSendEmailCodeGoesOutOnce(t *testing.T) {
 	if f.acct.sendCalls != 1 {
 		t.Fatalf("sendEmailCode calls = %d, want 1", f.acct.sendCalls)
 	}
-	if !f.login.emailSent || !strings.Contains(f.login.notice.text(), "验证码已发送到 ada@example.com") {
+	if !f.login.emailSent || f.login.notice.text() != locales.LoginNoticeEmailSentTo("ada@example.com") {
 		t.Fatalf("emailSent=%v notice=%q, want a visible confirmation", f.login.emailSent, f.login.notice.text())
 	}
 
@@ -426,8 +428,8 @@ func TestLoginWindowCancelRestoresTheSessionAndCloses(t *testing.T) {
 	if f.page.session.state != loginLoggedIn || f.page.session.userID != "user-1" {
 		t.Fatalf("session = %+v, want the restored signed-in session", f.page.session)
 	}
-	if f.page.notice != "已取消登录" || !f.page.noticeOK {
-		t.Fatalf("notice = %q ok=%v, want the cancellation line", f.page.notice, f.page.noticeOK)
+	if got, want := f.page.notice.text(), locales.LoginNoticeCancelled(); got != want || !f.page.notice.ok {
+		t.Fatalf("notice = %q ok=%v, want %q", got, f.page.notice.ok, want)
 	}
 	if f.login.password != "" || f.login.code != "" || f.login.challenge != nil {
 		t.Fatalf("secrets outlived the cancel: password=%q code=%q", f.login.password, f.login.code)
@@ -468,8 +470,8 @@ func TestLoginWindowCloseRequestMeansCancel(t *testing.T) {
 	if f.acct.cancelCalls != 0 {
 		t.Fatalf("a close during a call started a cancel (%d calls)", f.acct.cancelCalls)
 	}
-	if !strings.Contains(f.login.notice.text(), "登录进行中") {
-		t.Fatalf("notice = %q, want the busy hint", f.login.notice.text())
+	if got, want := f.login.notice.text(), locales.LoginNoticeBusy(); got != want {
+		t.Fatalf("notice = %q, want %q", got, want)
 	}
 	drainLogin(t, f.login)
 	if !f.login.showing || f.closed != 0 {
@@ -698,6 +700,7 @@ func TestLoginWindowResizesWhenABadAddressOpensAdvanced(t *testing.T) {
 // Each two-factor stage has its own target: a single code method is the
 // smallest, and the rows the challenge adds raise it.
 func TestLoginWindowResizesForTwoFactorStages(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	cases := []struct {
 		name    string
 		methods []twoFactorMethod
@@ -780,7 +783,7 @@ func TestLoginWindowResizesForTheNotice(t *testing.T) {
 }
 
 // noticeLines has to agree with the renderer about where a line ends: the
-// status font fits 32 wide glyphs or 64 half-width characters in the notice's
+// status font fits 28 wide glyphs or 56 half-width characters in the notice's
 // 388 DIP width.
 func TestNoticeLinesCountsWrappedLines(t *testing.T) {
 	cases := []struct {
@@ -791,10 +794,10 @@ func TestNoticeLinesCountsWrappedLines(t *testing.T) {
 		{"no text", "", 0},
 		{"a short hint", "验证码已发送", 1},
 		{"the 2FA hint", "服务器要求两步验证，请输入验证码", 1},
-		{"a refused address", `服务器地址无效：auth: base URL "http://bad host" has no host`, 1},
-		{"32 wide glyphs", strings.Repeat("测", 32), 1},
-		{"33 wide glyphs", strings.Repeat("测", 33), 2},
-		{"65 half-width characters", strings.Repeat("a", 65), 2},
+		{"a refused address", `服务器地址无效：auth: base URL "http://bad host" has no host`, 2},
+		{"28 wide glyphs", strings.Repeat("测", 28), 1},
+		{"29 wide glyphs", strings.Repeat("测", 29), 2},
+		{"57 half-width characters", strings.Repeat("a", 57), 2},
 	}
 	for _, tc := range cases {
 		if got := noticeLines(tc.text); got != tc.want {

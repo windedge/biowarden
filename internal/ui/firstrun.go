@@ -2,7 +2,6 @@ package ui
 
 import (
 	"log"
-	"strings"
 
 	"github.com/windedge/biowarden/internal/registry"
 )
@@ -78,28 +77,19 @@ type firstRunResult struct {
 	markErr    error    // the marker write failed; the setup itself still stands
 }
 
-// notice renders the summary, and ok is false whenever a human has something
-// to look at: a skipped registration, a failed step, or a lost marker.
-func (r firstRunResult) notice() (string, bool) {
-	parts := []string{"首启自动配置：已注册 " + itoa(len(r.registered)) + " 个浏览器"}
-	if len(r.registered) > 0 {
-		parts[0] += "（" + strings.Join(r.registered, "、") + "）"
-	}
-	if len(r.skipped) > 0 {
-		parts = append(parts, "跳过 "+itoa(len(r.skipped))+" 个（注册可能属于官方客户端，未覆盖："+
-			strings.Join(r.skipped, "、")+"）")
-	}
-	if len(r.failed) > 0 {
-		parts = append(parts, "失败："+strings.Join(r.failed, "、"))
-	}
-	if len(r.absent) > 0 {
-		parts = append(parts, "未安装："+strings.Join(r.absent, "、"))
-	}
-	if r.markErr != nil {
-		parts = append(parts, "首启标记异常："+r.markErr.Error())
-	}
+// notice renders the summary as the Browsers page's one status line, and ok is
+// false whenever a human has something to look at: a skipped registration, a
+// failed step, or a lost marker. The wording is rendered from the catalog at
+// draw time through firstRunSummary.
+func (r firstRunResult) notice() pageNotice {
 	ok := len(r.failed) == 0 && len(r.skipped) == 0 && r.markErr == nil
-	return strings.Join(parts, "；"), ok
+	return pageNotice{kind: noticeBrowsersFirstRun, ok: ok, firstRun: &firstRunSummary{
+		registered: r.registered,
+		skipped:    r.skipped,
+		failed:     r.failed,
+		absent:     r.absent,
+		markErr:    r.markErr,
+	}}
 }
 
 // setup performs the one-time setup and reports what happened. The boolean is
@@ -190,9 +180,9 @@ func (app *appState) runFirstRun() {
 	if !firstRun {
 		return
 	}
-	app.browsers.notice, app.browsers.noticeOK = result.notice()
-	if notice := app.browsers.notice; notice != "" {
-		log.Println("biowarden: " + notice)
+	app.browsers.notice = result.notice()
+	if line := app.browsers.notice.text(); line != "" {
+		log.Println("biowarden: " + line)
 	}
 	// The login window opens whatever the setup did above: unlocking never
 	// depended on the browser registration.

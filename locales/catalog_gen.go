@@ -1067,3 +1067,2689 @@ func LoginStateLoggedIn() string { return In(i18n.Locale()).LoginStateLoggedIn()
 func (msgs Messages) LoginStateLoggedIn() string {
 	return Catalog.Format(msgs.locale, "loginStateLoggedIn", nil)
 }
+
+// AppTitle says "biowarden"
+// in the language the app shows.
+//
+// The main window's title, the app's name.
+func AppTitle() string { return In(i18n.Locale()).AppTitle() }
+
+// AppTitle says "biowarden"
+// in the language of msgs.
+//
+// The main window's title, the app's name.
+func (msgs Messages) AppTitle() string {
+	return Catalog.Format(msgs.locale, "appTitle", nil)
+}
+
+// ListSeparator says ", "
+// in the language the app shows.
+//
+// The separator between names in a list: a comma in English, an enumeration
+// comma in Chinese.
+func ListSeparator() string { return In(i18n.Locale()).ListSeparator() }
+
+// ListSeparator says ", "
+// in the language of msgs.
+//
+// The separator between names in a list: a comma in English, an enumeration
+// comma in Chinese.
+func (msgs Messages) ListSeparator() string {
+	return Catalog.Format(msgs.locale, "listSeparator", nil)
+}
+
+// NoticeSeparator says "; "
+// in the language the app shows.
+//
+// The separator between the parts of a one-line summary notice.
+func NoticeSeparator() string { return In(i18n.Locale()).NoticeSeparator() }
+
+// NoticeSeparator says "; "
+// in the language of msgs.
+//
+// The separator between the parts of a one-line summary notice.
+func (msgs Messages) NoticeSeparator() string {
+	return Catalog.Format(msgs.locale, "noticeSeparator", nil)
+}
+
+// Refresh says "Refresh"
+// in the language the app shows.
+//
+// An action button that re-reads local state.
+func Refresh() string { return In(i18n.Locale()).Refresh() }
+
+// Refresh says "Refresh"
+// in the language of msgs.
+//
+// An action button that re-reads local state.
+func (msgs Messages) Refresh() string {
+	return Catalog.Format(msgs.locale, "refresh", nil)
+}
+
+// Delete says "Delete"
+// in the language the app shows.
+//
+// A destructive action button that removes one stored item.
+func Delete() string { return In(i18n.Locale()).Delete() }
+
+// Delete says "Delete"
+// in the language of msgs.
+//
+// A destructive action button that removes one stored item.
+func (msgs Messages) Delete() string {
+	return Catalog.Format(msgs.locale, "delete", nil)
+}
+
+// SidebarAccount says "Account"
+// in the language the app shows.
+//
+// The sidebar's item that shows the account page.
+func SidebarAccount() string { return In(i18n.Locale()).SidebarAccount() }
+
+// SidebarAccount says "Account"
+// in the language of msgs.
+//
+// The sidebar's item that shows the account page.
+func (msgs Messages) SidebarAccount() string {
+	return Catalog.Format(msgs.locale, "sidebarAccount", nil)
+}
+
+// SidebarBrowsers says "Browsers"
+// in the language the app shows.
+//
+// The sidebar's item that shows the browsers page.
+func SidebarBrowsers() string { return In(i18n.Locale()).SidebarBrowsers() }
+
+// SidebarBrowsers says "Browsers"
+// in the language of msgs.
+//
+// The sidebar's item that shows the browsers page.
+func (msgs Messages) SidebarBrowsers() string {
+	return Catalog.Format(msgs.locale, "sidebarBrowsers", nil)
+}
+
+// SidebarSettings says "Settings"
+// in the language the app shows.
+//
+// The sidebar's item that shows the settings page.
+func SidebarSettings() string { return In(i18n.Locale()).SidebarSettings() }
+
+// SidebarSettings says "Settings"
+// in the language of msgs.
+//
+// The sidebar's item that shows the settings page.
+func (msgs Messages) SidebarSettings() string {
+	return Catalog.Format(msgs.locale, "sidebarSettings", nil)
+}
+
+// SidebarLog says "Log"
+// in the language the app shows.
+//
+// The sidebar's item that shows the log page.
+func SidebarLog() string { return In(i18n.Locale()).SidebarLog() }
+
+// SidebarLog says "Log"
+// in the language of msgs.
+//
+// The sidebar's item that shows the log page.
+func (msgs Messages) SidebarLog() string {
+	return Catalog.Format(msgs.locale, "sidebarLog", nil)
+}
+
+// AccountTitle says "Account"
+// in the language the app shows.
+//
+// The account page's heading.
+func AccountTitle() string { return In(i18n.Locale()).AccountTitle() }
+
+// AccountTitle says "Account"
+// in the language of msgs.
+//
+// The account page's heading.
+func (msgs Messages) AccountTitle() string {
+	return Catalog.Format(msgs.locale, "accountTitle", nil)
+}
+
+// AccountIntro says "Sign in to Bitwarden to use it. The key is kept in this machine's credential manager and Windows Hello gates reads of…"
+// in the language the app shows.
+//
+// The account page's line under the heading.
+func AccountIntro() string { return In(i18n.Locale()).AccountIntro() }
+
+// AccountIntro says "Sign in to Bitwarden to use it. The key is kept in this machine's credential manager and Windows Hello gates reads of…"
+// in the language of msgs.
+//
+// The account page's line under the heading.
+func (msgs Messages) AccountIntro() string {
+	return Catalog.Format(msgs.locale, "accountIntro", nil)
+}
+
+// AccountCardGroup says "Account"
+// in the language the app shows.
+//
+// The account card's group title.
+func AccountCardGroup() string { return In(i18n.Locale()).AccountCardGroup() }
+
+// AccountCardGroup says "Account"
+// in the language of msgs.
+//
+// The account card's group title.
+func (msgs Messages) AccountCardGroup() string {
+	return Catalog.Format(msgs.locale, "accountCardGroup", nil)
+}
+
+// AccountCardSignedIn says "Signed in"
+// in the language the app shows.
+//
+// The account card's title when the login is verified.
+func AccountCardSignedIn() string { return In(i18n.Locale()).AccountCardSignedIn() }
+
+// AccountCardSignedIn says "Signed in"
+// in the language of msgs.
+//
+// The account card's title when the login is verified.
+func (msgs Messages) AccountCardSignedIn() string {
+	return Catalog.Format(msgs.locale, "accountCardSignedIn", nil)
+}
+
+// AccountCardSignedInKey says "{email} · server {server} · key stored {created}"
+// in the language the app shows.
+//
+// The signed-in card's detail line when a key is stored.
+func AccountCardSignedInKey(email string, server string, created string) string {
+	return In(i18n.Locale()).AccountCardSignedInKey(email, server, created)
+}
+
+// AccountCardSignedInKey says "{email} · server {server} · key stored {created}"
+// in the language of msgs.
+//
+// The signed-in card's detail line when a key is stored.
+func (msgs Messages) AccountCardSignedInKey(email string, server string, created string) string {
+	return Catalog.Format(msgs.locale, "accountCardSignedInKey", map[string]any{"email": email, "server": server, "created": created})
+}
+
+// AccountCardSignedInNoKey says "{email} · server {server} · no key stored on this machine yet"
+// in the language the app shows.
+//
+// The signed-in card's detail line when no key is stored yet.
+func AccountCardSignedInNoKey(email string, server string) string {
+	return In(i18n.Locale()).AccountCardSignedInNoKey(email, server)
+}
+
+// AccountCardSignedInNoKey says "{email} · server {server} · no key stored on this machine yet"
+// in the language of msgs.
+//
+// The signed-in card's detail line when no key is stored yet.
+func (msgs Messages) AccountCardSignedInNoKey(email string, server string) string {
+	return Catalog.Format(msgs.locale, "accountCardSignedInNoKey", map[string]any{"email": email, "server": server})
+}
+
+// AccountCard2FATitle says "Waiting for a two-factor code"
+// in the language the app shows.
+//
+// The account card's title while the login waits on a second factor.
+func AccountCard2FATitle() string { return In(i18n.Locale()).AccountCard2FATitle() }
+
+// AccountCard2FATitle says "Waiting for a two-factor code"
+// in the language of msgs.
+//
+// The account card's title while the login waits on a second factor.
+func (msgs Messages) AccountCard2FATitle() string {
+	return Catalog.Format(msgs.locale, "accountCard2FATitle", nil)
+}
+
+// AccountCard2FAMethod says "The two-factor method the server asks for: {method}"
+// in the language the app shows.
+//
+// The hint naming the second factor the server offered.
+func AccountCard2FAMethod(method string) string {
+	return In(i18n.Locale()).AccountCard2FAMethod(method)
+}
+
+// AccountCard2FAMethod says "The two-factor method the server asks for: {method}"
+// in the language of msgs.
+//
+// The hint naming the second factor the server offered.
+func (msgs Messages) AccountCard2FAMethod(method string) string {
+	return Catalog.Format(msgs.locale, "accountCard2FAMethod", map[string]any{"method": method})
+}
+
+// AccountCard2FAUnfinished says "Two-factor authentication is not finished yet."
+// in the language the app shows.
+//
+// The hint under the parked two-factor state.
+func AccountCard2FAUnfinished() string { return In(i18n.Locale()).AccountCard2FAUnfinished() }
+
+// AccountCard2FAUnfinished says "Two-factor authentication is not finished yet."
+// in the language of msgs.
+//
+// The hint under the parked two-factor state.
+func (msgs Messages) AccountCard2FAUnfinished() string {
+	return Catalog.Format(msgs.locale, "accountCard2FAUnfinished", nil)
+}
+
+// AccountCardContinue says "Continue signing in"
+// in the language the app shows.
+//
+// The account card's button that reopens a parked login.
+func AccountCardContinue() string { return In(i18n.Locale()).AccountCardContinue() }
+
+// AccountCardContinue says "Continue signing in"
+// in the language of msgs.
+//
+// The account card's button that reopens a parked login.
+func (msgs Messages) AccountCardContinue() string {
+	return Catalog.Format(msgs.locale, "accountCardContinue", nil)
+}
+
+// AccountCardCancel says "Cancel sign-in"
+// in the language the app shows.
+//
+// The account card's button that abandons a parked login.
+func AccountCardCancel() string { return In(i18n.Locale()).AccountCardCancel() }
+
+// AccountCardCancel says "Cancel sign-in"
+// in the language of msgs.
+//
+// The account card's button that abandons a parked login.
+func (msgs Messages) AccountCardCancel() string {
+	return Catalog.Format(msgs.locale, "accountCardCancel", nil)
+}
+
+// AccountCardVerifying says "Verifying the login session..."
+// in the language the app shows.
+//
+// The weak hint while the startup session restore is on the wire.
+func AccountCardVerifying() string { return In(i18n.Locale()).AccountCardVerifying() }
+
+// AccountCardVerifying says "Verifying the login session..."
+// in the language of msgs.
+//
+// The weak hint while the startup session restore is on the wire.
+func (msgs Messages) AccountCardVerifying() string {
+	return Catalog.Format(msgs.locale, "accountCardVerifying", nil)
+}
+
+// AccountCardReLogin says "Sign in again"
+// in the language the app shows.
+//
+// The signed-in account card's button that opens the login window to
+// refresh the key.
+func AccountCardReLogin() string { return In(i18n.Locale()).AccountCardReLogin() }
+
+// AccountCardReLogin says "Sign in again"
+// in the language of msgs.
+//
+// The signed-in account card's button that opens the login window to
+// refresh the key.
+func (msgs Messages) AccountCardReLogin() string {
+	return Catalog.Format(msgs.locale, "accountCardReLogin", nil)
+}
+
+// AccountCardSignOut says "Sign out"
+// in the language the app shows.
+//
+// The signed-in account card's button that deletes the stored key and
+// session.
+func AccountCardSignOut() string { return In(i18n.Locale()).AccountCardSignOut() }
+
+// AccountCardSignOut says "Sign out"
+// in the language of msgs.
+//
+// The signed-in account card's button that deletes the stored key and
+// session.
+func (msgs Messages) AccountCardSignOut() string {
+	return Catalog.Format(msgs.locale, "accountCardSignOut", nil)
+}
+
+// AccountCardWindowHint says "Signing in happens in a separate login window; Windows Hello must confirm before the key is written."
+// in the language the app shows.
+//
+// The hint under the signed-out card's sign-in button.
+func AccountCardWindowHint() string { return In(i18n.Locale()).AccountCardWindowHint() }
+
+// AccountCardWindowHint says "Signing in happens in a separate login window; Windows Hello must confirm before the key is written."
+// in the language of msgs.
+//
+// The hint under the signed-out card's sign-in button.
+func (msgs Messages) AccountCardWindowHint() string {
+	return Catalog.Format(msgs.locale, "accountCardWindowHint", nil)
+}
+
+// AccountCardConfigured says "Configured"
+// in the language the app shows.
+//
+// The account card's title when a key is stored but no session is verified.
+func AccountCardConfigured() string { return In(i18n.Locale()).AccountCardConfigured() }
+
+// AccountCardConfigured says "Configured"
+// in the language of msgs.
+//
+// The account card's title when a key is stored but no session is verified.
+func (msgs Messages) AccountCardConfigured() string {
+	return Catalog.Format(msgs.locale, "accountCardConfigured", nil)
+}
+
+// AccountCardConfiguredDetail says "{who} · key stored {created} · unlocking works"
+// in the language the app shows.
+//
+// The configured card's detail line.
+func AccountCardConfiguredDetail(who string, created string) string {
+	return In(i18n.Locale()).AccountCardConfiguredDetail(who, created)
+}
+
+// AccountCardConfiguredDetail says "{who} · key stored {created} · unlocking works"
+// in the language of msgs.
+//
+// The configured card's detail line.
+func (msgs Messages) AccountCardConfiguredDetail(who string, created string) string {
+	return Catalog.Format(msgs.locale, "accountCardConfiguredDetail", map[string]any{"who": who, "created": created})
+}
+
+// AccountCardConfiguredHint says "Unlocking already works, no need to sign in again; sign in only after the master password or KDF changed and the key …"
+// in the language the app shows.
+//
+// The configured card's hint.
+func AccountCardConfiguredHint() string { return In(i18n.Locale()).AccountCardConfiguredHint() }
+
+// AccountCardConfiguredHint says "Unlocking already works, no need to sign in again; sign in only after the master password or KDF changed and the key …"
+// in the language of msgs.
+//
+// The configured card's hint.
+func (msgs Messages) AccountCardConfiguredHint() string {
+	return Catalog.Format(msgs.locale, "accountCardConfiguredHint", nil)
+}
+
+// AccountCardSignedOut says "Not signed in"
+// in the language the app shows.
+//
+// The account card's title when there is no session and no stored key.
+func AccountCardSignedOut() string { return In(i18n.Locale()).AccountCardSignedOut() }
+
+// AccountCardSignedOut says "Not signed in"
+// in the language of msgs.
+//
+// The account card's title when there is no session and no stored key.
+func (msgs Messages) AccountCardSignedOut() string {
+	return Catalog.Format(msgs.locale, "accountCardSignedOut", nil)
+}
+
+// AccountCardSignedOutDetail says "After signing in to Bitwarden, biowarden fetches and stores the key automatically; no per-item setup is needed."
+// in the language the app shows.
+//
+// The signed-out card's detail line.
+func AccountCardSignedOutDetail() string { return In(i18n.Locale()).AccountCardSignedOutDetail() }
+
+// AccountCardSignedOutDetail says "After signing in to Bitwarden, biowarden fetches and stores the key automatically; no per-item setup is needed."
+// in the language of msgs.
+//
+// The signed-out card's detail line.
+func (msgs Messages) AccountCardSignedOutDetail() string {
+	return Catalog.Format(msgs.locale, "accountCardSignedOutDetail", nil)
+}
+
+// AccountServerLabel says "Server {server}"
+// in the language the app shows.
+//
+// The identity row's line naming the server.
+func AccountServerLabel(server string) string { return In(i18n.Locale()).AccountServerLabel(server) }
+
+// AccountServerLabel says "Server {server}"
+// in the language of msgs.
+//
+// The identity row's line naming the server.
+func (msgs Messages) AccountServerLabel(server string) string {
+	return Catalog.Format(msgs.locale, "accountServerLabel", map[string]any{"server": server})
+}
+
+// AccountKeyGroup says "Key status"
+// in the language the app shows.
+//
+// The stored-key card's group title.
+func AccountKeyGroup() string { return In(i18n.Locale()).AccountKeyGroup() }
+
+// AccountKeyGroup says "Key status"
+// in the language of msgs.
+//
+// The stored-key card's group title.
+func (msgs Messages) AccountKeyGroup() string {
+	return Catalog.Format(msgs.locale, "accountKeyGroup", nil)
+}
+
+// AccountKeyNone says "Not stored"
+// in the language the app shows.
+//
+// The key card's title when no key is stored on this machine.
+func AccountKeyNone() string { return In(i18n.Locale()).AccountKeyNone() }
+
+// AccountKeyNone says "Not stored"
+// in the language of msgs.
+//
+// The key card's title when no key is stored on this machine.
+func (msgs Messages) AccountKeyNone() string {
+	return Catalog.Format(msgs.locale, "accountKeyNone", nil)
+}
+
+// AccountKeyNoneHint says "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually."
+// in the language the app shows.
+//
+// The key card's hint when no key is stored.
+func AccountKeyNoneHint() string { return In(i18n.Locale()).AccountKeyNoneHint() }
+
+// AccountKeyNoneHint says "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually."
+// in the language of msgs.
+//
+// The key card's hint when no key is stored.
+func (msgs Messages) AccountKeyNoneHint() string {
+	return Catalog.Format(msgs.locale, "accountKeyNoneHint", nil)
+}
+
+// AccountKeyStored says "Stored"
+// in the language the app shows.
+//
+// The key card's title when a key is stored.
+func AccountKeyStored() string { return In(i18n.Locale()).AccountKeyStored() }
+
+// AccountKeyStored says "Stored"
+// in the language of msgs.
+//
+// The key card's title when a key is stored.
+func (msgs Messages) AccountKeyStored() string {
+	return Catalog.Format(msgs.locale, "accountKeyStored", nil)
+}
+
+// AccountKeyDetail says "Account {id} · stored {created}"
+// in the language the app shows.
+//
+// The key card's detail line.
+func AccountKeyDetail(id string, created string) string {
+	return In(i18n.Locale()).AccountKeyDetail(id, created)
+}
+
+// AccountKeyDetail says "Account {id} · stored {created}"
+// in the language of msgs.
+//
+// The key card's detail line.
+func (msgs Messages) AccountKeyDetail(id string, created string) string {
+	return Catalog.Format(msgs.locale, "accountKeyDetail", map[string]any{"id": id, "created": created})
+}
+
+// AccountAdvanced says "Advanced"
+// in the language the app shows.
+//
+// The account page's disclosure that hides the v1 escape hatches.
+func AccountAdvanced() string { return In(i18n.Locale()).AccountAdvanced() }
+
+// AccountAdvanced says "Advanced"
+// in the language of msgs.
+//
+// The account page's disclosure that hides the v1 escape hatches.
+func (msgs Messages) AccountAdvanced() string {
+	return Catalog.Format(msgs.locale, "accountAdvanced", nil)
+}
+
+// AccountExtractTitle says "Extraction script (compatibility path)"
+// in the language the app shows.
+//
+// The heading of the script escape hatch.
+func AccountExtractTitle() string { return In(i18n.Locale()).AccountExtractTitle() }
+
+// AccountExtractTitle says "Extraction script (compatibility path)"
+// in the language of msgs.
+//
+// The heading of the script escape hatch.
+func (msgs Messages) AccountExtractTitle() string {
+	return Catalog.Format(msgs.locale, "accountExtractTitle", nil)
+}
+
+// AccountExtractHint says "Take the User ID and encryption key (keyB64) out of an unlocked browser extension. Chrome / Edge: chrome://extensions…"
+// in the language the app shows.
+//
+// The hint that tells a human where to run the extraction script.
+func AccountExtractHint() string { return In(i18n.Locale()).AccountExtractHint() }
+
+// AccountExtractHint says "Take the User ID and encryption key (keyB64) out of an unlocked browser extension. Chrome / Edge: chrome://extensions…"
+// in the language of msgs.
+//
+// The hint that tells a human where to run the extraction script.
+func (msgs Messages) AccountExtractHint() string {
+	return Catalog.Format(msgs.locale, "accountExtractHint", nil)
+}
+
+// AccountCopyScript says "Copy extraction script"
+// in the language the app shows.
+//
+// The button that copies the extraction script.
+func AccountCopyScript() string { return In(i18n.Locale()).AccountCopyScript() }
+
+// AccountCopyScript says "Copy extraction script"
+// in the language of msgs.
+//
+// The button that copies the extraction script.
+func (msgs Messages) AccountCopyScript() string {
+	return Catalog.Format(msgs.locale, "accountCopyScript", nil)
+}
+
+// AccountCopied says "Copied to the clipboard ({count} characters); paste it into the console and run it"
+// in the language the app shows.
+//
+// The confirmation after the script was copied.
+func AccountCopied(count int) string { return In(i18n.Locale()).AccountCopied(count) }
+
+// AccountCopied says "Copied to the clipboard ({count} characters); paste it into the console and run it"
+// in the language of msgs.
+//
+// The confirmation after the script was copied.
+func (msgs Messages) AccountCopied(count int) string {
+	return Catalog.Format(msgs.locale, "accountCopied", map[string]any{"count": count})
+}
+
+// AccountViewScript says "View extraction script (auditable)"
+// in the language the app shows.
+//
+// The disclosure that reveals the extraction script.
+func AccountViewScript() string { return In(i18n.Locale()).AccountViewScript() }
+
+// AccountViewScript says "View extraction script (auditable)"
+// in the language of msgs.
+//
+// The disclosure that reveals the extraction script.
+func (msgs Messages) AccountViewScript() string {
+	return Catalog.Format(msgs.locale, "accountViewScript", nil)
+}
+
+// AccountScriptPreview says "(script preview)"
+// in the language the app shows.
+//
+// The read-only script area's placeholder.
+func AccountScriptPreview() string { return In(i18n.Locale()).AccountScriptPreview() }
+
+// AccountScriptPreview says "(script preview)"
+// in the language of msgs.
+//
+// The read-only script area's placeholder.
+func (msgs Messages) AccountScriptPreview() string {
+	return Catalog.Format(msgs.locale, "accountScriptPreview", nil)
+}
+
+// AccountManualTitle says "Paste manually (legacy v1 path)"
+// in the language the app shows.
+//
+// The heading of the manual entry form.
+func AccountManualTitle() string { return In(i18n.Locale()).AccountManualTitle() }
+
+// AccountManualTitle says "Paste manually (legacy v1 path)"
+// in the language of msgs.
+//
+// The heading of the manual entry form.
+func (msgs Messages) AccountManualTitle() string {
+	return Catalog.Format(msgs.locale, "accountManualTitle", nil)
+}
+
+// AccountManualHint says "Copy userId and keyB64 from the script output above and paste them here to save."
+// in the language the app shows.
+//
+// The hint above the manual entry form.
+func AccountManualHint() string { return In(i18n.Locale()).AccountManualHint() }
+
+// AccountManualHint says "Copy userId and keyB64 from the script output above and paste them here to save."
+// in the language of msgs.
+//
+// The hint above the manual entry form.
+func (msgs Messages) AccountManualHint() string {
+	return Catalog.Format(msgs.locale, "accountManualHint", nil)
+}
+
+// AccountManualUserId says "User ID"
+// in the language the app shows.
+//
+// The manual form's label for the user id field.
+func AccountManualUserId() string { return In(i18n.Locale()).AccountManualUserId() }
+
+// AccountManualUserId says "User ID"
+// in the language of msgs.
+//
+// The manual form's label for the user id field.
+func (msgs Messages) AccountManualUserId() string {
+	return Catalog.Format(msgs.locale, "accountManualUserId", nil)
+}
+
+// AccountManualUserIdPlaceholder says "userId from the console output"
+// in the language the app shows.
+//
+// The manual form's placeholder in the user id field.
+func AccountManualUserIdPlaceholder() string {
+	return In(i18n.Locale()).AccountManualUserIdPlaceholder()
+}
+
+// AccountManualUserIdPlaceholder says "userId from the console output"
+// in the language of msgs.
+//
+// The manual form's placeholder in the user id field.
+func (msgs Messages) AccountManualUserIdPlaceholder() string {
+	return Catalog.Format(msgs.locale, "accountManualUserIdPlaceholder", nil)
+}
+
+// AccountManualKey says "Encryption key (base64)"
+// in the language the app shows.
+//
+// The manual form's label for the key field.
+func AccountManualKey() string { return In(i18n.Locale()).AccountManualKey() }
+
+// AccountManualKey says "Encryption key (base64)"
+// in the language of msgs.
+//
+// The manual form's label for the key field.
+func (msgs Messages) AccountManualKey() string {
+	return Catalog.Format(msgs.locale, "accountManualKey", nil)
+}
+
+// AccountManualKeyPlaceholder says "keyB64"
+// in the language the app shows.
+//
+// The manual form's placeholder in the key field.
+func AccountManualKeyPlaceholder() string { return In(i18n.Locale()).AccountManualKeyPlaceholder() }
+
+// AccountManualKeyPlaceholder says "keyB64"
+// in the language of msgs.
+//
+// The manual form's placeholder in the key field.
+func (msgs Messages) AccountManualKeyPlaceholder() string {
+	return Catalog.Format(msgs.locale, "accountManualKeyPlaceholder", nil)
+}
+
+// AccountManualSave says "Save and verify"
+// in the language the app shows.
+//
+// The manual form's button that stores the key behind a Hello consent.
+func AccountManualSave() string { return In(i18n.Locale()).AccountManualSave() }
+
+// AccountManualSave says "Save and verify"
+// in the language of msgs.
+//
+// The manual form's button that stores the key behind a Hello consent.
+func (msgs Messages) AccountManualSave() string {
+	return Catalog.Format(msgs.locale, "accountManualSave", nil)
+}
+
+// AccountVerifyingSpinner says "Verifying"
+// in the language the app shows.
+//
+// The spinner label while the manual save runs.
+func AccountVerifyingSpinner() string { return In(i18n.Locale()).AccountVerifyingSpinner() }
+
+// AccountVerifyingSpinner says "Verifying"
+// in the language of msgs.
+//
+// The spinner label while the manual save runs.
+func (msgs Messages) AccountVerifyingSpinner() string {
+	return Catalog.Format(msgs.locale, "accountVerifyingSpinner", nil)
+}
+
+// AccountCallingHello says "Calling Windows Hello to verify your identity..."
+// in the language the app shows.
+//
+// The hint next to the manual save spinner.
+func AccountCallingHello() string { return In(i18n.Locale()).AccountCallingHello() }
+
+// AccountCallingHello says "Calling Windows Hello to verify your identity..."
+// in the language of msgs.
+//
+// The hint next to the manual save spinner.
+func (msgs Messages) AccountCallingHello() string {
+	return Catalog.Format(msgs.locale, "accountCallingHello", nil)
+}
+
+// AccountManualWarning says "The output contains the User ID and encryption key; they are kept only in this machine's credential manager, do not s…"
+// in the language the app shows.
+//
+// The warning under the manual form.
+func AccountManualWarning() string { return In(i18n.Locale()).AccountManualWarning() }
+
+// AccountManualWarning says "The output contains the User ID and encryption key; they are kept only in this machine's credential manager, do not s…"
+// in the language of msgs.
+//
+// The warning under the manual form.
+func (msgs Messages) AccountManualWarning() string {
+	return Catalog.Format(msgs.locale, "accountManualWarning", nil)
+}
+
+// AccountManualEnableBiometric says "After saving, also turn on \"unlock with biometrics\" in the Bitwarden extension under Settings -> Security."
+// in the language the app shows.
+//
+// The reminder under the manual form.
+func AccountManualEnableBiometric() string { return In(i18n.Locale()).AccountManualEnableBiometric() }
+
+// AccountManualEnableBiometric says "After saving, also turn on \"unlock with biometrics\" in the Bitwarden extension under Settings -> Security."
+// in the language of msgs.
+//
+// The reminder under the manual form.
+func (msgs Messages) AccountManualEnableBiometric() string {
+	return Catalog.Format(msgs.locale, "accountManualEnableBiometric", nil)
+}
+
+// AccountNoAccounts says "No accounts are stored on this machine yet."
+// in the language the app shows.
+//
+// The stored-account list's empty line.
+func AccountNoAccounts() string { return In(i18n.Locale()).AccountNoAccounts() }
+
+// AccountNoAccounts says "No accounts are stored on this machine yet."
+// in the language of msgs.
+//
+// The stored-account list's empty line.
+func (msgs Messages) AccountNoAccounts() string {
+	return Catalog.Format(msgs.locale, "accountNoAccounts", nil)
+}
+
+// AccountStoredAccounts says "Stored accounts"
+// in the language the app shows.
+//
+// The stored-account list's heading.
+func AccountStoredAccounts() string { return In(i18n.Locale()).AccountStoredAccounts() }
+
+// AccountStoredAccounts says "Stored accounts"
+// in the language of msgs.
+//
+// The stored-account list's heading.
+func (msgs Messages) AccountStoredAccounts() string {
+	return Catalog.Format(msgs.locale, "accountStoredAccounts", nil)
+}
+
+// AccountRowCreated says "Created {created}"
+// in the language the app shows.
+//
+// A stored-account row's meta line when the email is unknown.
+func AccountRowCreated(created string) string { return In(i18n.Locale()).AccountRowCreated(created) }
+
+// AccountRowCreated says "Created {created}"
+// in the language of msgs.
+//
+// A stored-account row's meta line when the email is unknown.
+func (msgs Messages) AccountRowCreated(created string) string {
+	return Catalog.Format(msgs.locale, "accountRowCreated", map[string]any{"created": created})
+}
+
+// AccountRowMeta says "{email} · {meta}"
+// in the language the app shows.
+//
+// A stored-account row's meta line with its email.
+func AccountRowMeta(email string, meta string) string {
+	return In(i18n.Locale()).AccountRowMeta(email, meta)
+}
+
+// AccountRowMeta says "{email} · {meta}"
+// in the language of msgs.
+//
+// A stored-account row's meta line with its email.
+func (msgs Messages) AccountRowMeta(email string, meta string) string {
+	return Catalog.Format(msgs.locale, "accountRowMeta", map[string]any{"email": email, "meta": meta})
+}
+
+// AccountTestUnlock says "Test unlock"
+// in the language the app shows.
+//
+// A stored-account row's button that runs one Hello consent check.
+func AccountTestUnlock() string { return In(i18n.Locale()).AccountTestUnlock() }
+
+// AccountTestUnlock says "Test unlock"
+// in the language of msgs.
+//
+// A stored-account row's button that runs one Hello consent check.
+func (msgs Messages) AccountTestUnlock() string {
+	return Catalog.Format(msgs.locale, "accountTestUnlock", nil)
+}
+
+// AccountSetCurrent says "Set as current"
+// in the language the app shows.
+//
+// A stored-account row's button that foregrounds the account.
+func AccountSetCurrent() string { return In(i18n.Locale()).AccountSetCurrent() }
+
+// AccountSetCurrent says "Set as current"
+// in the language of msgs.
+//
+// A stored-account row's button that foregrounds the account.
+func (msgs Messages) AccountSetCurrent() string {
+	return Catalog.Format(msgs.locale, "accountSetCurrent", nil)
+}
+
+// AccountNoticeKeysReadFailed says "Reading the stored accounts failed: {detail}"
+// in the language the app shows.
+//
+// The account page's status line when the credential store refused the
+// list.
+func AccountNoticeKeysReadFailed(detail string) string {
+	return In(i18n.Locale()).AccountNoticeKeysReadFailed(detail)
+}
+
+// AccountNoticeKeysReadFailed says "Reading the stored accounts failed: {detail}"
+// in the language of msgs.
+//
+// The account page's status line when the credential store refused the
+// list.
+func (msgs Messages) AccountNoticeKeysReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "accountNoticeKeysReadFailed", map[string]any{"detail": detail})
+}
+
+// AccountNoticeHelloCheckFailed says "Checking Windows Hello failed: {detail}"
+// in the language the app shows.
+//
+// The account page's status line when the Hello availability check failed.
+func AccountNoticeHelloCheckFailed(detail string) string {
+	return In(i18n.Locale()).AccountNoticeHelloCheckFailed(detail)
+}
+
+// AccountNoticeHelloCheckFailed says "Checking Windows Hello failed: {detail}"
+// in the language of msgs.
+//
+// The account page's status line when the Hello availability check failed.
+func (msgs Messages) AccountNoticeHelloCheckFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "accountNoticeHelloCheckFailed", map[string]any{"detail": detail})
+}
+
+// AccountNoticeHelloUnavailable says "Windows Hello is not configured on this machine, so keys cannot be saved or deleted."
+// in the language the app shows.
+//
+// The account page's status line when Windows Hello is absent.
+func AccountNoticeHelloUnavailable() string { return In(i18n.Locale()).AccountNoticeHelloUnavailable() }
+
+// AccountNoticeHelloUnavailable says "Windows Hello is not configured on this machine, so keys cannot be saved or deleted."
+// in the language of msgs.
+//
+// The account page's status line when Windows Hello is absent.
+func (msgs Messages) AccountNoticeHelloUnavailable() string {
+	return Catalog.Format(msgs.locale, "accountNoticeHelloUnavailable", nil)
+}
+
+// AccountNoticeSessionRevoked says "The login session expired and the local session was cleared; the key is still stored and unlocking is unaffected."
+// in the language the app shows.
+//
+// The account page's status line when the persisted session was revoked.
+func AccountNoticeSessionRevoked() string { return In(i18n.Locale()).AccountNoticeSessionRevoked() }
+
+// AccountNoticeSessionRevoked says "The login session expired and the local session was cleared; the key is still stored and unlocking is unaffected."
+// in the language of msgs.
+//
+// The account page's status line when the persisted session was revoked.
+func (msgs Messages) AccountNoticeSessionRevoked() string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionRevoked", nil)
+}
+
+// AccountNoticeSessionUnverified says "The login session cannot be verified right now (network or server problem) and is conservatively shown as signed out;…"
+// in the language the app shows.
+//
+// The account page's status line when the persisted session could not be
+// checked.
+func AccountNoticeSessionUnverified() string {
+	return In(i18n.Locale()).AccountNoticeSessionUnverified()
+}
+
+// AccountNoticeSessionUnverified says "The login session cannot be verified right now (network or server problem) and is conservatively shown as signed out;…"
+// in the language of msgs.
+//
+// The account page's status line when the persisted session could not be
+// checked.
+func (msgs Messages) AccountNoticeSessionUnverified() string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionUnverified", nil)
+}
+
+// AccountNoticeSessionReadFailed says "Reading the login state failed: {detail}"
+// in the language the app shows.
+//
+// The account page's status line when the persisted session could not be
+// read.
+func AccountNoticeSessionReadFailed(detail string) string {
+	return In(i18n.Locale()).AccountNoticeSessionReadFailed(detail)
+}
+
+// AccountNoticeSessionReadFailed says "Reading the login state failed: {detail}"
+// in the language of msgs.
+//
+// The account page's status line when the persisted session could not be
+// read.
+func (msgs Messages) AccountNoticeSessionReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionReadFailed", map[string]any{"detail": detail})
+}
+
+// AccountNoticeKeySaved says "The key was saved; Windows Hello verified."
+// in the language the app shows.
+//
+// The account page's status line after a manual key save.
+func AccountNoticeKeySaved() string { return In(i18n.Locale()).AccountNoticeKeySaved() }
+
+// AccountNoticeKeySaved says "The key was saved; Windows Hello verified."
+// in the language of msgs.
+//
+// The account page's status line after a manual key save.
+func (msgs Messages) AccountNoticeKeySaved() string {
+	return Catalog.Format(msgs.locale, "accountNoticeKeySaved", nil)
+}
+
+// AccountNoticeVerified says "Verified: Windows Hello confirmed your identity (userId={id})"
+// in the language the app shows.
+//
+// The account page's status line after a test unlock.
+func AccountNoticeVerified(id string) string { return In(i18n.Locale()).AccountNoticeVerified(id) }
+
+// AccountNoticeVerified says "Verified: Windows Hello confirmed your identity (userId={id})"
+// in the language of msgs.
+//
+// The account page's status line after a test unlock.
+func (msgs Messages) AccountNoticeVerified(id string) string {
+	return Catalog.Format(msgs.locale, "accountNoticeVerified", map[string]any{"id": id})
+}
+
+// AccountNoticeRemoveSessionFailed says "The account's key was deleted, but clearing the login session failed: {detail}"
+// in the language the app shows.
+//
+// The account page's status line when the session cleanup after a key
+// delete failed.
+func AccountNoticeRemoveSessionFailed(detail string) string {
+	return In(i18n.Locale()).AccountNoticeRemoveSessionFailed(detail)
+}
+
+// AccountNoticeRemoveSessionFailed says "The account's key was deleted, but clearing the login session failed: {detail}"
+// in the language of msgs.
+//
+// The account page's status line when the session cleanup after a key
+// delete failed.
+func (msgs Messages) AccountNoticeRemoveSessionFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "accountNoticeRemoveSessionFailed", map[string]any{"detail": detail})
+}
+
+// AccountNoticeKeyRemoved says "The account's key was deleted."
+// in the language the app shows.
+//
+// The account page's status line after a key delete.
+func AccountNoticeKeyRemoved() string { return In(i18n.Locale()).AccountNoticeKeyRemoved() }
+
+// AccountNoticeKeyRemoved says "The account's key was deleted."
+// in the language of msgs.
+//
+// The account page's status line after a key delete.
+func (msgs Messages) AccountNoticeKeyRemoved() string {
+	return Catalog.Format(msgs.locale, "accountNoticeKeyRemoved", nil)
+}
+
+// AccountNoticeLoggedOut says "Signed out"
+// in the language the app shows.
+//
+// The account page's status line after a logout.
+func AccountNoticeLoggedOut() string { return In(i18n.Locale()).AccountNoticeLoggedOut() }
+
+// AccountNoticeLoggedOut says "Signed out"
+// in the language of msgs.
+//
+// The account page's status line after a logout.
+func (msgs Messages) AccountNoticeLoggedOut() string {
+	return Catalog.Format(msgs.locale, "accountNoticeLoggedOut", nil)
+}
+
+// SettingsTitle says "Settings"
+// in the language the app shows.
+//
+// The settings page's heading.
+func SettingsTitle() string { return In(i18n.Locale()).SettingsTitle() }
+
+// SettingsTitle says "Settings"
+// in the language of msgs.
+//
+// The settings page's heading.
+func (msgs Messages) SettingsTitle() string {
+	return Catalog.Format(msgs.locale, "settingsTitle", nil)
+}
+
+// SettingsIntro says "Autostart and Windows Hello are wired to the real backends; the log level and tray icon only last this run."
+// in the language the app shows.
+//
+// The settings page's line under the heading.
+func SettingsIntro() string { return In(i18n.Locale()).SettingsIntro() }
+
+// SettingsIntro says "Autostart and Windows Hello are wired to the real backends; the log level and tray icon only last this run."
+// in the language of msgs.
+//
+// The settings page's line under the heading.
+func (msgs Messages) SettingsIntro() string {
+	return Catalog.Format(msgs.locale, "settingsIntro", nil)
+}
+
+// SettingsGroupAccount says "Account"
+// in the language the app shows.
+//
+// The settings page's account section title.
+func SettingsGroupAccount() string { return In(i18n.Locale()).SettingsGroupAccount() }
+
+// SettingsGroupAccount says "Account"
+// in the language of msgs.
+//
+// The settings page's account section title.
+func (msgs Messages) SettingsGroupAccount() string {
+	return Catalog.Format(msgs.locale, "settingsGroupAccount", nil)
+}
+
+// SettingsServer says "Server address"
+// in the language the app shows.
+//
+// The settings page's server address field label.
+func SettingsServer() string { return In(i18n.Locale()).SettingsServer() }
+
+// SettingsServer says "Server address"
+// in the language of msgs.
+//
+// The settings page's server address field label.
+func (msgs Messages) SettingsServer() string {
+	return Catalog.Format(msgs.locale, "settingsServer", nil)
+}
+
+// SettingsServerReadOnly says "Server address (read only)"
+// in the language the app shows.
+//
+// The read-only server address field's control label.
+func SettingsServerReadOnly() string { return In(i18n.Locale()).SettingsServerReadOnly() }
+
+// SettingsServerReadOnly says "Server address (read only)"
+// in the language of msgs.
+//
+// The read-only server address field's control label.
+func (msgs Messages) SettingsServerReadOnly() string {
+	return Catalog.Format(msgs.locale, "settingsServerReadOnly", nil)
+}
+
+// SettingsGroupEntry says "Entry points"
+// in the language the app shows.
+//
+// The settings page's section title for the entry points.
+func SettingsGroupEntry() string { return In(i18n.Locale()).SettingsGroupEntry() }
+
+// SettingsGroupEntry says "Entry points"
+// in the language of msgs.
+//
+// The settings page's section title for the entry points.
+func (msgs Messages) SettingsGroupEntry() string {
+	return Catalog.Format(msgs.locale, "settingsGroupEntry", nil)
+}
+
+// SettingsAutostart says "Start at login"
+// in the language the app shows.
+//
+// The settings switch that toggles the login item.
+func SettingsAutostart() string { return In(i18n.Locale()).SettingsAutostart() }
+
+// SettingsAutostart says "Start at login"
+// in the language of msgs.
+//
+// The settings switch that toggles the login item.
+func (msgs Messages) SettingsAutostart() string {
+	return Catalog.Format(msgs.locale, "settingsAutostart", nil)
+}
+
+// SettingsShowTray says "Show tray icon"
+// in the language the app shows.
+//
+// The settings switch that toggles the tray icon.
+func SettingsShowTray() string { return In(i18n.Locale()).SettingsShowTray() }
+
+// SettingsShowTray says "Show tray icon"
+// in the language of msgs.
+//
+// The settings switch that toggles the tray icon.
+func (msgs Messages) SettingsShowTray() string {
+	return Catalog.Format(msgs.locale, "settingsShowTray", nil)
+}
+
+// SettingsHello says "Windows Hello"
+// in the language the app shows.
+//
+// The settings page's Windows Hello row label.
+func SettingsHello() string { return In(i18n.Locale()).SettingsHello() }
+
+// SettingsHello says "Windows Hello"
+// in the language of msgs.
+//
+// The settings page's Windows Hello row label.
+func (msgs Messages) SettingsHello() string {
+	return Catalog.Format(msgs.locale, "settingsHello", nil)
+}
+
+// SettingsHelloCheckingSpinner says "Checking Windows Hello"
+// in the language the app shows.
+//
+// The spinner label while the Hello check runs.
+func SettingsHelloCheckingSpinner() string { return In(i18n.Locale()).SettingsHelloCheckingSpinner() }
+
+// SettingsHelloCheckingSpinner says "Checking Windows Hello"
+// in the language of msgs.
+//
+// The spinner label while the Hello check runs.
+func (msgs Messages) SettingsHelloCheckingSpinner() string {
+	return Catalog.Format(msgs.locale, "settingsHelloCheckingSpinner", nil)
+}
+
+// SettingsHelloChecking says "Checking..."
+// in the language the app shows.
+//
+// The text next to the Hello check spinner.
+func SettingsHelloChecking() string { return In(i18n.Locale()).SettingsHelloChecking() }
+
+// SettingsHelloChecking says "Checking..."
+// in the language of msgs.
+//
+// The text next to the Hello check spinner.
+func (msgs Messages) SettingsHelloChecking() string {
+	return Catalog.Format(msgs.locale, "settingsHelloChecking", nil)
+}
+
+// SettingsHelloAvailable says "Available (face / fingerprint / PIN configured)"
+// in the language the app shows.
+//
+// The Windows Hello row when Hello is available.
+func SettingsHelloAvailable() string { return In(i18n.Locale()).SettingsHelloAvailable() }
+
+// SettingsHelloAvailable says "Available (face / fingerprint / PIN configured)"
+// in the language of msgs.
+//
+// The Windows Hello row when Hello is available.
+func (msgs Messages) SettingsHelloAvailable() string {
+	return Catalog.Format(msgs.locale, "settingsHelloAvailable", nil)
+}
+
+// SettingsHelloUnavailable says "Unavailable"
+// in the language the app shows.
+//
+// The Windows Hello row when Hello is unavailable.
+func SettingsHelloUnavailable() string { return In(i18n.Locale()).SettingsHelloUnavailable() }
+
+// SettingsHelloUnavailable says "Unavailable"
+// in the language of msgs.
+//
+// The Windows Hello row when Hello is unavailable.
+func (msgs Messages) SettingsHelloUnavailable() string {
+	return Catalog.Format(msgs.locale, "settingsHelloUnavailable", nil)
+}
+
+// SettingsHelloRecheck says "Check again"
+// in the language the app shows.
+//
+// The button that re-runs the Hello availability check.
+func SettingsHelloRecheck() string { return In(i18n.Locale()).SettingsHelloRecheck() }
+
+// SettingsHelloRecheck says "Check again"
+// in the language of msgs.
+//
+// The button that re-runs the Hello availability check.
+func (msgs Messages) SettingsHelloRecheck() string {
+	return Catalog.Format(msgs.locale, "settingsHelloRecheck", nil)
+}
+
+// SettingsGroupLog says "Log"
+// in the language the app shows.
+//
+// The settings page's log section title.
+func SettingsGroupLog() string { return In(i18n.Locale()).SettingsGroupLog() }
+
+// SettingsGroupLog says "Log"
+// in the language of msgs.
+//
+// The settings page's log section title.
+func (msgs Messages) SettingsGroupLog() string {
+	return Catalog.Format(msgs.locale, "settingsGroupLog", nil)
+}
+
+// SettingsLogLevel says "Level"
+// in the language the app shows.
+//
+// The settings page's log level field label.
+func SettingsLogLevel() string { return In(i18n.Locale()).SettingsLogLevel() }
+
+// SettingsLogLevel says "Level"
+// in the language of msgs.
+//
+// The settings page's log level field label.
+func (msgs Messages) SettingsLogLevel() string {
+	return Catalog.Format(msgs.locale, "settingsLogLevel", nil)
+}
+
+// SettingsLogLevelLabel says "Log level"
+// in the language the app shows.
+//
+// The log level dropdown's control label.
+func SettingsLogLevelLabel() string { return In(i18n.Locale()).SettingsLogLevelLabel() }
+
+// SettingsLogLevelLabel says "Log level"
+// in the language of msgs.
+//
+// The log level dropdown's control label.
+func (msgs Messages) SettingsLogLevelLabel() string {
+	return Catalog.Format(msgs.locale, "settingsLogLevelLabel", nil)
+}
+
+// SettingsLogPath says "Path"
+// in the language the app shows.
+//
+// The settings page's log path field label.
+func SettingsLogPath() string { return In(i18n.Locale()).SettingsLogPath() }
+
+// SettingsLogPath says "Path"
+// in the language of msgs.
+//
+// The settings page's log path field label.
+func (msgs Messages) SettingsLogPath() string {
+	return Catalog.Format(msgs.locale, "settingsLogPath", nil)
+}
+
+// SettingsLogPathLabel says "Log path (read only)"
+// in the language the app shows.
+//
+// The read-only log path field's control label.
+func SettingsLogPathLabel() string { return In(i18n.Locale()).SettingsLogPathLabel() }
+
+// SettingsLogPathLabel says "Log path (read only)"
+// in the language of msgs.
+//
+// The read-only log path field's control label.
+func (msgs Messages) SettingsLogPathLabel() string {
+	return Catalog.Format(msgs.locale, "settingsLogPathLabel", nil)
+}
+
+// SettingsGroupAbout says "About"
+// in the language the app shows.
+//
+// The settings page's about section title.
+func SettingsGroupAbout() string { return In(i18n.Locale()).SettingsGroupAbout() }
+
+// SettingsGroupAbout says "About"
+// in the language of msgs.
+//
+// The settings page's about section title.
+func (msgs Messages) SettingsGroupAbout() string {
+	return Catalog.Format(msgs.locale, "settingsGroupAbout", nil)
+}
+
+// SettingsVersion says "Version"
+// in the language the app shows.
+//
+// The about section's version field label.
+func SettingsVersion() string { return In(i18n.Locale()).SettingsVersion() }
+
+// SettingsVersion says "Version"
+// in the language of msgs.
+//
+// The about section's version field label.
+func (msgs Messages) SettingsVersion() string {
+	return Catalog.Format(msgs.locale, "settingsVersion", nil)
+}
+
+// SettingsAboutText says "Windows Hello only gates reads of the key in the credential manager; the key itself is not encrypted by biometrics."
+// in the language the app shows.
+//
+// The about section's message.
+func SettingsAboutText() string { return In(i18n.Locale()).SettingsAboutText() }
+
+// SettingsAboutText says "Windows Hello only gates reads of the key in the credential manager; the key itself is not encrypted by biometrics."
+// in the language of msgs.
+//
+// The about section's message.
+func (msgs Messages) SettingsAboutText() string {
+	return Catalog.Format(msgs.locale, "settingsAboutText", nil)
+}
+
+// SettingsAboutNote says "Note"
+// in the language the app shows.
+//
+// The about section's note field label.
+func SettingsAboutNote() string { return In(i18n.Locale()).SettingsAboutNote() }
+
+// SettingsAboutNote says "Note"
+// in the language of msgs.
+//
+// The about section's note field label.
+func (msgs Messages) SettingsAboutNote() string {
+	return Catalog.Format(msgs.locale, "settingsAboutNote", nil)
+}
+
+// SettingsLogLevelError says "Error"
+// in the language the app shows.
+//
+// The log level whose name is Error.
+func SettingsLogLevelError() string { return In(i18n.Locale()).SettingsLogLevelError() }
+
+// SettingsLogLevelError says "Error"
+// in the language of msgs.
+//
+// The log level whose name is Error.
+func (msgs Messages) SettingsLogLevelError() string {
+	return Catalog.Format(msgs.locale, "settingsLogLevelError", nil)
+}
+
+// SettingsLogLevelInfo says "Info"
+// in the language the app shows.
+//
+// The log level whose name is Info.
+func SettingsLogLevelInfo() string { return In(i18n.Locale()).SettingsLogLevelInfo() }
+
+// SettingsLogLevelInfo says "Info"
+// in the language of msgs.
+//
+// The log level whose name is Info.
+func (msgs Messages) SettingsLogLevelInfo() string {
+	return Catalog.Format(msgs.locale, "settingsLogLevelInfo", nil)
+}
+
+// SettingsLogLevelDebug says "Debug"
+// in the language the app shows.
+//
+// The log level whose name is Debug.
+func SettingsLogLevelDebug() string { return In(i18n.Locale()).SettingsLogLevelDebug() }
+
+// SettingsLogLevelDebug says "Debug"
+// in the language of msgs.
+//
+// The log level whose name is Debug.
+func (msgs Messages) SettingsLogLevelDebug() string {
+	return Catalog.Format(msgs.locale, "settingsLogLevelDebug", nil)
+}
+
+// SettingsNoticeAutostartReadFailed says "Reading the autostart setting failed: {detail}"
+// in the language the app shows.
+//
+// The settings page's status line when the autostart read failed.
+func SettingsNoticeAutostartReadFailed(detail string) string {
+	return In(i18n.Locale()).SettingsNoticeAutostartReadFailed(detail)
+}
+
+// SettingsNoticeAutostartReadFailed says "Reading the autostart setting failed: {detail}"
+// in the language of msgs.
+//
+// The settings page's status line when the autostart read failed.
+func (msgs Messages) SettingsNoticeAutostartReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "settingsNoticeAutostartReadFailed", map[string]any{"detail": detail})
+}
+
+// SettingsNoticeHelloCheckFailed says "The Windows Hello check failed: {detail}"
+// in the language the app shows.
+//
+// The settings page's status line when the Hello check failed.
+func SettingsNoticeHelloCheckFailed(detail string) string {
+	return In(i18n.Locale()).SettingsNoticeHelloCheckFailed(detail)
+}
+
+// SettingsNoticeHelloCheckFailed says "The Windows Hello check failed: {detail}"
+// in the language of msgs.
+//
+// The settings page's status line when the Hello check failed.
+func (msgs Messages) SettingsNoticeHelloCheckFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "settingsNoticeHelloCheckFailed", map[string]any{"detail": detail})
+}
+
+// SettingsNoticeHelloAvailable says "Windows Hello is available"
+// in the language the app shows.
+//
+// The settings page's status line when Hello is available.
+func SettingsNoticeHelloAvailable() string { return In(i18n.Locale()).SettingsNoticeHelloAvailable() }
+
+// SettingsNoticeHelloAvailable says "Windows Hello is available"
+// in the language of msgs.
+//
+// The settings page's status line when Hello is available.
+func (msgs Messages) SettingsNoticeHelloAvailable() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeHelloAvailable", nil)
+}
+
+// SettingsNoticeHelloUnavailable says "Windows Hello is unavailable: no face / fingerprint / PIN is configured"
+// in the language the app shows.
+//
+// The settings page's status line when Hello is not configured.
+func SettingsNoticeHelloUnavailable() string {
+	return In(i18n.Locale()).SettingsNoticeHelloUnavailable()
+}
+
+// SettingsNoticeHelloUnavailable says "Windows Hello is unavailable: no face / fingerprint / PIN is configured"
+// in the language of msgs.
+//
+// The settings page's status line when Hello is not configured.
+func (msgs Messages) SettingsNoticeHelloUnavailable() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeHelloUnavailable", nil)
+}
+
+// SettingsNoticeAutostartWriteFailed says "Setting autostart failed: {detail}"
+// in the language the app shows.
+//
+// The settings page's status line when the autostart write failed.
+func SettingsNoticeAutostartWriteFailed(detail string) string {
+	return In(i18n.Locale()).SettingsNoticeAutostartWriteFailed(detail)
+}
+
+// SettingsNoticeAutostartWriteFailed says "Setting autostart failed: {detail}"
+// in the language of msgs.
+//
+// The settings page's status line when the autostart write failed.
+func (msgs Messages) SettingsNoticeAutostartWriteFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "settingsNoticeAutostartWriteFailed", map[string]any{"detail": detail})
+}
+
+// SettingsNoticeAutostartOn says "Autostart at login is on"
+// in the language the app shows.
+//
+// The settings page's status line after enabling autostart.
+func SettingsNoticeAutostartOn() string { return In(i18n.Locale()).SettingsNoticeAutostartOn() }
+
+// SettingsNoticeAutostartOn says "Autostart at login is on"
+// in the language of msgs.
+//
+// The settings page's status line after enabling autostart.
+func (msgs Messages) SettingsNoticeAutostartOn() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeAutostartOn", nil)
+}
+
+// SettingsNoticeAutostartOff says "Autostart at login is off"
+// in the language the app shows.
+//
+// The settings page's status line after disabling autostart.
+func SettingsNoticeAutostartOff() string { return In(i18n.Locale()).SettingsNoticeAutostartOff() }
+
+// SettingsNoticeAutostartOff says "Autostart at login is off"
+// in the language of msgs.
+//
+// The settings page's status line after disabling autostart.
+func (msgs Messages) SettingsNoticeAutostartOff() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeAutostartOff", nil)
+}
+
+// SettingsNoticeTrayShown says "Tray icon shown (memory only: it returns after a restart)"
+// in the language the app shows.
+//
+// The settings page's status line after showing the tray icon.
+func SettingsNoticeTrayShown() string { return In(i18n.Locale()).SettingsNoticeTrayShown() }
+
+// SettingsNoticeTrayShown says "Tray icon shown (memory only: it returns after a restart)"
+// in the language of msgs.
+//
+// The settings page's status line after showing the tray icon.
+func (msgs Messages) SettingsNoticeTrayShown() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeTrayShown", nil)
+}
+
+// SettingsNoticeTrayHidden says "Tray icon hidden (memory only: the tray is still there, quit from its menu)"
+// in the language the app shows.
+//
+// The settings page's status line after hiding the tray icon.
+func SettingsNoticeTrayHidden() string { return In(i18n.Locale()).SettingsNoticeTrayHidden() }
+
+// SettingsNoticeTrayHidden says "Tray icon hidden (memory only: the tray is still there, quit from its menu)"
+// in the language of msgs.
+//
+// The settings page's status line after hiding the tray icon.
+func (msgs Messages) SettingsNoticeTrayHidden() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeTrayHidden", nil)
+}
+
+// LogTitle says "Log"
+// in the language the app shows.
+//
+// The log page's heading.
+func LogTitle() string { return In(i18n.Locale()).LogTitle() }
+
+// LogTitle says "Log"
+// in the language of msgs.
+//
+// The log page's heading.
+func (msgs Messages) LogTitle() string {
+	return Catalog.Format(msgs.locale, "logTitle", nil)
+}
+
+// LogLevelLine says "Level {level} · {path}"
+// in the language the app shows.
+//
+// The log page's line naming the level and the file.
+func LogLevelLine(level string, path string) string {
+	return In(i18n.Locale()).LogLevelLine(level, path)
+}
+
+// LogLevelLine says "Level {level} · {path}"
+// in the language of msgs.
+//
+// The log page's line naming the level and the file.
+func (msgs Messages) LogLevelLine(level string, path string) string {
+	return Catalog.Format(msgs.locale, "logLevelLine", map[string]any{"level": level, "path": path})
+}
+
+// LogContent says "Log content"
+// in the language the app shows.
+//
+// The log text area's label.
+func LogContent() string { return In(i18n.Locale()).LogContent() }
+
+// LogContent says "Log content"
+// in the language of msgs.
+//
+// The log text area's label.
+func (msgs Messages) LogContent() string {
+	return Catalog.Format(msgs.locale, "logContent", nil)
+}
+
+// LogPlaceholder says "No log yet"
+// in the language the app shows.
+//
+// The log text area's placeholder while the file is empty.
+func LogPlaceholder() string { return In(i18n.Locale()).LogPlaceholder() }
+
+// LogPlaceholder says "No log yet"
+// in the language of msgs.
+//
+// The log text area's placeholder while the file is empty.
+func (msgs Messages) LogPlaceholder() string {
+	return Catalog.Format(msgs.locale, "logPlaceholder", nil)
+}
+
+// LogClear says "Clear"
+// in the language the app shows.
+//
+// The button that clears the log view.
+func LogClear() string { return In(i18n.Locale()).LogClear() }
+
+// LogClear says "Clear"
+// in the language of msgs.
+//
+// The button that clears the log view.
+func (msgs Messages) LogClear() string {
+	return Catalog.Format(msgs.locale, "logClear", nil)
+}
+
+// LogOpen says "Open log file"
+// in the language the app shows.
+//
+// The button that opens the log file in the default program.
+func LogOpen() string { return In(i18n.Locale()).LogOpen() }
+
+// LogOpen says "Open log file"
+// in the language of msgs.
+//
+// The button that opens the log file in the default program.
+func (msgs Messages) LogOpen() string {
+	return Catalog.Format(msgs.locale, "logOpen", nil)
+}
+
+// LogCharacters says "{count} characters"
+// in the language the app shows.
+//
+// The log page's character count.
+func LogCharacters(count int) string { return In(i18n.Locale()).LogCharacters(count) }
+
+// LogCharacters says "{count} characters"
+// in the language of msgs.
+//
+// The log page's character count.
+func (msgs Messages) LogCharacters(count int) string {
+	return Catalog.Format(msgs.locale, "logCharacters", map[string]any{"count": count})
+}
+
+// LogNoticeReadFailed says "Reading the log failed: {detail}"
+// in the language the app shows.
+//
+// The log page's status line when the log tail could not be read.
+func LogNoticeReadFailed(detail string) string { return In(i18n.Locale()).LogNoticeReadFailed(detail) }
+
+// LogNoticeReadFailed says "Reading the log failed: {detail}"
+// in the language of msgs.
+//
+// The log page's status line when the log tail could not be read.
+func (msgs Messages) LogNoticeReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "logNoticeReadFailed", map[string]any{"detail": detail})
+}
+
+// LogNoticeRefreshed says "Refreshed"
+// in the language the app shows.
+//
+// The log page's status line after a refresh.
+func LogNoticeRefreshed() string { return In(i18n.Locale()).LogNoticeRefreshed() }
+
+// LogNoticeRefreshed says "Refreshed"
+// in the language of msgs.
+//
+// The log page's status line after a refresh.
+func (msgs Messages) LogNoticeRefreshed() string {
+	return Catalog.Format(msgs.locale, "logNoticeRefreshed", nil)
+}
+
+// LogNoticeCleared says "Cleared the current view (the file is unchanged)"
+// in the language the app shows.
+//
+// The log page's status line after clearing the view.
+func LogNoticeCleared() string { return In(i18n.Locale()).LogNoticeCleared() }
+
+// LogNoticeCleared says "Cleared the current view (the file is unchanged)"
+// in the language of msgs.
+//
+// The log page's status line after clearing the view.
+func (msgs Messages) LogNoticeCleared() string {
+	return Catalog.Format(msgs.locale, "logNoticeCleared", nil)
+}
+
+// LogNoticeMissing says "The log file does not exist yet: {path}"
+// in the language the app shows.
+//
+// The log page's status line when the file is missing.
+func LogNoticeMissing(path string) string { return In(i18n.Locale()).LogNoticeMissing(path) }
+
+// LogNoticeMissing says "The log file does not exist yet: {path}"
+// in the language of msgs.
+//
+// The log page's status line when the file is missing.
+func (msgs Messages) LogNoticeMissing(path string) string {
+	return Catalog.Format(msgs.locale, "logNoticeMissing", map[string]any{"path": path})
+}
+
+// LogNoticeOpenFailed says "Opening the log file failed: {detail}"
+// in the language the app shows.
+//
+// The log page's status line when the shell could not open the file.
+func LogNoticeOpenFailed(detail string) string { return In(i18n.Locale()).LogNoticeOpenFailed(detail) }
+
+// LogNoticeOpenFailed says "Opening the log file failed: {detail}"
+// in the language of msgs.
+//
+// The log page's status line when the shell could not open the file.
+func (msgs Messages) LogNoticeOpenFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "logNoticeOpenFailed", map[string]any{"detail": detail})
+}
+
+// LogNoticeOpened says "Opened the log file with the system default program"
+// in the language the app shows.
+//
+// The log page's status line after opening the file.
+func LogNoticeOpened() string { return In(i18n.Locale()).LogNoticeOpened() }
+
+// LogNoticeOpened says "Opened the log file with the system default program"
+// in the language of msgs.
+//
+// The log page's status line after opening the file.
+func (msgs Messages) LogNoticeOpened() string {
+	return Catalog.Format(msgs.locale, "logNoticeOpened", nil)
+}
+
+// BrowsersTitle says "Browsers"
+// in the language the app shows.
+//
+// The browsers page's heading.
+func BrowsersTitle() string { return In(i18n.Locale()).BrowsersTitle() }
+
+// BrowsersTitle says "Browsers"
+// in the language of msgs.
+//
+// The browsers page's heading.
+func (msgs Messages) BrowsersTitle() string {
+	return Catalog.Format(msgs.locale, "browsersTitle", nil)
+}
+
+// BrowsersInstallAll says "Install all"
+// in the language the app shows.
+//
+// The browsers page's button that installs every safe row at once.
+func BrowsersInstallAll() string { return In(i18n.Locale()).BrowsersInstallAll() }
+
+// BrowsersInstallAll says "Install all"
+// in the language of msgs.
+//
+// The browsers page's button that installs every safe row at once.
+func (msgs Messages) BrowsersInstallAll() string {
+	return Catalog.Format(msgs.locale, "browsersInstallAll", nil)
+}
+
+// BrowsersSummary says "Configured {configured} / {total} browsers · {keys} keys stored. A browser with no manifest cannot start biometric u…"
+// in the language the app shows.
+//
+// The browsers page's summary line.
+func BrowsersSummary(configured int, total int, keys int) string {
+	return In(i18n.Locale()).BrowsersSummary(configured, total, keys)
+}
+
+// BrowsersSummary says "Configured {configured} / {total} browsers · {keys} keys stored. A browser with no manifest cannot start biometric u…"
+// in the language of msgs.
+//
+// The browsers page's summary line.
+func (msgs Messages) BrowsersSummary(configured int, total int, keys int) string {
+	return Catalog.Format(msgs.locale, "browsersSummary", map[string]any{"configured": configured, "total": total, "keys": keys})
+}
+
+// BrowsersBulkConfirm says "{count} registrations need confirmation; handle them in the confirmation dialog."
+// in the language the app shows.
+//
+// The browsers page's status line while the bulk confirmation dialog is up.
+func BrowsersBulkConfirm(count int) string { return In(i18n.Locale()).BrowsersBulkConfirm(count) }
+
+// BrowsersBulkConfirm says "{count} registrations need confirmation; handle them in the confirmation dialog."
+// in the language of msgs.
+//
+// The browsers page's status line while the bulk confirmation dialog is up.
+func (msgs Messages) BrowsersBulkConfirm(count int) string {
+	return Catalog.Format(msgs.locale, "browsersBulkConfirm", map[string]any{"count": count})
+}
+
+// BrowsersConfirmCover says "Confirmation before overwriting: this manifest may belong to the official Bitwarden desktop client; overwriting disab…"
+// in the language the app shows.
+//
+// The browsers page's status line while one row awaits an overwrite
+// confirmation.
+func BrowsersConfirmCover() string { return In(i18n.Locale()).BrowsersConfirmCover() }
+
+// BrowsersConfirmCover says "Confirmation before overwriting: this manifest may belong to the official Bitwarden desktop client; overwriting disab…"
+// in the language of msgs.
+//
+// The browsers page's status line while one row awaits an overwrite
+// confirmation.
+func (msgs Messages) BrowsersConfirmCover() string {
+	return Catalog.Format(msgs.locale, "browsersConfirmCover", nil)
+}
+
+// BrowsersHijacked says "Detected {count} browser(s) whose configuration was overwritten by another program (the official desktop client rewri…"
+// in the language the app shows.
+//
+// The browsers page's status line when a registration was hijacked.
+func BrowsersHijacked(count int) string { return In(i18n.Locale()).BrowsersHijacked(count) }
+
+// BrowsersHijacked says "Detected {count} browser(s) whose configuration was overwritten by another program (the official desktop client rewri…"
+// in the language of msgs.
+//
+// The browsers page's status line when a registration was hijacked.
+func (msgs Messages) BrowsersHijacked(count int) string {
+	return Catalog.Format(msgs.locale, "browsersHijacked", map[string]any{"count": count})
+}
+
+// BrowsersManifestHint says "The manifest records the absolute path of this tool's exe; after moving the program, click \"Repair\" on the row to rew…"
+// in the language the app shows.
+//
+// The browsers page's hint at the bottom of the list.
+func BrowsersManifestHint() string { return In(i18n.Locale()).BrowsersManifestHint() }
+
+// BrowsersManifestHint says "The manifest records the absolute path of this tool's exe; after moving the program, click \"Repair\" on the row to rew…"
+// in the language of msgs.
+//
+// The browsers page's hint at the bottom of the list.
+func (msgs Messages) BrowsersManifestHint() string {
+	return Catalog.Format(msgs.locale, "browsersManifestHint", nil)
+}
+
+// BrowserNotInstalled says "Not installed"
+// in the language the app shows.
+//
+// The row marker for a browser this machine does not have.
+func BrowserNotInstalled() string { return In(i18n.Locale()).BrowserNotInstalled() }
+
+// BrowserNotInstalled says "Not installed"
+// in the language of msgs.
+//
+// The row marker for a browser this machine does not have.
+func (msgs Messages) BrowserNotInstalled() string {
+	return Catalog.Format(msgs.locale, "browserNotInstalled", nil)
+}
+
+// BrowserAbsentHint says "This browser was not found on this machine; there is no registration point to write."
+// in the language the app shows.
+//
+// The tooltip that explains a disabled write action.
+func BrowserAbsentHint() string { return In(i18n.Locale()).BrowserAbsentHint() }
+
+// BrowserAbsentHint says "This browser was not found on this machine; there is no registration point to write."
+// in the language of msgs.
+//
+// The tooltip that explains a disabled write action.
+func (msgs Messages) BrowserAbsentHint() string {
+	return Catalog.Format(msgs.locale, "browserAbsentHint", nil)
+}
+
+// BrowserStatusOurs says "Installed (biowarden)"
+// in the language the app shows.
+//
+// The row state when our manifest is registered.
+func BrowserStatusOurs() string { return In(i18n.Locale()).BrowserStatusOurs() }
+
+// BrowserStatusOurs says "Installed (biowarden)"
+// in the language of msgs.
+//
+// The row state when our manifest is registered.
+func (msgs Messages) BrowserStatusOurs() string {
+	return Catalog.Format(msgs.locale, "browserStatusOurs", nil)
+}
+
+// BrowserStatusHijacked says "Overwritten by another program (possibly the official Bitwarden desktop client)"
+// in the language the app shows.
+//
+// The row state when our manifest was overwritten by another program.
+func BrowserStatusHijacked() string { return In(i18n.Locale()).BrowserStatusHijacked() }
+
+// BrowserStatusHijacked says "Overwritten by another program (possibly the official Bitwarden desktop client)"
+// in the language of msgs.
+//
+// The row state when our manifest was overwritten by another program.
+func (msgs Messages) BrowserStatusHijacked() string {
+	return Catalog.Format(msgs.locale, "browserStatusHijacked", nil)
+}
+
+// BrowserStatusForeign says "Present (possibly the official Bitwarden desktop client's configuration)"
+// in the language the app shows.
+//
+// The row state when a registration belonging to another client is present.
+func BrowserStatusForeign() string { return In(i18n.Locale()).BrowserStatusForeign() }
+
+// BrowserStatusForeign says "Present (possibly the official Bitwarden desktop client's configuration)"
+// in the language of msgs.
+//
+// The row state when a registration belonging to another client is present.
+func (msgs Messages) BrowserStatusForeign() string {
+	return Catalog.Format(msgs.locale, "browserStatusForeign", nil)
+}
+
+// BrowserStatusMissing says "Not installed"
+// in the language the app shows.
+//
+// The row state when no registration exists.
+func BrowserStatusMissing() string { return In(i18n.Locale()).BrowserStatusMissing() }
+
+// BrowserStatusMissing says "Not installed"
+// in the language of msgs.
+//
+// The row state when no registration exists.
+func (msgs Messages) BrowserStatusMissing() string {
+	return Catalog.Format(msgs.locale, "browserStatusMissing", nil)
+}
+
+// BrowserConnectionNever says "Extension never connected"
+// in the language the app shows.
+//
+// The row indicator while no host process has recorded this browser.
+func BrowserConnectionNever() string { return In(i18n.Locale()).BrowserConnectionNever() }
+
+// BrowserConnectionNever says "Extension never connected"
+// in the language of msgs.
+//
+// The row indicator while no host process has recorded this browser.
+func (msgs Messages) BrowserConnectionNever() string {
+	return Catalog.Format(msgs.locale, "browserConnectionNever", nil)
+}
+
+// BrowserConnectionConnected says "Connected · {when}"
+// in the language the app shows.
+//
+// The row indicator once the extension connected.
+func BrowserConnectionConnected(when string) string {
+	return In(i18n.Locale()).BrowserConnectionConnected(when)
+}
+
+// BrowserConnectionConnected says "Connected · {when}"
+// in the language of msgs.
+//
+// The row indicator once the extension connected.
+func (msgs Messages) BrowserConnectionConnected(when string) string {
+	return Catalog.Format(msgs.locale, "browserConnectionConnected", map[string]any{"when": when})
+}
+
+// BrowserRelativeJustNow says "just now"
+// in the language the app shows.
+//
+// A past instant under a minute ago.
+func BrowserRelativeJustNow() string { return In(i18n.Locale()).BrowserRelativeJustNow() }
+
+// BrowserRelativeJustNow says "just now"
+// in the language of msgs.
+//
+// A past instant under a minute ago.
+func (msgs Messages) BrowserRelativeJustNow() string {
+	return Catalog.Format(msgs.locale, "browserRelativeJustNow", nil)
+}
+
+// BrowserRelativeMinutes says "{count} minutes ago"
+// in the language the app shows.
+//
+// A past instant under an hour ago.
+func BrowserRelativeMinutes(count int) string { return In(i18n.Locale()).BrowserRelativeMinutes(count) }
+
+// BrowserRelativeMinutes says "{count} minutes ago"
+// in the language of msgs.
+//
+// A past instant under an hour ago.
+func (msgs Messages) BrowserRelativeMinutes(count int) string {
+	return Catalog.Format(msgs.locale, "browserRelativeMinutes", map[string]any{"count": count})
+}
+
+// BrowserRelativeHours says "{count} hours ago"
+// in the language the app shows.
+//
+// A past instant under a day ago.
+func BrowserRelativeHours(count int) string { return In(i18n.Locale()).BrowserRelativeHours(count) }
+
+// BrowserRelativeHours says "{count} hours ago"
+// in the language of msgs.
+//
+// A past instant under a day ago.
+func (msgs Messages) BrowserRelativeHours(count int) string {
+	return Catalog.Format(msgs.locale, "browserRelativeHours", map[string]any{"count": count})
+}
+
+// BrowserRelativeDays says "{count} days ago"
+// in the language the app shows.
+//
+// A past instant under a month ago.
+func BrowserRelativeDays(count int) string { return In(i18n.Locale()).BrowserRelativeDays(count) }
+
+// BrowserRelativeDays says "{count} days ago"
+// in the language of msgs.
+//
+// A past instant under a month ago.
+func (msgs Messages) BrowserRelativeDays(count int) string {
+	return Catalog.Format(msgs.locale, "browserRelativeDays", map[string]any{"count": count})
+}
+
+// BrowsersActionRepair says "Repair"
+// in the language the app shows.
+//
+// The row action that rewrites our manifest.
+func BrowsersActionRepair() string { return In(i18n.Locale()).BrowsersActionRepair() }
+
+// BrowsersActionRepair says "Repair"
+// in the language of msgs.
+//
+// The row action that rewrites our manifest.
+func (msgs Messages) BrowsersActionRepair() string {
+	return Catalog.Format(msgs.locale, "browsersActionRepair", nil)
+}
+
+// BrowsersActionUninstall says "Uninstall"
+// in the language the app shows.
+//
+// The row action that removes our manifest.
+func BrowsersActionUninstall() string { return In(i18n.Locale()).BrowsersActionUninstall() }
+
+// BrowsersActionUninstall says "Uninstall"
+// in the language of msgs.
+//
+// The row action that removes our manifest.
+func (msgs Messages) BrowsersActionUninstall() string {
+	return Catalog.Format(msgs.locale, "browsersActionUninstall", nil)
+}
+
+// BrowsersActionOverwrite says "Overwrite"
+// in the language the app shows.
+//
+// The row action that replaces a foreign manifest after confirmation.
+func BrowsersActionOverwrite() string { return In(i18n.Locale()).BrowsersActionOverwrite() }
+
+// BrowsersActionOverwrite says "Overwrite"
+// in the language of msgs.
+//
+// The row action that replaces a foreign manifest after confirmation.
+func (msgs Messages) BrowsersActionOverwrite() string {
+	return Catalog.Format(msgs.locale, "browsersActionOverwrite", nil)
+}
+
+// BrowsersActionRestore says "Restore"
+// in the language the app shows.
+//
+// The row action that recovers an overwritten manifest after confirmation.
+func BrowsersActionRestore() string { return In(i18n.Locale()).BrowsersActionRestore() }
+
+// BrowsersActionRestore says "Restore"
+// in the language of msgs.
+//
+// The row action that recovers an overwritten manifest after confirmation.
+func (msgs Messages) BrowsersActionRestore() string {
+	return Catalog.Format(msgs.locale, "browsersActionRestore", nil)
+}
+
+// BrowsersActionInstall says "Install"
+// in the language the app shows.
+//
+// The row action that writes our manifest.
+func BrowsersActionInstall() string { return In(i18n.Locale()).BrowsersActionInstall() }
+
+// BrowsersActionInstall says "Install"
+// in the language of msgs.
+//
+// The row action that writes our manifest.
+func (msgs Messages) BrowsersActionInstall() string {
+	return Catalog.Format(msgs.locale, "browsersActionInstall", nil)
+}
+
+// BrowsersActionConfirmOverwrite says "Confirm overwrite"
+// in the language the app shows.
+//
+// The second click that confirms overwriting a foreign manifest.
+func BrowsersActionConfirmOverwrite() string {
+	return In(i18n.Locale()).BrowsersActionConfirmOverwrite()
+}
+
+// BrowsersActionConfirmOverwrite says "Confirm overwrite"
+// in the language of msgs.
+//
+// The second click that confirms overwriting a foreign manifest.
+func (msgs Messages) BrowsersActionConfirmOverwrite() string {
+	return Catalog.Format(msgs.locale, "browsersActionConfirmOverwrite", nil)
+}
+
+// BrowsersActionConfirmRestore says "Confirm restore"
+// in the language the app shows.
+//
+// The second click that confirms restoring an overwritten manifest.
+func BrowsersActionConfirmRestore() string { return In(i18n.Locale()).BrowsersActionConfirmRestore() }
+
+// BrowsersActionConfirmRestore says "Confirm restore"
+// in the language of msgs.
+//
+// The second click that confirms restoring an overwritten manifest.
+func (msgs Messages) BrowsersActionConfirmRestore() string {
+	return Catalog.Format(msgs.locale, "browsersActionConfirmRestore", nil)
+}
+
+// BrowsersActionConfirmUninstall says "Confirm uninstall"
+// in the language the app shows.
+//
+// The second click that confirms deleting a manifest that may be another
+// client's.
+func BrowsersActionConfirmUninstall() string {
+	return In(i18n.Locale()).BrowsersActionConfirmUninstall()
+}
+
+// BrowsersActionConfirmUninstall says "Confirm uninstall"
+// in the language of msgs.
+//
+// The second click that confirms deleting a manifest that may be another
+// client's.
+func (msgs Messages) BrowsersActionConfirmUninstall() string {
+	return Catalog.Format(msgs.locale, "browsersActionConfirmUninstall", nil)
+}
+
+// BrowsersNoticeReadFailed says "Reading the browser registration state failed: {detail}"
+// in the language the app shows.
+//
+// The browsers page's status line when the registry read failed.
+func BrowsersNoticeReadFailed(detail string) string {
+	return In(i18n.Locale()).BrowsersNoticeReadFailed(detail)
+}
+
+// BrowsersNoticeReadFailed says "Reading the browser registration state failed: {detail}"
+// in the language of msgs.
+//
+// The browsers page's status line when the registry read failed.
+func (msgs Messages) BrowsersNoticeReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeReadFailed", map[string]any{"detail": detail})
+}
+
+// BrowsersNoticeInstalled says "Installed {count}"
+// in the language the app shows.
+//
+// The bulk summary's installed part.
+func BrowsersNoticeInstalled(count int) string {
+	return In(i18n.Locale()).BrowsersNoticeInstalled(count)
+}
+
+// BrowsersNoticeInstalled says "Installed {count}"
+// in the language of msgs.
+//
+// The bulk summary's installed part.
+func (msgs Messages) BrowsersNoticeInstalled(count int) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeInstalled", map[string]any{"count": count})
+}
+
+// BrowsersNoticeFailed says "Failed: {names}"
+// in the language the app shows.
+//
+// The bulk summary's failed part.
+func BrowsersNoticeFailed(names string) string { return In(i18n.Locale()).BrowsersNoticeFailed(names) }
+
+// BrowsersNoticeFailed says "Failed: {names}"
+// in the language of msgs.
+//
+// The bulk summary's failed part.
+func (msgs Messages) BrowsersNoticeFailed(names string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeFailed", map[string]any{"names": names})
+}
+
+// BrowsersNoticeSkippedAbsent says "Not installed, skipped: {names}"
+// in the language the app shows.
+//
+// The bulk summary's not-installed part.
+func BrowsersNoticeSkippedAbsent(names string) string {
+	return In(i18n.Locale()).BrowsersNoticeSkippedAbsent(names)
+}
+
+// BrowsersNoticeSkippedAbsent says "Not installed, skipped: {names}"
+// in the language of msgs.
+//
+// The bulk summary's not-installed part.
+func (msgs Messages) BrowsersNoticeSkippedAbsent(names string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeSkippedAbsent", map[string]any{"names": names})
+}
+
+// BrowsersNoticeSkippedCancelled says "Skipped {count} (overwrite cancelled, unchanged)"
+// in the language the app shows.
+//
+// The bulk summary's cancelled part.
+func BrowsersNoticeSkippedCancelled(count int) string {
+	return In(i18n.Locale()).BrowsersNoticeSkippedCancelled(count)
+}
+
+// BrowsersNoticeSkippedCancelled says "Skipped {count} (overwrite cancelled, unchanged)"
+// in the language of msgs.
+//
+// The bulk summary's cancelled part.
+func (msgs Messages) BrowsersNoticeSkippedCancelled(count int) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeSkippedCancelled", map[string]any{"count": count})
+}
+
+// BrowsersNoticeManifestWriteFailed says "Writing the manifest for {name} failed: {detail}"
+// in the language the app shows.
+//
+// The browsers page's status line when one manifest write failed.
+func BrowsersNoticeManifestWriteFailed(name string, detail string) string {
+	return In(i18n.Locale()).BrowsersNoticeManifestWriteFailed(name, detail)
+}
+
+// BrowsersNoticeManifestWriteFailed says "Writing the manifest for {name} failed: {detail}"
+// in the language of msgs.
+//
+// The browsers page's status line when one manifest write failed.
+func (msgs Messages) BrowsersNoticeManifestWriteFailed(name string, detail string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeManifestWriteFailed", map[string]any{"name": name, "detail": detail})
+}
+
+// BrowsersNoticeManifestWritten says "Wrote the manifest for {name}"
+// in the language the app shows.
+//
+// The browsers page's status line after one manifest write.
+func BrowsersNoticeManifestWritten(name string) string {
+	return In(i18n.Locale()).BrowsersNoticeManifestWritten(name)
+}
+
+// BrowsersNoticeManifestWritten says "Wrote the manifest for {name}"
+// in the language of msgs.
+//
+// The browsers page's status line after one manifest write.
+func (msgs Messages) BrowsersNoticeManifestWritten(name string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeManifestWritten", map[string]any{"name": name})
+}
+
+// BrowsersNoticeUninstallForeign says "Left {name}'s registration in place: it may belong to the official Bitwarden desktop client"
+// in the language the app shows.
+//
+// The browsers page's status line when an uninstall was refused.
+func BrowsersNoticeUninstallForeign(name string) string {
+	return In(i18n.Locale()).BrowsersNoticeUninstallForeign(name)
+}
+
+// BrowsersNoticeUninstallForeign says "Left {name}'s registration in place: it may belong to the official Bitwarden desktop client"
+// in the language of msgs.
+//
+// The browsers page's status line when an uninstall was refused.
+func (msgs Messages) BrowsersNoticeUninstallForeign(name string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeUninstallForeign", map[string]any{"name": name})
+}
+
+// BrowsersNoticeManifestDeleteFailed says "Deleting {name}'s manifest failed: {detail}"
+// in the language the app shows.
+//
+// The browsers page's status line when one manifest delete failed.
+func BrowsersNoticeManifestDeleteFailed(name string, detail string) string {
+	return In(i18n.Locale()).BrowsersNoticeManifestDeleteFailed(name, detail)
+}
+
+// BrowsersNoticeManifestDeleteFailed says "Deleting {name}'s manifest failed: {detail}"
+// in the language of msgs.
+//
+// The browsers page's status line when one manifest delete failed.
+func (msgs Messages) BrowsersNoticeManifestDeleteFailed(name string, detail string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeManifestDeleteFailed", map[string]any{"name": name, "detail": detail})
+}
+
+// BrowsersNoticeManifestDeleted says "Deleted {name}'s manifest"
+// in the language the app shows.
+//
+// The browsers page's status line after one manifest delete.
+func BrowsersNoticeManifestDeleted(name string) string {
+	return In(i18n.Locale()).BrowsersNoticeManifestDeleted(name)
+}
+
+// BrowsersNoticeManifestDeleted says "Deleted {name}'s manifest"
+// in the language of msgs.
+//
+// The browsers page's status line after one manifest delete.
+func (msgs Messages) BrowsersNoticeManifestDeleted(name string) string {
+	return Catalog.Format(msgs.locale, "browsersNoticeManifestDeleted", map[string]any{"name": name})
+}
+
+// BrowsersConfirmTitle says "Confirm overwriting browser registrations"
+// in the language the app shows.
+//
+// The bulk confirmation window's title and heading.
+func BrowsersConfirmTitle() string { return In(i18n.Locale()).BrowsersConfirmTitle() }
+
+// BrowsersConfirmTitle says "Confirm overwriting browser registrations"
+// in the language of msgs.
+//
+// The bulk confirmation window's title and heading.
+func (msgs Messages) BrowsersConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "browsersConfirmTitle", nil)
+}
+
+// BrowsersConfirmNote says "Overwriting only writes the local registry and manifest files; no keys are involved and no Windows Hello confirmation…"
+// in the language the app shows.
+//
+// The confirmation window's note about what a write touches.
+func BrowsersConfirmNote() string { return In(i18n.Locale()).BrowsersConfirmNote() }
+
+// BrowsersConfirmNote says "Overwriting only writes the local registry and manifest files; no keys are involved and no Windows Hello confirmation…"
+// in the language of msgs.
+//
+// The confirmation window's note about what a write touches.
+func (msgs Messages) BrowsersConfirmNote() string {
+	return Catalog.Format(msgs.locale, "browsersConfirmNote", nil)
+}
+
+// BrowsersConfirmOfficialNote says "The official Bitwarden desktop client may rewrite the registry again on every start; when you no longer use it, consi…"
+// in the language the app shows.
+//
+// The confirmation window's warning shown when a foreign registration is
+// listed.
+func BrowsersConfirmOfficialNote() string { return In(i18n.Locale()).BrowsersConfirmOfficialNote() }
+
+// BrowsersConfirmOfficialNote says "The official Bitwarden desktop client may rewrite the registry again on every start; when you no longer use it, consi…"
+// in the language of msgs.
+//
+// The confirmation window's warning shown when a foreign registration is
+// listed.
+func (msgs Messages) BrowsersConfirmOfficialNote() string {
+	return Catalog.Format(msgs.locale, "browsersConfirmOfficialNote", nil)
+}
+
+// BrowsersConfirmIntroForeign says "The registrations below do not belong to biowarden right now; they may come from the official Bitwarden desktop clien…"
+// in the language the app shows.
+//
+// The confirmation window's intro when it lists a foreign registration.
+func BrowsersConfirmIntroForeign() string { return In(i18n.Locale()).BrowsersConfirmIntroForeign() }
+
+// BrowsersConfirmIntroForeign says "The registrations below do not belong to biowarden right now; they may come from the official Bitwarden desktop clien…"
+// in the language of msgs.
+//
+// The confirmation window's intro when it lists a foreign registration.
+func (msgs Messages) BrowsersConfirmIntroForeign() string {
+	return Catalog.Format(msgs.locale, "browsersConfirmIntroForeign", nil)
+}
+
+// BrowsersConfirmIntroHijacked says "biowarden's configuration in the browsers below was overwritten by another program. Confirming restores biowarden's m…"
+// in the language the app shows.
+//
+// The confirmation window's intro when every listed row was hijacked.
+func BrowsersConfirmIntroHijacked() string { return In(i18n.Locale()).BrowsersConfirmIntroHijacked() }
+
+// BrowsersConfirmIntroHijacked says "biowarden's configuration in the browsers below was overwritten by another program. Confirming restores biowarden's m…"
+// in the language of msgs.
+//
+// The confirmation window's intro when every listed row was hijacked.
+func (msgs Messages) BrowsersConfirmIntroHijacked() string {
+	return Catalog.Format(msgs.locale, "browsersConfirmIntroHijacked", nil)
+}
+
+// BrowsersConfirmCurrent says "Currently points to: {path}{owner}"
+// in the language the app shows.
+//
+// A confirmation card's line naming the current manifest and its likely
+// owner.
+func BrowsersConfirmCurrent(path string, owner string) string {
+	return In(i18n.Locale()).BrowsersConfirmCurrent(path, owner)
+}
+
+// BrowsersConfirmCurrent says "Currently points to: {path}{owner}"
+// in the language of msgs.
+//
+// A confirmation card's line naming the current manifest and its likely
+// owner.
+func (msgs Messages) BrowsersConfirmCurrent(path string, owner string) string {
+	return Catalog.Format(msgs.locale, "browsersConfirmCurrent", map[string]any{"path": path, "owner": owner})
+}
+
+// BrowsersConfirmTarget says "Will point to: {path}"
+// in the language the app shows.
+//
+// A confirmation card's line naming the manifest it would write.
+func BrowsersConfirmTarget(path string) string { return In(i18n.Locale()).BrowsersConfirmTarget(path) }
+
+// BrowsersConfirmTarget says "Will point to: {path}"
+// in the language of msgs.
+//
+// A confirmation card's line naming the manifest it would write.
+func (msgs Messages) BrowsersConfirmTarget(path string) string {
+	return Catalog.Format(msgs.locale, "browsersConfirmTarget", map[string]any{"path": path})
+}
+
+// BrowsersConfirmRestoreTarget says "Restore to: {path}"
+// in the language the app shows.
+//
+// A confirmation card's line naming the manifest a restore would write.
+func BrowsersConfirmRestoreTarget(path string) string {
+	return In(i18n.Locale()).BrowsersConfirmRestoreTarget(path)
+}
+
+// BrowsersConfirmRestoreTarget says "Restore to: {path}"
+// in the language of msgs.
+//
+// A confirmation card's line naming the manifest a restore would write.
+func (msgs Messages) BrowsersConfirmRestoreTarget(path string) string {
+	return Catalog.Format(msgs.locale, "browsersConfirmRestoreTarget", map[string]any{"path": path})
+}
+
+// BrowsersTakeoverRestore says "Restore biowarden's configuration"
+// in the language the app shows.
+//
+// A confirmation card's headline for a hijacked row.
+func BrowsersTakeoverRestore() string { return In(i18n.Locale()).BrowsersTakeoverRestore() }
+
+// BrowsersTakeoverRestore says "Restore biowarden's configuration"
+// in the language of msgs.
+//
+// A confirmation card's headline for a hijacked row.
+func (msgs Messages) BrowsersTakeoverRestore() string {
+	return Catalog.Format(msgs.locale, "browsersTakeoverRestore", nil)
+}
+
+// BrowsersTakeoverForeign says "Take over a registration that belonged to another program"
+// in the language the app shows.
+//
+// A confirmation card's headline for a foreign row.
+func BrowsersTakeoverForeign() string { return In(i18n.Locale()).BrowsersTakeoverForeign() }
+
+// BrowsersTakeoverForeign says "Take over a registration that belonged to another program"
+// in the language of msgs.
+//
+// A confirmation card's headline for a foreign row.
+func (msgs Messages) BrowsersTakeoverForeign() string {
+	return Catalog.Format(msgs.locale, "browsersTakeoverForeign", nil)
+}
+
+// BrowsersTakeoverOwnerHijacked says " (biowarden's configuration was overwritten by it)"
+// in the language the app shows.
+//
+// The likely-owner hint for a hijacked row.
+func BrowsersTakeoverOwnerHijacked() string { return In(i18n.Locale()).BrowsersTakeoverOwnerHijacked() }
+
+// BrowsersTakeoverOwnerHijacked says " (biowarden's configuration was overwritten by it)"
+// in the language of msgs.
+//
+// The likely-owner hint for a hijacked row.
+func (msgs Messages) BrowsersTakeoverOwnerHijacked() string {
+	return Catalog.Format(msgs.locale, "browsersTakeoverOwnerHijacked", nil)
+}
+
+// BrowsersTakeoverOwnerForeign says " (possibly the official Bitwarden desktop client)"
+// in the language the app shows.
+//
+// The likely-owner hint for a foreign row.
+func BrowsersTakeoverOwnerForeign() string { return In(i18n.Locale()).BrowsersTakeoverOwnerForeign() }
+
+// BrowsersTakeoverOwnerForeign says " (possibly the official Bitwarden desktop client)"
+// in the language of msgs.
+//
+// The likely-owner hint for a foreign row.
+func (msgs Messages) BrowsersTakeoverOwnerForeign() string {
+	return Catalog.Format(msgs.locale, "browsersTakeoverOwnerForeign", nil)
+}
+
+// FirstRunNoticeIntro says "First-run automatic setup: registered {count} browsers"
+// in the language the app shows.
+//
+// The first-run summary's opening part.
+func FirstRunNoticeIntro(count int) string { return In(i18n.Locale()).FirstRunNoticeIntro(count) }
+
+// FirstRunNoticeIntro says "First-run automatic setup: registered {count} browsers"
+// in the language of msgs.
+//
+// The first-run summary's opening part.
+func (msgs Messages) FirstRunNoticeIntro(count int) string {
+	return Catalog.Format(msgs.locale, "firstRunNoticeIntro", map[string]any{"count": count})
+}
+
+// FirstRunNoticeNamed says " ({names})"
+// in the language the app shows.
+//
+// The first-run summary's list of registered browser names.
+func FirstRunNoticeNamed(names string) string { return In(i18n.Locale()).FirstRunNoticeNamed(names) }
+
+// FirstRunNoticeNamed says " ({names})"
+// in the language of msgs.
+//
+// The first-run summary's list of registered browser names.
+func (msgs Messages) FirstRunNoticeNamed(names string) string {
+	return Catalog.Format(msgs.locale, "firstRunNoticeNamed", map[string]any{"names": names})
+}
+
+// FirstRunNoticeSkipped says "Skipped {count} (the registration may belong to the official client, not overwritten: {names})"
+// in the language the app shows.
+//
+// The first-run summary's skipped part.
+func FirstRunNoticeSkipped(count int, names string) string {
+	return In(i18n.Locale()).FirstRunNoticeSkipped(count, names)
+}
+
+// FirstRunNoticeSkipped says "Skipped {count} (the registration may belong to the official client, not overwritten: {names})"
+// in the language of msgs.
+//
+// The first-run summary's skipped part.
+func (msgs Messages) FirstRunNoticeSkipped(count int, names string) string {
+	return Catalog.Format(msgs.locale, "firstRunNoticeSkipped", map[string]any{"count": count, "names": names})
+}
+
+// FirstRunNoticeFailed says "Failed: {names}"
+// in the language the app shows.
+//
+// The first-run summary's failed part.
+func FirstRunNoticeFailed(names string) string { return In(i18n.Locale()).FirstRunNoticeFailed(names) }
+
+// FirstRunNoticeFailed says "Failed: {names}"
+// in the language of msgs.
+//
+// The first-run summary's failed part.
+func (msgs Messages) FirstRunNoticeFailed(names string) string {
+	return Catalog.Format(msgs.locale, "firstRunNoticeFailed", map[string]any{"names": names})
+}
+
+// FirstRunNoticeAbsent says "Not installed: {names}"
+// in the language the app shows.
+//
+// The first-run summary's not-installed part.
+func FirstRunNoticeAbsent(names string) string { return In(i18n.Locale()).FirstRunNoticeAbsent(names) }
+
+// FirstRunNoticeAbsent says "Not installed: {names}"
+// in the language of msgs.
+//
+// The first-run summary's not-installed part.
+func (msgs Messages) FirstRunNoticeAbsent(names string) string {
+	return Catalog.Format(msgs.locale, "firstRunNoticeAbsent", map[string]any{"names": names})
+}
+
+// FirstRunNoticeMarkerError says "First-run marker error: {detail}"
+// in the language the app shows.
+//
+// The first-run summary's marker-write failure part.
+func FirstRunNoticeMarkerError(detail string) string {
+	return In(i18n.Locale()).FirstRunNoticeMarkerError(detail)
+}
+
+// FirstRunNoticeMarkerError says "First-run marker error: {detail}"
+// in the language of msgs.
+//
+// The first-run summary's marker-write failure part.
+func (msgs Messages) FirstRunNoticeMarkerError(detail string) string {
+	return Catalog.Format(msgs.locale, "firstRunNoticeMarkerError", map[string]any{"detail": detail})
+}
+
+// HelloReasonTestUnlock says "Test unlock of the biowarden key"
+// in the language the app shows.
+//
+// The Windows Hello prompt's reason for a test unlock.
+func HelloReasonTestUnlock() string { return In(i18n.Locale()).HelloReasonTestUnlock() }
+
+// HelloReasonTestUnlock says "Test unlock of the biowarden key"
+// in the language of msgs.
+//
+// The Windows Hello prompt's reason for a test unlock.
+func (msgs Messages) HelloReasonTestUnlock() string {
+	return Catalog.Format(msgs.locale, "helloReasonTestUnlock", nil)
+}
+
+// HelloReasonSaveKey says "Save the biowarden key"
+// in the language the app shows.
+//
+// The Windows Hello prompt's reason for saving a key.
+func HelloReasonSaveKey() string { return In(i18n.Locale()).HelloReasonSaveKey() }
+
+// HelloReasonSaveKey says "Save the biowarden key"
+// in the language of msgs.
+//
+// The Windows Hello prompt's reason for saving a key.
+func (msgs Messages) HelloReasonSaveKey() string {
+	return Catalog.Format(msgs.locale, "helloReasonSaveKey", nil)
+}
+
+// HelloReasonRemoveKey says "Delete the biowarden key"
+// in the language the app shows.
+//
+// The Windows Hello prompt's reason for deleting a key.
+func HelloReasonRemoveKey() string { return In(i18n.Locale()).HelloReasonRemoveKey() }
+
+// HelloReasonRemoveKey says "Delete the biowarden key"
+// in the language of msgs.
+//
+// The Windows Hello prompt's reason for deleting a key.
+func (msgs Messages) HelloReasonRemoveKey() string {
+	return Catalog.Format(msgs.locale, "helloReasonRemoveKey", nil)
+}
+
+// HelloErrorCallFailed says "The Windows Hello call failed: {detail}"
+// in the language the app shows.
+//
+// The failure when the Hello call itself broke.
+func HelloErrorCallFailed(detail string) string {
+	return In(i18n.Locale()).HelloErrorCallFailed(detail)
+}
+
+// HelloErrorCallFailed says "The Windows Hello call failed: {detail}"
+// in the language of msgs.
+//
+// The failure when the Hello call itself broke.
+func (msgs Messages) HelloErrorCallFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "helloErrorCallFailed", map[string]any{"detail": detail})
+}
+
+// HelloErrorCanceled says "Windows Hello verification was cancelled"
+// in the language the app shows.
+//
+// The failure when the human refused the Hello prompt.
+func HelloErrorCanceled() string { return In(i18n.Locale()).HelloErrorCanceled() }
+
+// HelloErrorCanceled says "Windows Hello verification was cancelled"
+// in the language of msgs.
+//
+// The failure when the human refused the Hello prompt.
+func (msgs Messages) HelloErrorCanceled() string {
+	return Catalog.Format(msgs.locale, "helloErrorCanceled", nil)
+}
+
+// HelloErrorUnavailable says "Windows Hello is not configured on this machine"
+// in the language the app shows.
+//
+// The failure when Hello is not configured.
+func HelloErrorUnavailable() string { return In(i18n.Locale()).HelloErrorUnavailable() }
+
+// HelloErrorUnavailable says "Windows Hello is not configured on this machine"
+// in the language of msgs.
+//
+// The failure when Hello is not configured.
+func (msgs Messages) HelloErrorUnavailable() string {
+	return Catalog.Format(msgs.locale, "helloErrorUnavailable", nil)
+}
+
+// HelloErrorLocked says "Windows Hello is locked; try again later"
+// in the language the app shows.
+//
+// The failure when Hello is locked out.
+func HelloErrorLocked() string { return In(i18n.Locale()).HelloErrorLocked() }
+
+// HelloErrorLocked says "Windows Hello is locked; try again later"
+// in the language of msgs.
+//
+// The failure when Hello is locked out.
+func (msgs Messages) HelloErrorLocked() string {
+	return Catalog.Format(msgs.locale, "helloErrorLocked", nil)
+}
+
+// HelloErrorBusy says "Windows Hello is temporarily unavailable (the device is busy)"
+// in the language the app shows.
+//
+// The failure when the Hello device is busy.
+func HelloErrorBusy() string { return In(i18n.Locale()).HelloErrorBusy() }
+
+// HelloErrorBusy says "Windows Hello is temporarily unavailable (the device is busy)"
+// in the language of msgs.
+//
+// The failure when the Hello device is busy.
+func (msgs Messages) HelloErrorBusy() string {
+	return Catalog.Format(msgs.locale, "helloErrorBusy", nil)
+}
+
+// HelloErrorUnknown says "Windows Hello returned an unknown result: {result}"
+// in the language the app shows.
+//
+// The failure when Hello returned a result the UI does not know.
+func HelloErrorUnknown(result string) string { return In(i18n.Locale()).HelloErrorUnknown(result) }
+
+// HelloErrorUnknown says "Windows Hello returned an unknown result: {result}"
+// in the language of msgs.
+//
+// The failure when Hello returned a result the UI does not know.
+func (msgs Messages) HelloErrorUnknown(result string) string {
+	return Catalog.Format(msgs.locale, "helloErrorUnknown", map[string]any{"result": result})
+}
+
+// KeyErrorNotBase64 says "The key is not valid base64: {detail}"
+// in the language the app shows.
+//
+// The manual save failure when the pasted key cannot be decoded.
+func KeyErrorNotBase64(detail string) string { return In(i18n.Locale()).KeyErrorNotBase64(detail) }
+
+// KeyErrorNotBase64 says "The key is not valid base64: {detail}"
+// in the language of msgs.
+//
+// The manual save failure when the pasted key cannot be decoded.
+func (msgs Messages) KeyErrorNotBase64(detail string) string {
+	return Catalog.Format(msgs.locale, "keyErrorNotBase64", map[string]any{"detail": detail})
+}
+
+// AccountErrorRemoveKey says "Deleting the key failed: {detail}"
+// in the language the app shows.
+//
+// The logout failure when the stored key could not be deleted.
+func AccountErrorRemoveKey(detail string) string {
+	return In(i18n.Locale()).AccountErrorRemoveKey(detail)
+}
+
+// AccountErrorRemoveKey says "Deleting the key failed: {detail}"
+// in the language of msgs.
+//
+// The logout failure when the stored key could not be deleted.
+func (msgs Messages) AccountErrorRemoveKey(detail string) string {
+	return Catalog.Format(msgs.locale, "accountErrorRemoveKey", map[string]any{"detail": detail})
+}
+
+// AccountErrorClearSession says "Clearing the login session failed: {detail}"
+// in the language the app shows.
+//
+// The logout failure when the persisted session could not be cleared.
+func AccountErrorClearSession(detail string) string {
+	return In(i18n.Locale()).AccountErrorClearSession(detail)
+}
+
+// AccountErrorClearSession says "Clearing the login session failed: {detail}"
+// in the language of msgs.
+//
+// The logout failure when the persisted session could not be cleared.
+func (msgs Messages) AccountErrorClearSession(detail string) string {
+	return Catalog.Format(msgs.locale, "accountErrorClearSession", map[string]any{"detail": detail})
+}

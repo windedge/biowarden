@@ -51,6 +51,8 @@ browser extension -stdio(native messaging)-> biowarden host -> Windows Hello -> 
   a login in the GUI is the one the host reads at unlock time.
 - Logs go to `%LOCALAPPDATA%\biowarden\host.log` (rotated at 5 MB, secret fields always redacted);
   set `BIOWARDEN_LOG=debug` for protocol-level detail.
+- The interface language follows the system's language (English or Simplified Chinese); the
+  Settings page's **Language** row overrides it.
 
 **Security model: Windows Hello gates *access* to the key, it does not encrypt it.** The account
 key sits in the Windows Credential Manager as raw bytes. Passing the Hello check only means

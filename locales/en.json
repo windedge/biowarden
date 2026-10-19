@@ -12,7 +12,10 @@
   "@trayOpen": {
     "description": "The tray menu's item that shows the main window.",
     "placeholders": {
-      "app": { "type": "String", "example": "biowarden" }
+      "app": {
+        "type": "String",
+        "example": "biowarden"
+      }
     }
   },
   "loginTitle": "Sign in to Bitwarden",
@@ -79,7 +82,10 @@
   "@loginTwoFactorPrompt": {
     "description": "The hint above the code field, naming the selected second factor.",
     "placeholders": {
-      "method": { "type": "String", "example": "Authenticator app (TOTP)" }
+      "method": {
+        "type": "String",
+        "example": "Authenticator app (TOTP)"
+      }
     }
   },
   "loginCode": "Code",
@@ -118,22 +124,34 @@
   "@loginEmailCodeSentTo": {
     "description": "The hint under the email code's send button, naming the address the code goes to.",
     "placeholders": {
-      "email": { "type": "String", "example": "ada@example.com" }
+      "email": {
+        "type": "String",
+        "example": "ada@example.com"
+      }
     }
   },
   "loginUnsupportedAlso": "The server also offers {methods}; {note}",
   "@loginUnsupportedAlso": {
     "description": "The hint naming the offered methods biowarden cannot answer, after the ones it can.",
     "placeholders": {
-      "methods": { "type": "String", "example": "Duo, Security key (WebAuthn)" },
-      "note": { "type": "String", "example": "this method is not supported by biowarden yet" }
+      "methods": {
+        "type": "String",
+        "example": "Duo, Security key (WebAuthn)"
+      },
+      "note": {
+        "type": "String",
+        "example": "this method is not supported by biowarden yet"
+      }
     }
   },
   "loginUnsupportedOffered": "Methods the server offers: {methods}",
   "@loginUnsupportedOffered": {
     "description": "The panel's line listing every method the server offered, when none can be answered.",
     "placeholders": {
-      "methods": { "type": "String", "example": "Duo, Security key (WebAuthn)" }
+      "methods": {
+        "type": "String",
+        "example": "Duo, Security key (WebAuthn)"
+      }
     }
   },
   "loginUnsupportedTitle": "This method is not supported by biowarden yet. Use the extraction script under Advanced on the account page to enter the key.",
@@ -208,14 +226,20 @@
   "@loginNoticeEmailSentTo": {
     "description": "The login window's status line after the code email went out, naming the address.",
     "placeholders": {
-      "email": { "type": "String", "example": "ada@example.com" }
+      "email": {
+        "type": "String",
+        "example": "ada@example.com"
+      }
     }
   },
   "loginNoticeLoggedIn": "Signed in as {email}.",
   "@loginNoticeLoggedIn": {
     "description": "The account page's notice after a login succeeded.",
     "placeholders": {
-      "email": { "type": "String", "example": "ada@example.com" }
+      "email": {
+        "type": "String",
+        "example": "ada@example.com"
+      }
     }
   },
   "loginNoticeCancelled": "Login cancelled.",
@@ -262,35 +286,50 @@
   "@loginErrorServerAddress": {
     "description": "The server-address refusal, with the validator's own explanation.",
     "placeholders": {
-      "detail": { "type": "String", "example": "auth: base URL \"http://bad host\" has no host" }
+      "detail": {
+        "type": "String",
+        "example": "auth: base URL \"http://bad host\" has no host"
+      }
     }
   },
   "loginErrorFlowState": "The login did not finish: {state}",
   "@loginErrorFlowState": {
     "description": "The login failure when the flow stopped in a state the UI cannot use.",
     "placeholders": {
-      "state": { "type": "String", "example": "loginNeedPassword" }
+      "state": {
+        "type": "String",
+        "example": "loginNeedPassword"
+      }
     }
   },
   "loginErrorFlowStart": "The login flow started in an unexpected state: {state}",
   "@loginErrorFlowStart": {
     "description": "The login failure when the start step answered with an unexpected state.",
     "placeholders": {
-      "state": { "type": "String", "example": "loginNeedPassword" }
+      "state": {
+        "type": "String",
+        "example": "loginNeedPassword"
+      }
     }
   },
   "loginErrorSaveKey": "Saving the key failed: {detail}",
   "@loginErrorSaveKey": {
     "description": "The login failure when the credential store refused the key write.",
     "placeholders": {
-      "detail": { "type": "String", "example": "credential write failed" }
+      "detail": {
+        "type": "String",
+        "example": "credential write failed"
+      }
     }
   },
   "loginErrorProviderNotOffered": "The server did not offer this method (provider {provider})",
   "@loginErrorProviderNotOffered": {
     "description": "The two-factor submission failure when the provider was never offered.",
     "placeholders": {
-      "provider": { "type": "String", "example": "3" }
+      "provider": {
+        "type": "String",
+        "example": "3"
+      }
     }
   },
   "loginErrorEmailMethodMissing": "The server did not offer the email code method",
@@ -301,7 +340,10 @@
   "@loginErrorSessionPersist": {
     "description": "The non-fatal warning when the refresh token could not be stored.",
     "placeholders": {
-      "detail": { "type": "String", "example": "credential write failed" }
+      "detail": {
+        "type": "String",
+        "example": "credential write failed"
+      }
     }
   },
   "loginStateLoggedOut": "Signed out",
@@ -319,5 +361,1119 @@
   "loginStateLoggedIn": "Signed in",
   "@loginStateLoggedIn": {
     "description": "The account page's label for the signed-in login state."
+  },
+  "appTitle": "biowarden",
+  "@appTitle": {
+    "description": "The main window's title, the app's name."
+  },
+  "listSeparator": ", ",
+  "@listSeparator": {
+    "description": "The separator between names in a list: a comma in English, an enumeration comma in Chinese."
+  },
+  "noticeSeparator": "; ",
+  "@noticeSeparator": {
+    "description": "The separator between the parts of a one-line summary notice."
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "An action button that re-reads local state."
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "A destructive action button that removes one stored item."
+  },
+  "sidebarAccount": "Account",
+  "@sidebarAccount": {
+    "description": "The sidebar's item that shows the account page."
+  },
+  "sidebarBrowsers": "Browsers",
+  "@sidebarBrowsers": {
+    "description": "The sidebar's item that shows the browsers page."
+  },
+  "sidebarSettings": "Settings",
+  "@sidebarSettings": {
+    "description": "The sidebar's item that shows the settings page."
+  },
+  "sidebarLog": "Log",
+  "@sidebarLog": {
+    "description": "The sidebar's item that shows the log page."
+  },
+  "accountTitle": "Account",
+  "@accountTitle": {
+    "description": "The account page's heading."
+  },
+  "accountIntro": "Sign in to Bitwarden to use it. The key is kept in this machine's credential manager and Windows Hello gates reads of it; biometrics only gate reads, the key itself is not encrypted by biometrics.",
+  "@accountIntro": {
+    "description": "The account page's line under the heading."
+  },
+  "accountCardGroup": "Account",
+  "@accountCardGroup": {
+    "description": "The account card's group title."
+  },
+  "accountCardSignedIn": "Signed in",
+  "@accountCardSignedIn": {
+    "description": "The account card's title when the login is verified."
+  },
+  "accountCardSignedInKey": "{email} · server {server} · key stored {created}",
+  "@accountCardSignedInKey": {
+    "description": "The signed-in card's detail line when a key is stored.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "ada@example.com"
+      },
+      "server": {
+        "type": "String",
+        "example": "https://vault.bitwarden.com"
+      },
+      "created": {
+        "type": "String",
+        "example": "2026-03-10 12:00"
+      }
+    }
+  },
+  "accountCardSignedInNoKey": "{email} · server {server} · no key stored on this machine yet",
+  "@accountCardSignedInNoKey": {
+    "description": "The signed-in card's detail line when no key is stored yet.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "ada@example.com"
+      },
+      "server": {
+        "type": "String",
+        "example": "https://vault.bitwarden.com"
+      }
+    }
+  },
+  "accountCard2FATitle": "Waiting for a two-factor code",
+  "@accountCard2FATitle": {
+    "description": "The account card's title while the login waits on a second factor."
+  },
+  "accountCard2FAMethod": "The two-factor method the server asks for: {method}",
+  "@accountCard2FAMethod": {
+    "description": "The hint naming the second factor the server offered.",
+    "placeholders": {
+      "method": {
+        "type": "String",
+        "example": "Authenticator app (TOTP)"
+      }
+    }
+  },
+  "accountCard2FAUnfinished": "Two-factor authentication is not finished yet.",
+  "@accountCard2FAUnfinished": {
+    "description": "The hint under the parked two-factor state."
+  },
+  "accountCardContinue": "Continue signing in",
+  "@accountCardContinue": {
+    "description": "The account card's button that reopens a parked login."
+  },
+  "accountCardCancel": "Cancel sign-in",
+  "@accountCardCancel": {
+    "description": "The account card's button that abandons a parked login."
+  },
+  "accountCardVerifying": "Verifying the login session...",
+  "@accountCardVerifying": {
+    "description": "The weak hint while the startup session restore is on the wire."
+  },
+  "accountCardReLogin": "Sign in again",
+  "@accountCardReLogin": {
+    "description": "The signed-in account card's button that opens the login window to refresh the key."
+  },
+  "accountCardSignOut": "Sign out",
+  "@accountCardSignOut": {
+    "description": "The signed-in account card's button that deletes the stored key and session."
+  },
+  "accountCardWindowHint": "Signing in happens in a separate login window; Windows Hello must confirm before the key is written.",
+  "@accountCardWindowHint": {
+    "description": "The hint under the signed-out card's sign-in button."
+  },
+  "accountCardConfigured": "Configured",
+  "@accountCardConfigured": {
+    "description": "The account card's title when a key is stored but no session is verified."
+  },
+  "accountCardConfiguredDetail": "{who} · key stored {created} · unlocking works",
+  "@accountCardConfiguredDetail": {
+    "description": "The configured card's detail line.",
+    "placeholders": {
+      "who": {
+        "type": "String",
+        "example": "ada@example.com"
+      },
+      "created": {
+        "type": "String",
+        "example": "2026-03-10 12:00"
+      }
+    }
+  },
+  "accountCardConfiguredHint": "Unlocking already works, no need to sign in again; sign in only after the master password or KDF changed and the key needs refreshing.",
+  "@accountCardConfiguredHint": {
+    "description": "The configured card's hint."
+  },
+  "accountCardSignedOut": "Not signed in",
+  "@accountCardSignedOut": {
+    "description": "The account card's title when there is no session and no stored key."
+  },
+  "accountCardSignedOutDetail": "After signing in to Bitwarden, biowarden fetches and stores the key automatically; no per-item setup is needed.",
+  "@accountCardSignedOutDetail": {
+    "description": "The signed-out card's detail line."
+  },
+  "accountServerLabel": "Server {server}",
+  "@accountServerLabel": {
+    "description": "The identity row's line naming the server.",
+    "placeholders": {
+      "server": {
+        "type": "String",
+        "example": "https://vault.bitwarden.com"
+      }
+    }
+  },
+  "accountKeyGroup": "Key status",
+  "@accountKeyGroup": {
+    "description": "The stored-key card's group title."
+  },
+  "accountKeyNone": "Not stored",
+  "@accountKeyNone": {
+    "description": "The key card's title when no key is stored on this machine."
+  },
+  "accountKeyNoneHint": "No key is stored on this machine yet. Sign in to save one automatically, or open Advanced below to enter it manually.",
+  "@accountKeyNoneHint": {
+    "description": "The key card's hint when no key is stored."
+  },
+  "accountKeyStored": "Stored",
+  "@accountKeyStored": {
+    "description": "The key card's title when a key is stored."
+  },
+  "accountKeyDetail": "Account {id} · stored {created}",
+  "@accountKeyDetail": {
+    "description": "The key card's detail line.",
+    "placeholders": {
+      "id": {
+        "type": "String",
+        "example": "6f1c9a04..."
+      },
+      "created": {
+        "type": "String",
+        "example": "2026-03-10 12:00"
+      }
+    }
+  },
+  "accountAdvanced": "Advanced",
+  "@accountAdvanced": {
+    "description": "The account page's disclosure that hides the v1 escape hatches."
+  },
+  "accountExtractTitle": "Extraction script (compatibility path)",
+  "@accountExtractTitle": {
+    "description": "The heading of the script escape hatch."
+  },
+  "accountExtractHint": "Take the User ID and encryption key (keyB64) out of an unlocked browser extension. Chrome / Edge: chrome://extensions -> Developer mode -> Bitwarden -> service worker; Firefox: about:debugging#/runtime/this-firefox -> Bitwarden -> Inspect.",
+  "@accountExtractHint": {
+    "description": "The hint that tells a human where to run the extraction script."
+  },
+  "accountCopyScript": "Copy extraction script",
+  "@accountCopyScript": {
+    "description": "The button that copies the extraction script."
+  },
+  "accountCopied": "Copied to the clipboard ({count} characters); paste it into the console and run it",
+  "@accountCopied": {
+    "description": "The confirmation after the script was copied.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "320"
+      }
+    }
+  },
+  "accountViewScript": "View extraction script (auditable)",
+  "@accountViewScript": {
+    "description": "The disclosure that reveals the extraction script."
+  },
+  "accountScriptPreview": "(script preview)",
+  "@accountScriptPreview": {
+    "description": "The read-only script area's placeholder."
+  },
+  "accountManualTitle": "Paste manually (legacy v1 path)",
+  "@accountManualTitle": {
+    "description": "The heading of the manual entry form."
+  },
+  "accountManualHint": "Copy userId and keyB64 from the script output above and paste them here to save.",
+  "@accountManualHint": {
+    "description": "The hint above the manual entry form."
+  },
+  "accountManualUserId": "User ID",
+  "@accountManualUserId": {
+    "description": "The manual form's label for the user id field."
+  },
+  "accountManualUserIdPlaceholder": "userId from the console output",
+  "@accountManualUserIdPlaceholder": {
+    "description": "The manual form's placeholder in the user id field."
+  },
+  "accountManualKey": "Encryption key (base64)",
+  "@accountManualKey": {
+    "description": "The manual form's label for the key field."
+  },
+  "accountManualKeyPlaceholder": "keyB64",
+  "@accountManualKeyPlaceholder": {
+    "description": "The manual form's placeholder in the key field."
+  },
+  "accountManualSave": "Save and verify",
+  "@accountManualSave": {
+    "description": "The manual form's button that stores the key behind a Hello consent."
+  },
+  "accountVerifyingSpinner": "Verifying",
+  "@accountVerifyingSpinner": {
+    "description": "The spinner label while the manual save runs."
+  },
+  "accountCallingHello": "Calling Windows Hello to verify your identity...",
+  "@accountCallingHello": {
+    "description": "The hint next to the manual save spinner."
+  },
+  "accountManualWarning": "The output contains the User ID and encryption key; they are kept only in this machine's credential manager, do not share them.",
+  "@accountManualWarning": {
+    "description": "The warning under the manual form."
+  },
+  "accountManualEnableBiometric": "After saving, also turn on \"unlock with biometrics\" in the Bitwarden extension under Settings -> Security.",
+  "@accountManualEnableBiometric": {
+    "description": "The reminder under the manual form."
+  },
+  "accountNoAccounts": "No accounts are stored on this machine yet.",
+  "@accountNoAccounts": {
+    "description": "The stored-account list's empty line."
+  },
+  "accountStoredAccounts": "Stored accounts",
+  "@accountStoredAccounts": {
+    "description": "The stored-account list's heading."
+  },
+  "accountRowCreated": "Created {created}",
+  "@accountRowCreated": {
+    "description": "A stored-account row's meta line when the email is unknown.",
+    "placeholders": {
+      "created": {
+        "type": "String",
+        "example": "2026-03-10 12:00"
+      }
+    }
+  },
+  "accountRowMeta": "{email} · {meta}",
+  "@accountRowMeta": {
+    "description": "A stored-account row's meta line with its email.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "ada@example.com"
+      },
+      "meta": {
+        "type": "String",
+        "example": "Created 2026-03-10 12:00"
+      }
+    }
+  },
+  "accountTestUnlock": "Test unlock",
+  "@accountTestUnlock": {
+    "description": "A stored-account row's button that runs one Hello consent check."
+  },
+  "accountSetCurrent": "Set as current",
+  "@accountSetCurrent": {
+    "description": "A stored-account row's button that foregrounds the account."
+  },
+  "accountNoticeKeysReadFailed": "Reading the stored accounts failed: {detail}",
+  "@accountNoticeKeysReadFailed": {
+    "description": "The account page's status line when the credential store refused the list.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "credential list failed"
+      }
+    }
+  },
+  "accountNoticeHelloCheckFailed": "Checking Windows Hello failed: {detail}",
+  "@accountNoticeHelloCheckFailed": {
+    "description": "The account page's status line when the Hello availability check failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "hello call failed"
+      }
+    }
+  },
+  "accountNoticeHelloUnavailable": "Windows Hello is not configured on this machine, so keys cannot be saved or deleted.",
+  "@accountNoticeHelloUnavailable": {
+    "description": "The account page's status line when Windows Hello is absent."
+  },
+  "accountNoticeSessionRevoked": "The login session expired and the local session was cleared; the key is still stored and unlocking is unaffected.",
+  "@accountNoticeSessionRevoked": {
+    "description": "The account page's status line when the persisted session was revoked."
+  },
+  "accountNoticeSessionUnverified": "The login session cannot be verified right now (network or server problem) and is conservatively shown as signed out; the key is still stored.",
+  "@accountNoticeSessionUnverified": {
+    "description": "The account page's status line when the persisted session could not be checked."
+  },
+  "accountNoticeSessionReadFailed": "Reading the login state failed: {detail}",
+  "@accountNoticeSessionReadFailed": {
+    "description": "The account page's status line when the persisted session could not be read.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "credential read failed"
+      }
+    }
+  },
+  "accountNoticeKeySaved": "The key was saved; Windows Hello verified.",
+  "@accountNoticeKeySaved": {
+    "description": "The account page's status line after a manual key save."
+  },
+  "accountNoticeVerified": "Verified: Windows Hello confirmed your identity (userId={id})",
+  "@accountNoticeVerified": {
+    "description": "The account page's status line after a test unlock.",
+    "placeholders": {
+      "id": {
+        "type": "String",
+        "example": "6f1c9a04..."
+      }
+    }
+  },
+  "accountNoticeRemoveSessionFailed": "The account's key was deleted, but clearing the login session failed: {detail}",
+  "@accountNoticeRemoveSessionFailed": {
+    "description": "The account page's status line when the session cleanup after a key delete failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "credential delete failed"
+      }
+    }
+  },
+  "accountNoticeKeyRemoved": "The account's key was deleted.",
+  "@accountNoticeKeyRemoved": {
+    "description": "The account page's status line after a key delete."
+  },
+  "accountNoticeLoggedOut": "Signed out",
+  "@accountNoticeLoggedOut": {
+    "description": "The account page's status line after a logout."
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "The settings page's heading."
+  },
+  "settingsIntro": "Autostart and Windows Hello are wired to the real backends; the log level and tray icon only last this run.",
+  "@settingsIntro": {
+    "description": "The settings page's line under the heading."
+  },
+  "settingsGroupAccount": "Account",
+  "@settingsGroupAccount": {
+    "description": "The settings page's account section title."
+  },
+  "settingsServer": "Server address",
+  "@settingsServer": {
+    "description": "The settings page's server address field label."
+  },
+  "settingsServerReadOnly": "Server address (read only)",
+  "@settingsServerReadOnly": {
+    "description": "The read-only server address field's control label."
+  },
+  "settingsGroupEntry": "Entry points",
+  "@settingsGroupEntry": {
+    "description": "The settings page's section title for the entry points."
+  },
+  "settingsAutostart": "Start at login",
+  "@settingsAutostart": {
+    "description": "The settings switch that toggles the login item."
+  },
+  "settingsShowTray": "Show tray icon",
+  "@settingsShowTray": {
+    "description": "The settings switch that toggles the tray icon."
+  },
+  "settingsHello": "Windows Hello",
+  "@settingsHello": {
+    "description": "The settings page's Windows Hello row label."
+  },
+  "settingsHelloCheckingSpinner": "Checking Windows Hello",
+  "@settingsHelloCheckingSpinner": {
+    "description": "The spinner label while the Hello check runs."
+  },
+  "settingsHelloChecking": "Checking...",
+  "@settingsHelloChecking": {
+    "description": "The text next to the Hello check spinner."
+  },
+  "settingsHelloAvailable": "Available (face / fingerprint / PIN configured)",
+  "@settingsHelloAvailable": {
+    "description": "The Windows Hello row when Hello is available."
+  },
+  "settingsHelloUnavailable": "Unavailable",
+  "@settingsHelloUnavailable": {
+    "description": "The Windows Hello row when Hello is unavailable."
+  },
+  "settingsHelloRecheck": "Check again",
+  "@settingsHelloRecheck": {
+    "description": "The button that re-runs the Hello availability check."
+  },
+  "settingsGroupLog": "Log",
+  "@settingsGroupLog": {
+    "description": "The settings page's log section title."
+  },
+  "settingsLogLevel": "Level",
+  "@settingsLogLevel": {
+    "description": "The settings page's log level field label."
+  },
+  "settingsLogLevelLabel": "Log level",
+  "@settingsLogLevelLabel": {
+    "description": "The log level dropdown's control label."
+  },
+  "settingsLogPath": "Path",
+  "@settingsLogPath": {
+    "description": "The settings page's log path field label."
+  },
+  "settingsLogPathLabel": "Log path (read only)",
+  "@settingsLogPathLabel": {
+    "description": "The read-only log path field's control label."
+  },
+  "settingsGroupAbout": "About",
+  "@settingsGroupAbout": {
+    "description": "The settings page's about section title."
+  },
+  "settingsVersion": "Version",
+  "@settingsVersion": {
+    "description": "The about section's version field label."
+  },
+  "settingsAboutText": "Windows Hello only gates reads of the key in the credential manager; the key itself is not encrypted by biometrics.",
+  "@settingsAboutText": {
+    "description": "The about section's message."
+  },
+  "settingsAboutNote": "Note",
+  "@settingsAboutNote": {
+    "description": "The about section's note field label."
+  },
+  "settingsLogLevelError": "Error",
+  "@settingsLogLevelError": {
+    "description": "The log level whose name is Error."
+  },
+  "settingsLogLevelInfo": "Info",
+  "@settingsLogLevelInfo": {
+    "description": "The log level whose name is Info."
+  },
+  "settingsLogLevelDebug": "Debug",
+  "@settingsLogLevelDebug": {
+    "description": "The log level whose name is Debug."
+  },
+  "settingsNoticeAutostartReadFailed": "Reading the autostart setting failed: {detail}",
+  "@settingsNoticeAutostartReadFailed": {
+    "description": "The settings page's status line when the autostart read failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "registry read failed"
+      }
+    }
+  },
+  "settingsNoticeHelloCheckFailed": "The Windows Hello check failed: {detail}",
+  "@settingsNoticeHelloCheckFailed": {
+    "description": "The settings page's status line when the Hello check failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "hello call failed"
+      }
+    }
+  },
+  "settingsNoticeHelloAvailable": "Windows Hello is available",
+  "@settingsNoticeHelloAvailable": {
+    "description": "The settings page's status line when Hello is available."
+  },
+  "settingsNoticeHelloUnavailable": "Windows Hello is unavailable: no face / fingerprint / PIN is configured",
+  "@settingsNoticeHelloUnavailable": {
+    "description": "The settings page's status line when Hello is not configured."
+  },
+  "settingsNoticeAutostartWriteFailed": "Setting autostart failed: {detail}",
+  "@settingsNoticeAutostartWriteFailed": {
+    "description": "The settings page's status line when the autostart write failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "registry write failed"
+      }
+    }
+  },
+  "settingsNoticeAutostartOn": "Autostart at login is on",
+  "@settingsNoticeAutostartOn": {
+    "description": "The settings page's status line after enabling autostart."
+  },
+  "settingsNoticeAutostartOff": "Autostart at login is off",
+  "@settingsNoticeAutostartOff": {
+    "description": "The settings page's status line after disabling autostart."
+  },
+  "settingsNoticeTrayShown": "Tray icon shown (memory only: it returns after a restart)",
+  "@settingsNoticeTrayShown": {
+    "description": "The settings page's status line after showing the tray icon."
+  },
+  "settingsNoticeTrayHidden": "Tray icon hidden (memory only: the tray is still there, quit from its menu)",
+  "@settingsNoticeTrayHidden": {
+    "description": "The settings page's status line after hiding the tray icon."
+  },
+  "logTitle": "Log",
+  "@logTitle": {
+    "description": "The log page's heading."
+  },
+  "logLevelLine": "Level {level} · {path}",
+  "@logLevelLine": {
+    "description": "The log page's line naming the level and the file.",
+    "placeholders": {
+      "level": {
+        "type": "String",
+        "example": "Info"
+      },
+      "path": {
+        "type": "String",
+        "example": "C:\\Users\\ada\\AppData\\Local\\biowarden\\biowarden.log"
+      }
+    }
+  },
+  "logContent": "Log content",
+  "@logContent": {
+    "description": "The log text area's label."
+  },
+  "logPlaceholder": "No log yet",
+  "@logPlaceholder": {
+    "description": "The log text area's placeholder while the file is empty."
+  },
+  "logClear": "Clear",
+  "@logClear": {
+    "description": "The button that clears the log view."
+  },
+  "logOpen": "Open log file",
+  "@logOpen": {
+    "description": "The button that opens the log file in the default program."
+  },
+  "logCharacters": "{count} characters",
+  "@logCharacters": {
+    "description": "The log page's character count.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2048"
+      }
+    }
+  },
+  "logNoticeReadFailed": "Reading the log failed: {detail}",
+  "@logNoticeReadFailed": {
+    "description": "The log page's status line when the log tail could not be read.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "open failed"
+      }
+    }
+  },
+  "logNoticeRefreshed": "Refreshed",
+  "@logNoticeRefreshed": {
+    "description": "The log page's status line after a refresh."
+  },
+  "logNoticeCleared": "Cleared the current view (the file is unchanged)",
+  "@logNoticeCleared": {
+    "description": "The log page's status line after clearing the view."
+  },
+  "logNoticeMissing": "The log file does not exist yet: {path}",
+  "@logNoticeMissing": {
+    "description": "The log page's status line when the file is missing.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "C:\\Users\\ada\\AppData\\Local\\biowarden\\biowarden.log"
+      }
+    }
+  },
+  "logNoticeOpenFailed": "Opening the log file failed: {detail}",
+  "@logNoticeOpenFailed": {
+    "description": "The log page's status line when the shell could not open the file.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "no association"
+      }
+    }
+  },
+  "logNoticeOpened": "Opened the log file with the system default program",
+  "@logNoticeOpened": {
+    "description": "The log page's status line after opening the file."
+  },
+  "browsersTitle": "Browsers",
+  "@browsersTitle": {
+    "description": "The browsers page's heading."
+  },
+  "browsersInstallAll": "Install all",
+  "@browsersInstallAll": {
+    "description": "The browsers page's button that installs every safe row at once."
+  },
+  "browsersSummary": "Configured {configured} / {total} browsers · {keys} keys stored. A browser with no manifest cannot start biometric unlock. \"Install all\" writes the rows that are installed and either have no manifest or are ours; browsers that are not installed are skipped; registrations that may belong to the official client or were overwritten are listed for confirmation first and replaced together once confirmed.",
+  "@browsersSummary": {
+    "description": "The browsers page's summary line.",
+    "placeholders": {
+      "configured": {
+        "type": "int",
+        "example": "2"
+      },
+      "total": {
+        "type": "int",
+        "example": "3"
+      },
+      "keys": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "browsersBulkConfirm": "{count} registrations need confirmation; handle them in the confirmation dialog.",
+  "@browsersBulkConfirm": {
+    "description": "The browsers page's status line while the bulk confirmation dialog is up.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "browsersConfirmCover": "Confirmation before overwriting: this manifest may belong to the official Bitwarden desktop client; overwriting disables its biometric unlock.",
+  "@browsersConfirmCover": {
+    "description": "The browsers page's status line while one row awaits an overwrite confirmation."
+  },
+  "browsersHijacked": "Detected {count} browser(s) whose configuration was overwritten by another program (the official desktop client rewrites the registry on every start). After restoring, close or uninstall the official desktop client, or it will be overwritten again.",
+  "@browsersHijacked": {
+    "description": "The browsers page's status line when a registration was hijacked.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "browsersManifestHint": "The manifest records the absolute path of this tool's exe; after moving the program, click \"Repair\" on the row to rewrite it.",
+  "@browsersManifestHint": {
+    "description": "The browsers page's hint at the bottom of the list."
+  },
+  "browserNotInstalled": "Not installed",
+  "@browserNotInstalled": {
+    "description": "The row marker for a browser this machine does not have."
+  },
+  "browserAbsentHint": "This browser was not found on this machine; there is no registration point to write.",
+  "@browserAbsentHint": {
+    "description": "The tooltip that explains a disabled write action."
+  },
+  "browserStatusOurs": "Installed (biowarden)",
+  "@browserStatusOurs": {
+    "description": "The row state when our manifest is registered."
+  },
+  "browserStatusHijacked": "Overwritten by another program (possibly the official Bitwarden desktop client)",
+  "@browserStatusHijacked": {
+    "description": "The row state when our manifest was overwritten by another program."
+  },
+  "browserStatusForeign": "Present (possibly the official Bitwarden desktop client's configuration)",
+  "@browserStatusForeign": {
+    "description": "The row state when a registration belonging to another client is present."
+  },
+  "browserStatusMissing": "Not installed",
+  "@browserStatusMissing": {
+    "description": "The row state when no registration exists."
+  },
+  "browserConnectionNever": "Extension never connected",
+  "@browserConnectionNever": {
+    "description": "The row indicator while no host process has recorded this browser."
+  },
+  "browserConnectionConnected": "Connected · {when}",
+  "@browserConnectionConnected": {
+    "description": "The row indicator once the extension connected.",
+    "placeholders": {
+      "when": {
+        "type": "String",
+        "example": "3 hours ago"
+      }
+    }
+  },
+  "browserRelativeJustNow": "just now",
+  "@browserRelativeJustNow": {
+    "description": "A past instant under a minute ago."
+  },
+  "browserRelativeMinutes": "{count} minutes ago",
+  "@browserRelativeMinutes": {
+    "description": "A past instant under an hour ago.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "browserRelativeHours": "{count} hours ago",
+  "@browserRelativeHours": {
+    "description": "A past instant under a day ago.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "browserRelativeDays": "{count} days ago",
+  "@browserRelativeDays": {
+    "description": "A past instant under a month ago.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "browsersActionRepair": "Repair",
+  "@browsersActionRepair": {
+    "description": "The row action that rewrites our manifest."
+  },
+  "browsersActionUninstall": "Uninstall",
+  "@browsersActionUninstall": {
+    "description": "The row action that removes our manifest."
+  },
+  "browsersActionOverwrite": "Overwrite",
+  "@browsersActionOverwrite": {
+    "description": "The row action that replaces a foreign manifest after confirmation."
+  },
+  "browsersActionRestore": "Restore",
+  "@browsersActionRestore": {
+    "description": "The row action that recovers an overwritten manifest after confirmation."
+  },
+  "browsersActionInstall": "Install",
+  "@browsersActionInstall": {
+    "description": "The row action that writes our manifest."
+  },
+  "browsersActionConfirmOverwrite": "Confirm overwrite",
+  "@browsersActionConfirmOverwrite": {
+    "description": "The second click that confirms overwriting a foreign manifest."
+  },
+  "browsersActionConfirmRestore": "Confirm restore",
+  "@browsersActionConfirmRestore": {
+    "description": "The second click that confirms restoring an overwritten manifest."
+  },
+  "browsersActionConfirmUninstall": "Confirm uninstall",
+  "@browsersActionConfirmUninstall": {
+    "description": "The second click that confirms deleting a manifest that may be another client's."
+  },
+  "browsersNoticeReadFailed": "Reading the browser registration state failed: {detail}",
+  "@browsersNoticeReadFailed": {
+    "description": "The browsers page's status line when the registry read failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "access denied"
+      }
+    }
+  },
+  "browsersNoticeInstalled": "Installed {count}",
+  "@browsersNoticeInstalled": {
+    "description": "The bulk summary's installed part.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "browsersNoticeFailed": "Failed: {names}",
+  "@browsersNoticeFailed": {
+    "description": "The bulk summary's failed part.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Firefox"
+      }
+    }
+  },
+  "browsersNoticeSkippedAbsent": "Not installed, skipped: {names}",
+  "@browsersNoticeSkippedAbsent": {
+    "description": "The bulk summary's not-installed part.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Chrome、Firefox"
+      }
+    }
+  },
+  "browsersNoticeSkippedCancelled": "Skipped {count} (overwrite cancelled, unchanged)",
+  "@browsersNoticeSkippedCancelled": {
+    "description": "The bulk summary's cancelled part.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "browsersNoticeManifestWriteFailed": "Writing the manifest for {name} failed: {detail}",
+  "@browsersNoticeManifestWriteFailed": {
+    "description": "The browsers page's status line when one manifest write failed.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Chrome"
+      },
+      "detail": {
+        "type": "String",
+        "example": "access denied"
+      }
+    }
+  },
+  "browsersNoticeManifestWritten": "Wrote the manifest for {name}",
+  "@browsersNoticeManifestWritten": {
+    "description": "The browsers page's status line after one manifest write.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Chrome"
+      }
+    }
+  },
+  "browsersNoticeUninstallForeign": "Left {name}'s registration in place: it may belong to the official Bitwarden desktop client",
+  "@browsersNoticeUninstallForeign": {
+    "description": "The browsers page's status line when an uninstall was refused.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Chrome"
+      }
+    }
+  },
+  "browsersNoticeManifestDeleteFailed": "Deleting {name}'s manifest failed: {detail}",
+  "@browsersNoticeManifestDeleteFailed": {
+    "description": "The browsers page's status line when one manifest delete failed.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Chrome"
+      },
+      "detail": {
+        "type": "String",
+        "example": "access denied"
+      }
+    }
+  },
+  "browsersNoticeManifestDeleted": "Deleted {name}'s manifest",
+  "@browsersNoticeManifestDeleted": {
+    "description": "The browsers page's status line after one manifest delete.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Chrome"
+      }
+    }
+  },
+  "browsersConfirmTitle": "Confirm overwriting browser registrations",
+  "@browsersConfirmTitle": {
+    "description": "The bulk confirmation window's title and heading."
+  },
+  "browsersConfirmNote": "Overwriting only writes the local registry and manifest files; no keys are involved and no Windows Hello confirmation is needed.",
+  "@browsersConfirmNote": {
+    "description": "The confirmation window's note about what a write touches."
+  },
+  "browsersConfirmOfficialNote": "The official Bitwarden desktop client may rewrite the registry again on every start; when you no longer use it, consider closing or uninstalling it.",
+  "@browsersConfirmOfficialNote": {
+    "description": "The confirmation window's warning shown when a foreign registration is listed."
+  },
+  "browsersConfirmIntroForeign": "The registrations below do not belong to biowarden right now; they may come from the official Bitwarden desktop client or another tool. Confirming hands them to biowarden and disables the official client's biometric unlock; cancelling changes nothing.",
+  "@browsersConfirmIntroForeign": {
+    "description": "The confirmation window's intro when it lists a foreign registration."
+  },
+  "browsersConfirmIntroHijacked": "biowarden's configuration in the browsers below was overwritten by another program. Confirming restores biowarden's manifest; cancelling changes nothing.",
+  "@browsersConfirmIntroHijacked": {
+    "description": "The confirmation window's intro when every listed row was hijacked."
+  },
+  "browsersConfirmCurrent": "Currently points to: {path}{owner}",
+  "@browsersConfirmCurrent": {
+    "description": "A confirmation card's line naming the current manifest and its likely owner.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "C:\\official\\chrome.json"
+      },
+      "owner": {
+        "type": "String",
+        "example": " (possibly the official Bitwarden desktop client)"
+      }
+    }
+  },
+  "browsersConfirmTarget": "Will point to: {path}",
+  "@browsersConfirmTarget": {
+    "description": "A confirmation card's line naming the manifest it would write.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "C:\\Users\\ada\\AppData\\Local\\biowarden\\chrome.json"
+      }
+    }
+  },
+  "browsersConfirmRestoreTarget": "Restore to: {path}",
+  "@browsersConfirmRestoreTarget": {
+    "description": "A confirmation card's line naming the manifest a restore would write.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "C:\\Users\\ada\\AppData\\Local\\biowarden\\chrome.json"
+      }
+    }
+  },
+  "browsersTakeoverRestore": "Restore biowarden's configuration",
+  "@browsersTakeoverRestore": {
+    "description": "A confirmation card's headline for a hijacked row."
+  },
+  "browsersTakeoverForeign": "Take over a registration that belonged to another program",
+  "@browsersTakeoverForeign": {
+    "description": "A confirmation card's headline for a foreign row."
+  },
+  "browsersTakeoverOwnerHijacked": " (biowarden's configuration was overwritten by it)",
+  "@browsersTakeoverOwnerHijacked": {
+    "description": "The likely-owner hint for a hijacked row."
+  },
+  "browsersTakeoverOwnerForeign": " (possibly the official Bitwarden desktop client)",
+  "@browsersTakeoverOwnerForeign": {
+    "description": "The likely-owner hint for a foreign row."
+  },
+  "firstRunNoticeIntro": "First-run automatic setup: registered {count} browsers",
+  "@firstRunNoticeIntro": {
+    "description": "The first-run summary's opening part.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "firstRunNoticeNamed": " ({names})",
+  "@firstRunNoticeNamed": {
+    "description": "The first-run summary's list of registered browser names.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Chrome、Edge"
+      }
+    }
+  },
+  "firstRunNoticeSkipped": "Skipped {count} (the registration may belong to the official client, not overwritten: {names})",
+  "@firstRunNoticeSkipped": {
+    "description": "The first-run summary's skipped part.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      },
+      "names": {
+        "type": "String",
+        "example": "Edge、Firefox"
+      }
+    }
+  },
+  "firstRunNoticeFailed": "Failed: {names}",
+  "@firstRunNoticeFailed": {
+    "description": "The first-run summary's failed part.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Chrome"
+      }
+    }
+  },
+  "firstRunNoticeAbsent": "Not installed: {names}",
+  "@firstRunNoticeAbsent": {
+    "description": "The first-run summary's not-installed part.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Chrome、Firefox"
+      }
+    }
+  },
+  "firstRunNoticeMarkerError": "First-run marker error: {detail}",
+  "@firstRunNoticeMarkerError": {
+    "description": "The first-run summary's marker-write failure part.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "access denied"
+      }
+    }
+  },
+  "helloReasonTestUnlock": "Test unlock of the biowarden key",
+  "@helloReasonTestUnlock": {
+    "description": "The Windows Hello prompt's reason for a test unlock."
+  },
+  "helloReasonSaveKey": "Save the biowarden key",
+  "@helloReasonSaveKey": {
+    "description": "The Windows Hello prompt's reason for saving a key."
+  },
+  "helloReasonRemoveKey": "Delete the biowarden key",
+  "@helloReasonRemoveKey": {
+    "description": "The Windows Hello prompt's reason for deleting a key."
+  },
+  "helloErrorCallFailed": "The Windows Hello call failed: {detail}",
+  "@helloErrorCallFailed": {
+    "description": "The failure when the Hello call itself broke.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "COM error 0x800704C7"
+      }
+    }
+  },
+  "helloErrorCanceled": "Windows Hello verification was cancelled",
+  "@helloErrorCanceled": {
+    "description": "The failure when the human refused the Hello prompt."
+  },
+  "helloErrorUnavailable": "Windows Hello is not configured on this machine",
+  "@helloErrorUnavailable": {
+    "description": "The failure when Hello is not configured."
+  },
+  "helloErrorLocked": "Windows Hello is locked; try again later",
+  "@helloErrorLocked": {
+    "description": "The failure when Hello is locked out."
+  },
+  "helloErrorBusy": "Windows Hello is temporarily unavailable (the device is busy)",
+  "@helloErrorBusy": {
+    "description": "The failure when the Hello device is busy."
+  },
+  "helloErrorUnknown": "Windows Hello returned an unknown result: {result}",
+  "@helloErrorUnknown": {
+    "description": "The failure when Hello returned a result the UI does not know.",
+    "placeholders": {
+      "result": {
+        "type": "String",
+        "example": "7"
+      }
+    }
+  },
+  "keyErrorNotBase64": "The key is not valid base64: {detail}",
+  "@keyErrorNotBase64": {
+    "description": "The manual save failure when the pasted key cannot be decoded.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "illegal base64 data"
+      }
+    }
+  },
+  "accountErrorRemoveKey": "Deleting the key failed: {detail}",
+  "@accountErrorRemoveKey": {
+    "description": "The logout failure when the stored key could not be deleted.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "credential delete failed"
+      }
+    }
+  },
+  "accountErrorClearSession": "Clearing the login session failed: {detail}",
+  "@accountErrorClearSession": {
+    "description": "The logout failure when the persisted session could not be cleared.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "credential delete failed"
+      }
+    }
+  },
+  "mygo.appDescription": "Biometric unlock for the Bitwarden browser extension on Windows.",
+  "@mygo.appDescription": {
+    "description": "The app's description, which packaging writes where systems list the app."
   }
 }

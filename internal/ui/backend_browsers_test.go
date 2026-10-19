@@ -266,10 +266,10 @@ func TestBrowsersStateUninstallForeignReportsKept(t *testing.T) {
 	}
 	s := newBrowsersStateWith(backend)
 	s.uninstall(&s.rows[0])
-	if s.noticeOK {
-		t.Fatalf("noticeOK = true for a refused uninstall")
+	if s.notice.ok {
+		t.Fatalf("notice.ok = true for a refused uninstall")
 	}
-	if s.notice == "" {
+	if s.notice.text() == "" {
 		t.Fatalf("refused uninstall produced no notice")
 	}
 }

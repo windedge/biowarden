@@ -6,11 +6,11 @@ import (
 	"github.com/windedge/biowarden/locales"
 )
 
-// loginErrorText says a login failure in the language the app shows. The
-// backend reports typed sentinels; this is the one place they become wording,
-// so a language change re-says an error the status line or the field still
-// holds instead of leaving the previous language on screen.
-func loginErrorText(err error) string {
+// errorText says a typed failure in the language the app shows. The backends
+// report sentinels; this is the one place they become wording, so a language
+// change re-says an error the status line or the field still holds instead of
+// leaving the previous language on screen.
+func errorText(err error) string {
 	if err == nil {
 		return ""
 	}
@@ -30,6 +30,18 @@ func loginErrorText(err error) string {
 			return locales.LoginErrorProviderNotOffered(le.detail)
 		case errSessionPersist:
 			return locales.LoginErrorSessionPersist(le.detail)
+		case errSessionRead:
+			return locales.AccountNoticeSessionReadFailed(le.detail)
+		case errHelloCallFailed:
+			return locales.HelloErrorCallFailed(le.detail)
+		case errHelloUnknown:
+			return locales.HelloErrorUnknown(le.detail)
+		case errKeyNotBase64:
+			return locales.KeyErrorNotBase64(le.detail)
+		case errRemoveKey:
+			return locales.AccountErrorRemoveKey(le.detail)
+		case errClearSession:
+			return locales.AccountErrorClearSession(le.detail)
 		}
 	}
 	switch {
@@ -53,6 +65,14 @@ func loginErrorText(err error) string {
 		return locales.LoginErrorEmptyCode()
 	case errors.Is(err, errEmailMethodMissing):
 		return locales.LoginErrorEmailMethodMissing()
+	case errors.Is(err, errHelloCanceled):
+		return locales.HelloErrorCanceled()
+	case errors.Is(err, errHelloUnavailable):
+		return locales.HelloErrorUnavailable()
+	case errors.Is(err, errHelloLocked):
+		return locales.HelloErrorLocked()
+	case errors.Is(err, errHelloBusy):
+		return locales.HelloErrorBusy()
 	default:
 		// A failure the UI has no wording for (or a test's own error) says its
 		// own message; the backend never writes a user-facing one.
@@ -79,7 +99,7 @@ const (
 )
 
 // loginNotice is the login window's status line. kind says what it is; args
-// carries what its wording interpolates, and failure the error loginErrorText
+// carries what its wording interpolates, and failure the error errorText
 // maps. text is the one place it becomes a string, and the height target and
 // the drawing both go through it.
 type loginNotice struct {
@@ -87,6 +107,15 @@ type loginNotice struct {
 	args    []string
 	failure error
 	ok      bool
+}
+
+// arg returns args[i], or "" when a caller built the notice without it, so a
+// missing argument renders a harmless sentence instead of panicking.
+func (n loginNotice) arg(i int) string {
+	if i < 0 || i >= len(n.args) {
+		return ""
+	}
+	return n.args[i]
 }
 
 // text says the notice in the language the app shows, "" when there is none.
@@ -105,11 +134,11 @@ func (n loginNotice) text() string {
 	case loginNoticeEmailSent:
 		return locales.LoginNoticeEmailSent()
 	case loginNoticeEmailSentTo:
-		return locales.LoginNoticeEmailSentTo(n.args[0])
+		return locales.LoginNoticeEmailSentTo(n.arg(0))
 	case loginNoticeBusy:
 		return locales.LoginNoticeBusy()
 	case loginNoticeFailure:
-		return loginErrorText(n.failure)
+		return errorText(n.failure)
 	default:
 		return ""
 	}

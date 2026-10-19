@@ -38,19 +38,18 @@ type accountCardView struct {
 // accountCardViewFor picks the card's state and wording from the login session
 // and the account the key card foregrounds (which may be nil). A signed-in
 // session wins; otherwise a stored key means "configured"; otherwise the page
-// asks the user to sign in.
+// asks the user to sign in. The wording comes from the catalog here, at draw
+// time, so a language change moves the card with it.
 func accountCardViewFor(sess accountSession, primary *accountRow) accountCardView {
 	switch sess.state {
 	case loginLoggedIn, loginLoggingIn:
-		detail := sess.email + " · 服务器 " + sess.serverURL
+		detail := locales.AccountCardSignedInNoKey(sess.email, sess.serverURL)
 		if primary != nil {
-			detail += " · 密钥存储于 " + primary.created
-		} else {
-			detail += " · 本机尚未保存密钥"
+			detail = locales.AccountCardSignedInKey(sess.email, sess.serverURL, primary.created)
 		}
 		return accountCardView{
 			state:    cardSignedIn,
-			title:    "已登录",
+			title:    locales.AccountCardSignedIn(),
 			detail:   detail,
 			logout:   true,
 			identity: true,
@@ -58,7 +57,7 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 	case loginNeeds2FA:
 		// The 2FA branch renders its own prompt; this keeps the pure function
 		// total for callers that ask anyway.
-		return accountCardView{state: cardSignedIn, title: "等待两步验证码", identity: true}
+		return accountCardView{state: cardSignedIn, title: locales.AccountCard2FATitle(), identity: true}
 	}
 	if primary != nil {
 		who := primary.email
@@ -67,16 +66,16 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 		}
 		return accountCardView{
 			state:      cardConfigured,
-			title:      "已配置",
-			detail:     who + " · 密钥存储于 " + primary.created + " · 解锁可用",
-			hint:       "解锁已经可用，无需重新登录；只有主密码或 KDF 改过、需要刷新密钥时才要重新登录。",
-			loginLabel: locales.LoginReLogin(),
+			title:      locales.AccountCardConfigured(),
+			detail:     locales.AccountCardConfiguredDetail(who, primary.created),
+			hint:       locales.AccountCardConfiguredHint(),
+			loginLabel: locales.AccountCardReLogin(),
 		}
 	}
 	return accountCardView{
 		state:      cardSignedOut,
-		title:      "尚未登录",
-		detail:     "登录 Bitwarden 账号后，biowarden 会自动取出并保存密钥，无需逐项手动配置。",
+		title:      locales.AccountCardSignedOut(),
+		detail:     locales.AccountCardSignedOutDetail(),
 		loginLabel: locales.LoginTitle(),
 	}
 }

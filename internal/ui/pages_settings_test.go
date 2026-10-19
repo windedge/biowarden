@@ -12,9 +12,10 @@ import (
 // width is pinned here; the labels also name the read-only fields for
 // assistive technology.
 func TestSettingsControlsKeepTheFieldWidth(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	app := &appState{}
 	app.account.session.serverURL = "https://vault.example.com"
-	app.settings.logLevel = logLevels[0]
+	app.settings.logLevel = logLevelError
 	app.settings.logPath = `C:\Users\ada\AppData\Local\biowarden\biowarden.log`
 	tester := ui.NewTester(app.settingsPage, 1600, 900)
 	tester.Frame()

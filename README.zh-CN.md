@@ -43,6 +43,7 @@ native messaging host（与主程序同一个 exe，由浏览器按需拉起）�
   元数据条目。GUI 与 host 共用这个存储，所以 GUI 里登录保存的密钥就是 host 解锁时读取的那条。
 - 日志在 `%LOCALAPPDATA%\biowarden\host.log`（5 MB 轮转，密钥字段一律脱敏）；设 `BIOWARDEN_LOG=debug`
   可看到协议级细节。
+- 界面语言跟随系统（英文或简体中文），可在**设置**页的**语言**项里覆盖。
 
 **安全模型：Windows Hello 只是读取密钥前的访问控制，它不加密密钥。** 账号密钥以原始字节存在 Windows
 凭据管理器里。通过 Hello 只代表 biowarden 获准读取该条目 - 存储的密钥没有任何成分来自你的生物特征或 PIN。

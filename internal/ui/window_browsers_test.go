@@ -12,6 +12,7 @@ import (
 // hijacked rows get different wording, which is the whole point of confirming
 // them together without pretending they carry the same risk.
 func TestBrowsersConfirmViewListsTakeovers(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	s := &browsersState{bulk: []browserRow{
 		{
 			browser:     registry.Edge,
@@ -34,7 +35,7 @@ func TestBrowsersConfirmViewListsTakeovers(t *testing.T) {
 	for _, want := range []string{
 		"Edge · 接管此前属于其他程序的注册",
 		"Firefox · 恢复 biowarden 的配置",
-		"当前指向：C:\\official\\edge.json（可能是官方 Bitwarden 桌面端）",
+		"当前指向：C:\\official\\edge.json（可能是官方 Bitwarden 桌面客户端）",
 		"当前指向：C:\\other\\firefox.json（biowarden 的配置已被它覆盖）",
 		"覆盖后指向：C:\\biowarden\\manifests\\edge.json",
 		"恢复为：C:\\biowarden\\manifests\\firefox.json",
@@ -50,6 +51,7 @@ func TestBrowsersConfirmViewListsTakeovers(t *testing.T) {
 // A hijacked-only list is a recovery, not a takeover of someone else's
 // registration, so the primary button and the intro say so.
 func TestBrowsersConfirmViewHijackedOnlyReadsAsRecovery(t *testing.T) {
+	appLanguage(t, "zh-Hans")
 	s := &browsersState{bulk: []browserRow{{
 		browser:     registry.Firefox,
 		name:        "Firefox",
