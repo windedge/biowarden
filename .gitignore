@@ -1,6 +1,9 @@
 # Build output: mygo build writes to dist/ (exe, NSIS installer, packed resources)
 dist/
 build/
+# mygo builds Windows resources by writing mygo_windows_amd64.syso into the package dir;
+# left untracked, Go's buildvcs sees a dirty tree and stamps the binary vcs.modified=true
+*.syso
 /mygo.exe
 /biowarden.exe
 /biowarden
