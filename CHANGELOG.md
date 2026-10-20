@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-20
+
+### Added
+
+- The window, the tray menu and the sign-in errors are available in English
+  and Simplified Chinese; the app follows the system language and the
+  Settings page can override it.
+- A language selector on the Settings page.
+- Clicking the tray icon opens the window.
+
+### Changed
+
+- Upgraded mygo to v0.5.5.
+- The account page shows the account and the stored key in one card instead
+  of two.
+- Settings moved to the bottom of the sidebar: the main navigation is now
+  Account / Browsers / Log, and the sidebar no longer shows the version.
+- The tray icon is the app icon, the same one the window and the taskbar
+  show.
+- The account action is now "Sign out" instead of "Delete", the single
+  action left: it removes the stored key after a Windows Hello confirmation
+  and clears the login session.
+
+### Fixed
+
+- A login session that could not be verified (network or server problem) no
+  longer reports that the session was cleared; the notice says the key is
+  still stored and unlocking works.
+- Release builds no longer carry a `+dirty` version suffix: the temporary
+  `.syso` file the mygo build writes is now ignored.
+
 ## [0.1.0] - 2026-10-18
 
 First release. biowarden lets the Bitwarden browser extension unlock with
