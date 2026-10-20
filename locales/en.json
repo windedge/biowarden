@@ -720,18 +720,6 @@
   "@settingsIntro": {
     "description": "The settings page's line under the heading."
   },
-  "settingsGroupAccount": "Account",
-  "@settingsGroupAccount": {
-    "description": "The settings page's account section title."
-  },
-  "settingsServer": "Server address",
-  "@settingsServer": {
-    "description": "The settings page's server address field label."
-  },
-  "settingsServerReadOnly": "Server address (read only)",
-  "@settingsServerReadOnly": {
-    "description": "The read-only server address field's control label."
-  },
   "settingsGroupEntry": "Entry points",
   "@settingsGroupEntry": {
     "description": "The settings page's section title for the entry points."

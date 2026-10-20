@@ -30,14 +30,6 @@ func (app *appState) settingsPage(c *ui.Context) {
 			ui.Column(c).Padding(16, 4, 16, 16).Gap(12).Children(func() {
 				notice(c, app.settings.notice.text(), app.settings.notice.ok)
 				ui.Form(c, func() {
-					ui.Fieldset(c, locales.SettingsGroupAccount(), func() {
-						ui.Field(c, locales.SettingsServer(), func() {
-							// The live session's address, the same value the login window
-							// prefills from; read-only, never edited here.
-							ui.TextInput(c, &app.account.session.serverURL).ReadOnly(true).FontSize(11).
-								Width(settingsFieldWidth).Label(locales.SettingsServerReadOnly())
-						})
-					})
 					ui.Fieldset(c, locales.SettingsGroupEntry(), func() {
 						// The language row is the first text of the page the catalogs
 						// say; the rest of it moves there in a later ticket.

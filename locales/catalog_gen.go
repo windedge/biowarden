@@ -1998,48 +1998,6 @@ func (msgs Messages) SettingsIntro() string {
 	return Catalog.Format(msgs.locale, "settingsIntro", nil)
 }
 
-// SettingsGroupAccount says "Account"
-// in the language the app shows.
-//
-// The settings page's account section title.
-func SettingsGroupAccount() string { return In(i18n.Locale()).SettingsGroupAccount() }
-
-// SettingsGroupAccount says "Account"
-// in the language of msgs.
-//
-// The settings page's account section title.
-func (msgs Messages) SettingsGroupAccount() string {
-	return Catalog.Format(msgs.locale, "settingsGroupAccount", nil)
-}
-
-// SettingsServer says "Server address"
-// in the language the app shows.
-//
-// The settings page's server address field label.
-func SettingsServer() string { return In(i18n.Locale()).SettingsServer() }
-
-// SettingsServer says "Server address"
-// in the language of msgs.
-//
-// The settings page's server address field label.
-func (msgs Messages) SettingsServer() string {
-	return Catalog.Format(msgs.locale, "settingsServer", nil)
-}
-
-// SettingsServerReadOnly says "Server address (read only)"
-// in the language the app shows.
-//
-// The read-only server address field's control label.
-func SettingsServerReadOnly() string { return In(i18n.Locale()).SettingsServerReadOnly() }
-
-// SettingsServerReadOnly says "Server address (read only)"
-// in the language of msgs.
-//
-// The read-only server address field's control label.
-func (msgs Messages) SettingsServerReadOnly() string {
-	return Catalog.Format(msgs.locale, "settingsServerReadOnly", nil)
-}
-
 // SettingsGroupEntry says "Entry points"
 // in the language the app shows.
 //
