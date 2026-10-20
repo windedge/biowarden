@@ -89,6 +89,9 @@ func start() {
 		// The tray lives until the app quits; destroying it here would remove
 		// it the moment start returns.
 		mygo.App.OnWillQuit(func(*mygo.QuitEvent) { tray.Destroy() })
+		// Windows convention: left click activates, right click opens the
+		// menu. The backend fires OnClick on left clicks even with a menu set.
+		tray.OnClick(func() { Reveal(win) })
 	}
 	// What the app set once - the window title and its tray menu's own label -
 	// is set again in the new language.
@@ -103,6 +106,15 @@ func start() {
 	// then ask the human to log in. It runs after the window is up because the
 	// login window is that window's modal child.
 	app.runFirstRun()
+}
+
+// Reveal brings a hidden window back to the tray user and focuses it either
+// way, so a tray click or a second launch means "show me the window".
+func Reveal(w *mygo.Window) {
+	if !w.IsVisible() {
+		w.Show()
+	}
+	w.Focus()
 }
 
 // trayMenu builds the tray's menu in the language the app shows, again when the

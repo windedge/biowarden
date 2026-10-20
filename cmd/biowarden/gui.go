@@ -17,10 +17,7 @@ func runGUI() error {
 	// in the tray with its window hidden.
 	mygo.App.OnSecondInstance(func([]string, string) {
 		for _, w := range mygo.Windows() {
-			if !w.IsVisible() {
-				w.Show()
-			}
-			w.Focus()
+			ui.Reveal(w)
 		}
 	})
 	return ui.Run()
