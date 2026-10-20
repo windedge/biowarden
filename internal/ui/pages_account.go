@@ -67,8 +67,10 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		v := accountCardViewFor(a.session, primary)
 		a.accountIdentity(c, v, t)
 		switch v.state {
-		case cardSignedIn:
-			ui.Row(c).Gap(10).Children(func() {
+		case cardSignedIn, cardConfigured:
+			// Re-login and delete share one row; delete sits at the right end
+			// as small red text so it reads as the dangerous action.
+			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
 					// Re-login re-derives the key, which always needs the master
 					// password (a restored session kept only the refresh token),
@@ -76,12 +78,14 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 					login.begin()
 					c.Invalidate()
 				}
-			})
-		case cardConfigured:
-			ui.Row(c).Gap(10).Children(func() {
-				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
-					login.begin()
-					c.Invalidate()
+				if v.deletable {
+					ui.Spacer(c).Grow(1)
+					if ui.Button(c, locales.Delete()).Disabled(a.busy).
+						FontSize(t.Rem(0.85)).PaddingX(8).PaddingY(4).
+						TextColor(t.Danger).Clicked() {
+						a.removeAccount(primary)
+						c.Invalidate()
+					}
 				}
 			})
 		default:
@@ -94,15 +98,6 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 				// e.g. after the host saved one outside the GUI.
 				if ui.Button(c, locales.Refresh()).Disabled(a.busy).Clicked() {
 					a.reload()
-					c.Invalidate()
-				}
-			})
-		}
-		if v.deletable {
-			ui.Row(c).Gap(10).Children(func() {
-				if ui.Button(c, locales.Delete()).Disabled(a.busy).
-					TextColor(t.Danger).Clicked() {
-					a.removeAccount(primary)
 					c.Invalidate()
 				}
 			})
