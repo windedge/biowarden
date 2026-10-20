@@ -5,11 +5,7 @@
 package ui
 
 import (
-	"bytes"
-	"image"
-	"image/color"
-	"image/draw"
-	"image/png"
+	_ "embed"
 	"log"
 
 	"github.com/egoist/mygo"
@@ -81,7 +77,7 @@ func start() {
 	mygo.App.OnBeforeQuit(func(*mygo.QuitEvent) { quitting = true })
 
 	tray, err := mygo.NewTray(mygo.TrayOptions{
-		Icon:    trayIcon(),
+		Icon:    appIconPNG,
 		ToolTip: appName,
 		Menu:    trayMenu(win),
 	})
@@ -119,13 +115,10 @@ func trayMenu(win *mygo.Window) *mygo.Menu {
 	})
 }
 
-// trayIcon draws a ring, blue so it stays visible on light and dark taskbars.
-func trayIcon() []byte {
-	img := image.NewNRGBA(image.Rect(0, 0, 32, 32))
-	ink := color.NRGBA{R: 79, G: 124, B: 255, A: 255}
-	draw.Draw(img, image.Rect(6, 4, 26, 28), image.NewUniform(ink), image.Point{}, draw.Src)
-	draw.Draw(img, image.Rect(9, 7, 23, 25), image.NewUniform(color.NRGBA{}), image.Point{}, draw.Src)
-	var buf bytes.Buffer
-	_ = png.Encode(&buf, img)
-	return buf.Bytes()
-}
+// appIconPNG is resources/icon.png, the same square icon mygo.json points at,
+// so the tray shows what the taskbar's icon shows. The tray's SetImage
+// decodes the PNG's true size and CreateIconFromResourceEx scales it to the
+// notification area's size; one 1024x1024 source feeds both roles.
+//
+//go:embed resources/icon.png
+var appIconPNG []byte

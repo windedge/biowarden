@@ -61,8 +61,9 @@ var (
 	iconLog      = icon(`<path d="M14 3v5h5"/><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M9 13h6M9 17h4"/>`)
 )
 
-// sidebar draws the left nav: four items with icons and labels, and the
-// version pinned to the bottom. A click switches app.page through the
+// sidebar draws the left nav: three main items, then settings pinned above
+// the version at the bottom. Both lists share one selection string, so each
+// marks only the chosen page's item. A click switches app.page through the
 // Sidebar's string selection. Quitting lives in the tray menu, which the
 // close-to-tray window makes the deliberate exit.
 func (app *appState) sidebar(c *ui.Context) {
@@ -70,17 +71,22 @@ func (app *appState) sidebar(c *ui.Context) {
 	selected := app.page.navID()
 	ui.Column(c).Width(sidebarWidth).FillHeight().Shrink(0).
 		Background(t.Surface).Children(func() {
-		sb := ui.Sidebar(c, &selected, func() {
+		mainNav := ui.Sidebar(c, &selected, func() {
 			ui.SidebarItem(c, navIDAccount, iconAccount, locales.SidebarAccount())
 			ui.SidebarItem(c, navIDBrowsers, iconBrowsers, locales.SidebarBrowsers())
-			ui.SidebarItem(c, navIDSettings, iconSettings, locales.SidebarSettings())
 			ui.SidebarItem(c, navIDLog, iconLog, locales.SidebarLog())
 		})
-		sb.Grow(1)
-		if sb.Changed() {
+		mainNav.Grow(1)
+		if mainNav.Changed() {
 			app.page = navPageOf(selected)
 		}
 		ui.Divider(c)
+		bottomNav := ui.Sidebar(c, &selected, func() {
+			ui.SidebarItem(c, navIDSettings, iconSettings, locales.SidebarSettings())
+		})
+		if bottomNav.Changed() {
+			app.page = navPageOf(selected)
+		}
 		ui.Column(c).Padding(12, 10).Gap(6).Children(func() {
 			muted(c, appName+" v"+appVersion)
 		})
