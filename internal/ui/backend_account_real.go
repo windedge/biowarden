@@ -660,9 +660,21 @@ func (a *realAccount) adoptRestored(sess accountSession) {
 
 // forgetSession drops the persisted login for an account whose stored key was
 // just deleted, so a restart cannot restore a session for a key that no longer
-// exists. It touches no key material and asks for no consent.
+// exists. When the in-memory session is that account's it is reset to signed
+// out as well, or the card would keep claiming a login for a key that is gone;
+// a failed clear still resets it, matching logout. It touches no key material
+// and asks for no consent.
 func (a *realAccount) forgetSession(userID string) error {
-	return a.sessions.clear(userID)
+	err := a.sessions.clear(userID)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	// lastLoggedIn is checked too: a pending login keeps it as the session a
+	// cancel falls back to, and that must not revive the deleted account.
+	if userID != "" && (a.sess.userID == userID || a.lastLoggedIn.userID == userID) {
+		a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
+		a.lastLoggedIn = a.sess
+	}
+	return err
 }
 
 // serverURLOf falls back to the official server when the page has no address.

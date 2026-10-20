@@ -330,6 +330,10 @@ func (s *accountState) applyRemove(id string, err, clearErr error) {
 		}
 	}
 	s.accounts = out
+	// The backend reset its in-memory session when it was the removed
+	// account's; re-read it so the card cannot stay on "signed in" for a key
+	// that no longer exists. It is a memory read, no network.
+	s.applySession(s.account.session())
 	if clearErr != nil {
 		// The key is deleted either way; only the session cleanup failed.
 		s.notice = pageNotice{kind: noticeAccountRemoveSessionFailed, err: clearErr}

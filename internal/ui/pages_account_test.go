@@ -21,10 +21,10 @@ func (emptyKeys) remove(string) error           { return errFakeBackend }
 func (emptyKeys) helloAvailable() (bool, error) { return true, nil }
 func (emptyKeys) verify(reason string) error    { return errFakeBackend }
 
-// The merged account card renders all three states in both languages: the
-// title, the detail line, the hint and the action buttons come from the
-// catalog at draw time.
-func TestAccountCardRendersThreeStatesInBothLanguages(t *testing.T) {
+// The merged account card renders every state in both languages: the title,
+// the detail line, the hint and the action buttons come from the catalog at
+// draw time.
+func TestAccountCardRendersEveryStateInBothLanguages(t *testing.T) {
 	for _, tag := range []string{"en", "zh-Hans"} {
 		t.Run(tag, func(t *testing.T) {
 			appLanguage(t, tag)
@@ -58,6 +58,20 @@ func TestAccountCardRendersThreeStatesInBothLanguages(t *testing.T) {
 						locales.AccountCardSignOut(),
 					},
 					absent: []string{locales.LoginTitle(), "Sign in again"},
+				},
+				{
+					// The key was removed outside this page: the card must still
+					// offer the way back instead of a dead end with no button.
+					name: "signed in without a key",
+					keys: emptyKeys{},
+					sess: loggedInSession(),
+					texts: []string{
+						locales.AccountCardSignedIn(),
+						locales.AccountCardSignedInNoKey("ada@example.com", defaultServerURL),
+						locales.AccountNoKeyHint(),
+						locales.LoginTitle(),
+					},
+					absent: []string{locales.AccountCardSignOut(), locales.AccountCardSignedOut()},
 				},
 				{
 					name: "signed out",
@@ -129,6 +143,47 @@ func TestAccountCardSignOut(t *testing.T) {
 	}
 	if len(acct.forgotten) != 1 || acct.forgotten[0] != "user-1" {
 		t.Fatalf("forgetSession calls = %v, want user-1", acct.forgotten)
+	}
+}
+
+// Signing out from the card must leave a self-consistent card: signed out with
+// the way back in, never "signed in" next to the no-key line with no button.
+func TestAccountCardAfterSignOutShowsSignedOut(t *testing.T) {
+	for _, tag := range []string{"en", "zh-Hans"} {
+		t.Run(tag, func(t *testing.T) {
+			appLanguage(t, tag)
+			store := newFakeStore()
+			if err := store.Put(secrets.Account{UserID: "user-1", Email: "ada@example.com"}, secrets.Key("secret")); err != nil {
+				t.Fatalf("seed store: %v", err)
+			}
+			acct := &stubAccount{sess: loggedInSession()}
+			s := newAccountStateWith(newRealKeysWith(store, &fakeVerifier{result: hello.Verified}), acct)
+			waitRestore(t, &s)
+
+			tester := ui.NewTester(func(c *ui.Context) { s.accountCard(c, nil) }, 1200, 800)
+			tester.Frame()
+			if err := tester.Click(locales.AccountCardSignOut()); err != nil {
+				t.Fatalf("click the sign-out button: %v", err)
+			}
+			drain(t, &s)
+			tester.Frame()
+
+			if len(acct.forgotten) != 1 || acct.forgotten[0] != "user-1" {
+				t.Fatalf("forgetSession calls = %v, want user-1", acct.forgotten)
+			}
+			if !tester.HasText(locales.AccountCardSignedOut()) {
+				t.Errorf("after sign-out the card does not say %q: %v", locales.AccountCardSignedOut(), tester.Texts())
+			}
+			if !tester.HasText(locales.LoginTitle()) {
+				t.Errorf("after sign-out the card offers no way to sign in: %v", tester.Texts())
+			}
+			if tester.HasText(locales.AccountCardSignedIn()) {
+				t.Errorf("after sign-out the card still says %q: %v", locales.AccountCardSignedIn(), tester.Texts())
+			}
+			if tester.HasText(locales.AccountCardSignedInNoKey("ada@example.com", defaultServerURL)) {
+				t.Errorf("after sign-out the card still shows the signed-in no-key line: %v", tester.Texts())
+			}
+		})
 	}
 }
 

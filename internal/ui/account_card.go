@@ -25,15 +25,12 @@ type accountCardView struct {
 	title  string
 	detail string
 	hint   string
-	// loginLabel labels the signed-out card's primary button, which opens the
-	// login window. The other states offer no sign-in button: refreshing the
-	// key goes through sign-out, then sign-in.
+	// loginLabel labels the card's primary button, which opens the login
+	// window. Only the views with no stored key have one: the signed-out
+	// state, and a signed-in state whose key was removed elsewhere.
 	loginLabel string
-	// primary marks the login button as the card's primary action, which only
-	// the signed-out state needs; the other states lead with the stored key.
-	primary bool
 	// removable offers the sign-out button for a stored key. Only a stored
-	// key can be signed out, so the signed-out state hides it.
+	// key can be signed out, so the views without one hide it.
 	removable bool
 	// identity draws the avatar row from the session's email.
 	identity bool
@@ -46,15 +43,25 @@ type accountCardView struct {
 // time, so a language change moves the card with it.
 func accountCardViewFor(sess accountSession, primary *accountRow) accountCardView {
 	if sess.state == loginLoggedIn || sess.state == loginLoggingIn {
-		detail := locales.AccountCardSignedInNoKey(sess.email, sess.serverURL)
-		if primary != nil {
-			detail = locales.AccountCardSignedInKey(sess.email, sess.serverURL, primary.created)
+		if primary == nil {
+			// A verified login with no stored key: the key was removed outside
+			// this page (another device, the host). Signing in is the only way
+			// back to a working key, so the card must offer it rather than sit
+			// there with no button at all.
+			return accountCardView{
+				state:      cardSignedIn,
+				title:      locales.AccountCardSignedIn(),
+				detail:     locales.AccountCardSignedInNoKey(sess.email, sess.serverURL),
+				hint:       locales.AccountNoKeyHint(),
+				loginLabel: locales.LoginTitle(),
+				identity:   true,
+			}
 		}
 		return accountCardView{
 			state:     cardSignedIn,
 			title:     locales.AccountCardSignedIn(),
-			detail:    detail,
-			removable: primary != nil,
+			detail:    locales.AccountCardSignedInKey(sess.email, sess.serverURL, primary.created),
+			removable: true,
 			identity:  true,
 		}
 	}
@@ -80,6 +87,5 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 		title:      locales.AccountCardSignedOut(),
 		hint:       locales.AccountNoKeyHint(),
 		loginLabel: locales.LoginTitle(),
-		primary:    true,
 	}
 }

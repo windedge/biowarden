@@ -342,6 +342,135 @@ func TestForgetSessionClearsStoredSession(t *testing.T) {
 	}
 }
 
+// Deleting a stored key also resets the in-memory session when it belongs to
+// the deleted account: otherwise the card keeps saying "signed in" for a key
+// that no longer exists. It must not touch another account's session.
+func TestForgetSessionResetsTheInMemorySession(t *testing.T) {
+	store := seedStore("user-1", "ada@example.com")
+	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("key"))}
+	flow.step.refreshToken = "r-1"
+	sessions := &fakeSessionStore{}
+	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(flow), sessions, nil)
+	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+
+	if err := a.forgetSession("user-2"); err != nil {
+		t.Fatalf("forgetSession(other): %v", err)
+	}
+	if sess, _ := a.session(); sess.state != loginLoggedIn || sess.userID != "user-1" {
+		t.Fatalf("forgetting another account's session reset the login: %+v", sess)
+	}
+
+	if err := a.forgetSession("user-1"); err != nil {
+		t.Fatalf("forgetSession: %v", err)
+	}
+	sess, err := a.session()
+	if err != nil {
+		t.Fatalf("session: %v", err)
+	}
+	if sess.state != loginLoggedOut || sess.userID != "" || sess.email != "" ||
+		sess.serverURL != defaultServerURL {
+		t.Fatalf("session after forgetSession = %+v, want signed out", sess)
+	}
+	// Abandoning an unrelated attempt must not revive the deleted account.
+	if _, err := a.cancelLogin(); err != nil {
+		t.Fatalf("cancelLogin: %v", err)
+	}
+	if sess, _ := a.session(); sess.state != loginLoggedOut || sess.userID != "" {
+		t.Fatalf("cancelLogin revived the deleted session: %+v", sess)
+	}
+}
+
+// Removing a key from the account page leaves the backend signed out, so the
+// card and the backend agree once the removal lands.
+func TestRemoveAccountResetsTheBackendSession(t *testing.T) {
+	store := seedStore("user-1", "ada@example.com")
+	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("secret"))}
+	flow.step.refreshToken = "r-1"
+	sessions := &fakeSessionStore{}
+	verifier := &fakeVerifier{result: hello.Verified}
+	refresh := fixedRefresher(auth.TokenResponse{RefreshToken: "r-1"}, nil)
+	acct := newRealAccountWith(store, verifier, fixedFlow(flow), sessions, refresh)
+	if _, err := acct.login("ada@example.com", "pw", defaultServerURL); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	s := newAccountStateWith(newRealKeysWith(store, verifier), acct)
+	waitRestore(t, &s)
+	if s.session.state != loginLoggedIn {
+		t.Fatalf("session before removal = %+v, want signed in", s.session)
+	}
+
+	s.removeAccount(&accountRow{userID: "user-1"})
+	drain(t, &s)
+
+	sess, err := acct.session()
+	if err != nil {
+		t.Fatalf("session: %v", err)
+	}
+	if sess.state != loginLoggedOut || sess.userID != "" {
+		t.Fatalf("backend session after removal = %+v, want signed out", sess)
+	}
+	if s.session.state != loginLoggedOut {
+		t.Fatalf("page session after removal = %+v, want signed out", s.session)
+	}
+	if sessions.has {
+		t.Fatal("removal left the persisted session behind")
+	}
+	if len(s.accounts) != 0 {
+		t.Fatalf("accounts = %v, want the removed row gone", s.accounts)
+	}
+}
+
+// Signing out (behind Hello, from the card) and deleting the key (from the
+// advanced list) are two entry points to the same end state: signed out, no
+// stored key, no persisted session, no stale row.
+func TestLogoutAndRemoveAccountEndInTheSameState(t *testing.T) {
+	for _, path := range []string{"logout", "removeAccount"} {
+		t.Run(path, func(t *testing.T) {
+			store := seedStore("user-1", "ada@example.com")
+			flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("secret"))}
+			flow.step.refreshToken = "r-1"
+			sessions := &fakeSessionStore{}
+			verifier := &fakeVerifier{result: hello.Verified}
+			acct := newRealAccountWith(store, verifier, fixedFlow(flow), sessions,
+				fixedRefresher(auth.TokenResponse{RefreshToken: "r-1"}, nil))
+			if _, err := acct.login("ada@example.com", "pw", defaultServerURL); err != nil {
+				t.Fatalf("login: %v", err)
+			}
+			s := newAccountStateWith(newRealKeysWith(store, verifier), acct)
+			waitRestore(t, &s)
+			if s.session.state != loginLoggedIn {
+				t.Fatalf("session before %s = %+v, want signed in", path, s.session)
+			}
+
+			switch path {
+			case "logout":
+				s.logout()
+			case "removeAccount":
+				s.removeAccount(&accountRow{userID: "user-1"})
+			}
+			drain(t, &s)
+
+			if sess, _ := acct.session(); sess.state != loginLoggedOut || sess.userID != "" {
+				t.Fatalf("%s left the backend session as %+v", path, sess)
+			}
+			if s.session.state != loginLoggedOut {
+				t.Fatalf("%s left the page session as %+v", path, s.session)
+			}
+			if sessions.has {
+				t.Fatalf("%s left the persisted session behind", path)
+			}
+			if rows, err := store.List(); err != nil || len(rows) != 0 {
+				t.Fatalf("%s left the stored key behind: %v %v", path, rows, err)
+			}
+			if len(s.accounts) != 0 {
+				t.Fatalf("%s left the stored row behind: %v", path, s.accounts)
+			}
+		})
+	}
+}
+
 // Removing a stored key goes through the account backend's session cleanup, so
 // the key and its persisted session cannot outlive each other.
 func TestRemoveAccountClearsStoredSession(t *testing.T) {
@@ -400,8 +529,8 @@ func TestAccountCardStates(t *testing.T) {
 	if signedOut.state != cardSignedOut || signedOut.title != locales.AccountCardSignedOut() {
 		t.Fatalf("signed-out view = %+v", signedOut)
 	}
-	if signedOut.loginLabel != locales.LoginTitle() || !signedOut.primary {
-		t.Fatalf("signed-out button = %q primary=%v", signedOut.loginLabel, signedOut.primary)
+	if signedOut.loginLabel != locales.LoginTitle() {
+		t.Fatalf("signed-out button = %q", signedOut.loginLabel)
 	}
 	if signedOut.removable {
 		t.Fatal("a card without a stored key must not offer sign-out")
@@ -417,8 +546,8 @@ func TestAccountCardStates(t *testing.T) {
 			t.Fatalf("configured detail = %q, want it to contain %q", configured.detail, want)
 		}
 	}
-	if configured.loginLabel != "" || configured.primary {
-		t.Fatalf("configured view must offer no sign-in button: label=%q primary=%v", configured.loginLabel, configured.primary)
+	if configured.loginLabel != "" {
+		t.Fatalf("configured view must offer no sign-in button: label=%q", configured.loginLabel)
 	}
 	if !configured.removable {
 		t.Fatal("a configured card with a stored key must offer sign-out")
@@ -433,8 +562,8 @@ func TestAccountCardStates(t *testing.T) {
 			t.Fatalf("signed-in detail = %q, want it to contain %q", signedIn.detail, want)
 		}
 	}
-	if signedIn.loginLabel != "" || signedIn.primary {
-		t.Fatalf("signed-in view must offer no sign-in button: label=%q primary=%v", signedIn.loginLabel, signedIn.primary)
+	if signedIn.loginLabel != "" {
+		t.Fatalf("signed-in view with a stored key must offer no sign-in button: label=%q", signedIn.loginLabel)
 	}
 	if !signedIn.removable {
 		t.Fatal("a signed-in card with a stored key must offer sign-out")
@@ -443,6 +572,11 @@ func TestAccountCardStates(t *testing.T) {
 	noKey := accountCardViewFor(loggedInSession(), nil)
 	if noKey.removable || noKey.detail != locales.AccountCardSignedInNoKey("ada@example.com", defaultServerURL) {
 		t.Fatalf("signed-in without a key = %+v", noKey)
+	}
+	// A signed-in session whose key is gone must still offer a way out: the
+	// login window re-derives the key.
+	if noKey.loginLabel != locales.LoginTitle() || noKey.state != cardSignedIn {
+		t.Fatalf("signed-in without a key offers no sign-in: %+v", noKey)
 	}
 }
 

@@ -179,5 +179,13 @@ func (a *stubAccount) logout() error {
 
 func (a *stubAccount) forgetSession(userID string) error {
 	a.forgotten = append(a.forgotten, userID)
-	return a.forgetErr
+	if a.forgetErr != nil {
+		return a.forgetErr
+	}
+	// Mirror the backend: dropping a key's session also resets the in-memory
+	// session when it is that account's.
+	if a.sess.userID == userID {
+		a.sess = loggedOutSession()
+	}
+	return nil
 }
