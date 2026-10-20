@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-20
+
+### Fixed
+
+- Signing out used to leave the account page claiming "Signed in" with no
+  stored key and no buttons; the in-memory session is now reset, so the page
+  becomes "Not signed in" with the sign-in button.
+- When the key is missing but a session is still valid (the key was deleted
+  elsewhere), the card now offers the sign-in button instead of a dead state.
+
 ## [0.1.1] - 2026-10-20
 
 ### Added
