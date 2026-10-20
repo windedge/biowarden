@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-21
+
+### Changed
+
+- The unused refresh button on the account page is gone; every action already
+  reloads the page state.
+
+### Fixed
+
+- The last server address is remembered across sign-outs and key deletions,
+  so a self-hosted address no longer has to be retyped: the sign-in window
+  pre-fills it.
+
 ## [0.1.2] - 2026-10-20
 
 ### Fixed
