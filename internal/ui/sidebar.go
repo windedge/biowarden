@@ -61,11 +61,11 @@ var (
 	iconLog      = icon(`<path d="M14 3v5h5"/><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M9 13h6M9 17h4"/>`)
 )
 
-// sidebar draws the left nav: three main items, then settings pinned above
-// the version at the bottom. Both lists share one selection string, so each
-// marks only the chosen page's item. A click switches app.page through the
-// Sidebar's string selection. Quitting lives in the tray menu, which the
-// close-to-tray window makes the deliberate exit.
+// sidebar draws the left nav: three main items, then settings pinned at the
+// bottom. Both lists share one selection string, so each marks only the
+// chosen page's item. A click switches app.page through the Sidebar's string
+// selection. Quitting lives in the tray menu, which the close-to-tray window
+// makes the deliberate exit.
 func (app *appState) sidebar(c *ui.Context) {
 	t := c.Theme()
 	selected := app.page.navID()
@@ -87,8 +87,5 @@ func (app *appState) sidebar(c *ui.Context) {
 		if bottomNav.Changed() {
 			app.page = navPageOf(selected)
 		}
-		ui.Column(c).Padding(12, 10).Gap(6).Children(func() {
-			muted(c, appName+" v"+appVersion)
-		})
 	})
 }

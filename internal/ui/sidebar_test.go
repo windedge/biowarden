@@ -6,24 +6,24 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// The sidebar is nav plus the version; quitting lives in the tray menu, which
-// the close-to-tray window makes the deliberate exit. A second exit in the nav
+// The sidebar is nav only; quitting lives in the tray menu, which the
+// close-to-tray window makes the deliberate exit. A second exit in the nav
 // would only be easier to hit by accident, so the sidebar must not offer one.
-func TestSidebarKeepsTheVersionWithoutAQuitButton(t *testing.T) {
+func TestSidebarHasNoVersionLabel(t *testing.T) {
 	appLanguage(t, "zh-Hans")
 	app := &appState{}
 	tester := ui.NewTester(func(c *ui.Context) { app.sidebar(c) }, sidebarWidth, 400)
 
-	if !tester.HasText("biowarden v" + appVersion) {
-		t.Fatalf("the sidebar footer lost the version; texts = %v", tester.Texts())
+	if tester.HasText("biowarden v"+appVersion) || tester.HasText("v"+appVersion) {
+		t.Fatalf("the sidebar still shows the version; texts = %v", tester.Texts())
 	}
 	if tester.HasText("退出") {
 		t.Fatalf("the sidebar still offers a quit button; texts = %v", tester.Texts())
 	}
 }
 
-// Settings left the main nav for the bottom of the sidebar, above the
-// version, and it still switches to the settings page from there.
+// Settings left the main nav for the bottom of the sidebar and it still
+// switches to the settings page from there.
 func TestSidebarPinsSettingsToTheBottom(t *testing.T) {
 	appLanguage(t, "zh-Hans")
 	app := &appState{}
