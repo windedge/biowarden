@@ -65,25 +65,27 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		}
 		primary := a.primary()
 		v := accountCardViewFor(a.session, primary)
-		a.accountIdentity(c, v, t)
+		// Sign out is the low-frequency corner action on the title row, out of
+		// the main flow; re-login alone owns the action row below.
+		a.accountIdentity(c, v, t, func() {
+			if !v.removable {
+				return
+			}
+			if ui.Button(c, locales.AccountCardSignOut()).Disabled(a.busy).
+				FontSize(t.Rem(0.85)).Clicked() {
+				a.removeAccount(primary)
+				c.Invalidate()
+			}
+		})
 		switch v.state {
 		case cardSignedIn, cardConfigured:
-			// Re-login and sign out share one row; sign out sits at the right
-			// end, the spot the old trash icon held.
-			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Children(func() {
 				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
 					// Re-login re-derives the key, which always needs the master
 					// password (a restored session kept only the refresh token),
 					// so the login window is the one path that always works.
 					login.begin()
 					c.Invalidate()
-				}
-				if v.removable {
-					ui.Spacer(c).Grow(1)
-					if ui.Button(c, locales.AccountCardSignOut()).Disabled(a.busy).Clicked() {
-						a.removeAccount(primary)
-						c.Invalidate()
-					}
 				}
 			})
 		default:
@@ -106,7 +108,8 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 // accountIdentity draws the title, the identity/detail line and any hint for
 // one card view. The title color follows the state: green for a verified
 // login, the normal text color for the configured and signed-out states.
-func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.Theme) {
+// corner, when not nil, draws at the right end of the title row.
+func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.Theme, corner func()) {
 	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 		if v.identity {
 			ui.Avatar(c, avatarName(a.session.email), nil)
@@ -124,6 +127,9 @@ func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.T
 				muted(c, v.hint)
 			}
 		})
+		if corner != nil {
+			corner()
+		}
 		if a.session.state == loginLoggingIn {
 			ui.Spinner(c).Label(locales.LoginSpinnerLoggingIn())
 		}
