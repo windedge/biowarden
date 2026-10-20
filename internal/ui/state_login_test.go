@@ -510,27 +510,35 @@ func TestLoginWindowBeginReopensAParkedChallenge(t *testing.T) {
 }
 
 // The address the form opens on prefers the live session, then the stored
-// account's metadata, then the official cloud. An entry from before the
-// metadata carried an address counts as none, so it cannot blank the form.
+// account's metadata, then the address the last successful login used, then the
+// official cloud. An entry from before the metadata carried an address counts
+// as none, so it cannot blank the form, and a stored value that is not a usable
+// https address is ignored.
 func TestLoginWindowPrefillsServerURL(t *testing.T) {
 	cases := []struct {
 		name          string
+		sessionState  loginState
 		sessionServer string
 		accountServer string
+		lastServer    string
 		want          string
 	}{
-		{"session wins", "https://session.example", "https://account.example", "https://session.example"},
-		{"account metadata when the session has none", "", "https://account.example", "https://account.example"},
-		{"default when neither has one", "", "", defaultServerURL},
+		{"session wins", loginLoggedIn, "https://session.example", "https://account.example", "https://last.example", "https://session.example"},
+		{"account metadata when the session has none", loginLoggedOut, defaultServerURL, "https://account.example", "https://last.example", "https://account.example"},
+		{"remembered address when neither has one", loginLoggedOut, defaultServerURL, "", "https://last.example", "https://last.example"},
+		{"default when nothing has one", loginLoggedOut, defaultServerURL, "", "", defaultServerURL},
+		{"broken remembered value falls back to the default", loginLoggedOut, defaultServerURL, "", "http://last.example", defaultServerURL},
+		{"a parked attempt keeps its address", loginNeeds2FA, "https://session.example", "", "https://last.example", "https://session.example"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := newLoginFixture(t, &stubAccount{sess: accountSession{state: loginLoggedOut, serverURL: tc.sessionServer}})
+			f := newLoginFixture(t, &stubAccount{sess: accountSession{state: tc.sessionState, serverURL: tc.sessionServer}})
 			if tc.accountServer == "" {
 				f.page.accounts = nil
 			} else {
 				f.page.accounts = []*accountRow{{userID: "user-1", email: "ada@example.com", serverURL: tc.accountServer}}
 			}
+			f.page.prefs = &fakeServerPref{address: tc.lastServer, has: tc.lastServer != ""}
 
 			f.login.begin()
 			if f.login.serverURL != tc.want {

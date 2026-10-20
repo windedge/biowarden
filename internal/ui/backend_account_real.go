@@ -122,6 +122,11 @@ type realAccount struct {
 	// credential store or the network.
 	sessions sessionStore
 	refresh  sessionRefresher
+	// prefs remembers the address of the last successful login, so a signed-out
+	// self-hosted user gets it back in the form. It is a seam like the two
+	// above: the default forgets, and only the production wiring writes the
+	// registry.
+	prefs serverPref
 
 	mu   sync.Mutex
 	sess accountSession
@@ -152,6 +157,7 @@ func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accoun
 		store: store, verifier: verifier, newFlow: factory,
 		sessions: nopSessionStore{},
 		refresh:  newSessionRefresher(),
+		prefs:    nopServerPref{},
 	}
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
 	a.lastLoggedIn = a.sess
@@ -177,8 +183,12 @@ func newRealAccountState() accountState {
 	store := secrets.New()
 	verifier := hello.New()
 	sessions := newWincredSessionStore(secrets.SessionPrefix)
+	prefs := newServerPref()
 	account := newRealAccountWith(store, verifier, newAuthFlowFactory(), sessions, newSessionRefresher())
-	return newAccountStateWith(newRealKeysWith(store, verifier), account)
+	account.prefs = prefs
+	s := newAccountStateWith(newRealKeysWith(store, verifier), account)
+	s.prefs = prefs
+	return s
 }
 
 // newAuthFlowFactory builds real login flows through internal/auth. The
@@ -439,6 +449,10 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 	if err := a.store.Put(acc, secrets.Key(step.userKey)); err != nil {
 		return a.stay(serverURL), newLoginError(errSaveKey, err)
 	}
+	// The address outlives this login: the key and the session record go on
+	// sign-out, so remembering it here is what keeps a self-hosted address in
+	// the next form. Best-effort, and it never holds up the login.
+	a.prefs.save(serverURL)
 	warning := a.persistSession(sessionRecord{
 		UserID:       acc.UserID,
 		Email:        acc.Email,

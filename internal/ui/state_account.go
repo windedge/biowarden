@@ -19,6 +19,10 @@ import (
 type accountState struct {
 	keys    keysBackend
 	account accountBackend
+	// prefs remembers the address the last successful login used. It outlives
+	// the session and the stored key, so it is the one place a signed-out
+	// self-hosted user's address still lives.
+	prefs serverPref
 
 	// session mirrors accountBackend.session: the signed-in identity (or the
 	// pending 2FA state) the account card draws.
@@ -83,6 +87,7 @@ func newAccountStateWith(keys keysBackend, account accountBackend) accountState 
 	s := accountState{
 		keys:          keys,
 		account:       account,
+		prefs:         nopServerPref{},
 		scriptBody:    extractSnippet,
 		session:       accountSession{state: loginLoggedOut, serverURL: defaultServerURL},
 		results:       make(chan func(*accountState), 8),
@@ -155,11 +160,12 @@ func (s *accountState) primary() *accountRow {
 }
 
 // effectiveServerURL is the address the UI shows when it is not tied to one
-// live session: the session's address, else the primary stored account's
-// metadata, else the official cloud. A stored entry from before the metadata
-// carried an address has none, which falls through to the default.
+// live session: the live session's address, else the primary stored account's
+// metadata, else the address the last successful login used, else the official
+// cloud. A stored entry from before the metadata carried an address has none,
+// which falls through to the remembered one.
 func (s *accountState) effectiveServerURL() string {
-	if v := strings.TrimSpace(s.session.serverURL); v != "" {
+	if v := s.sessionServerURL(); v != "" {
 		return v
 	}
 	if p := s.primary(); p != nil {
@@ -167,7 +173,36 @@ func (s *accountState) effectiveServerURL() string {
 			return v
 		}
 	}
+	if v := s.lastServerURL(); v != "" {
+		return v
+	}
 	return defaultServerURL
+}
+
+// sessionServerURL is the live session's address. A signed-out session carries
+// the official cloud as a placeholder rather than nothing, and that placeholder
+// must not shadow the remembered address: after signing out of a self-hosted
+// server, the login form still has to open on that server.
+func (s *accountState) sessionServerURL() string {
+	v := strings.TrimSpace(s.session.serverURL)
+	if s.session.state == loginLoggedOut && strings.EqualFold(v, defaultServerURL) {
+		return ""
+	}
+	return v
+}
+
+// lastServerURL is the address the last successful login used, read now rather
+// than cached: a login that lands while this process runs updates the store, and
+// the next form must see it.
+func (s *accountState) lastServerURL() string {
+	if s.prefs == nil {
+		return ""
+	}
+	raw, ok := s.prefs.load()
+	if !ok {
+		return ""
+	}
+	return rememberedServerURL(raw)
 }
 
 // selectAccount foregrounds one stored account, which is what "switching"
