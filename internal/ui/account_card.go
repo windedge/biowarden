@@ -32,9 +32,9 @@ type accountCardView struct {
 	// primary marks the login button as the card's primary action, which only
 	// the signed-out state needs; the other states lead with the stored key.
 	primary bool
-	// deletable offers the dangerous delete button for the stored key. Only a
-	// stored key can be deleted, so the signed-out state hides it.
-	deletable bool
+	// removable offers the sign-out button for a stored key. Only a stored
+	// key can be signed out, so the signed-out state hides it.
+	removable bool
 	// identity draws the avatar row from the session's email.
 	identity bool
 }
@@ -55,7 +55,7 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 			title:      locales.AccountCardSignedIn(),
 			detail:     detail,
 			loginLabel: locales.AccountCardReLogin(),
-			deletable:  primary != nil,
+			removable:  primary != nil,
 			identity:   true,
 		}
 	}
@@ -74,7 +74,7 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 			detail:     locales.AccountCardConfiguredDetail(who, server, primary.created),
 			hint:       locales.AccountCardConfiguredHint(),
 			loginLabel: locales.AccountCardReLogin(),
-			deletable:  true,
+			removable:  true,
 		}
 	}
 	return accountCardView{

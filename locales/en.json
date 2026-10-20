@@ -476,6 +476,10 @@
   "@accountCardReLogin": {
     "description": "The signed-in account card's button that opens the login window to refresh the key."
   },
+  "accountCardSignOut": "Sign out",
+  "@accountCardSignOut": {
+    "description": "The account card's button that removes the stored key (after a Windows Hello confirmation) and forgets the session."
+  },
   "accountCardConfigured": "Configured",
   "@accountCardConfigured": {
     "description": "The account card's title when a key is stored but no session is verified."

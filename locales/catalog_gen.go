@@ -1370,6 +1370,22 @@ func (msgs Messages) AccountCardReLogin() string {
 	return Catalog.Format(msgs.locale, "accountCardReLogin", nil)
 }
 
+// AccountCardSignOut says "Sign out"
+// in the language the app shows.
+//
+// The account card's button that removes the stored key (after a Windows
+// Hello confirmation) and forgets the session.
+func AccountCardSignOut() string { return In(i18n.Locale()).AccountCardSignOut() }
+
+// AccountCardSignOut says "Sign out"
+// in the language of msgs.
+//
+// The account card's button that removes the stored key (after a Windows
+// Hello confirmation) and forgets the session.
+func (msgs Messages) AccountCardSignOut() string {
+	return Catalog.Format(msgs.locale, "accountCardSignOut", nil)
+}
+
 // AccountCardConfigured says "Configured"
 // in the language the app shows.
 //

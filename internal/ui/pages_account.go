@@ -9,10 +9,6 @@ import (
 	"github.com/windedge/biowarden/locales"
 )
 
-// iconTrash is Lucide's trash-2, the delete action's mark; like the nav
-// icons it draws in currentColor, so the button's TextColor paints it.
-var iconTrash = icon(`<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>`)
-
 // accountPage is the landing page: who is signed in, whether a key is stored,
 // and the v1 escape hatches behind the Advanced disclosure. It keeps the
 // reference KeyTab's store-and-verify flow, now under the account it belongs
@@ -37,8 +33,8 @@ func (app *appState) accountPage(c *ui.Context) {
 // stored-key "configured" state when a key exists without a live session, and
 // the sign-in guidance with nothing stored. The wording for all three comes
 // from accountCardViewFor; the login window owns the form and the two-factor
-// prompt, so the card only mirrors the session the backend reports. Delete is
-// the card's destructive action, gated by Windows Hello inside removeAccount.
+// prompt, so the card only mirrors the session the backend reports. Sign out
+// is the card's destructive action, gated by Windows Hello inside removeAccount.
 func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 	t := c.Theme()
 	groupBox(c, locales.AccountCardGroup(), func() {
@@ -72,8 +68,8 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		a.accountIdentity(c, v, t)
 		switch v.state {
 		case cardSignedIn, cardConfigured:
-			// Re-login and delete share one row; delete sits at the right end
-			// as a small red trash icon so it reads as the dangerous action.
+			// Re-login and sign out share one row; sign out sits at the right
+			// end, the spot the old trash icon held.
 			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
 					// Re-login re-derives the key, which always needs the master
@@ -82,14 +78,9 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 					login.begin()
 					c.Invalidate()
 				}
-				if v.deletable {
+				if v.removable {
 					ui.Spacer(c).Grow(1)
-					if ui.Button(c, "").Disabled(a.busy).
-						PaddingX(6).PaddingY(6).
-						TextColor(t.Danger).
-						Label(locales.Delete()).Tooltip(locales.Delete()).
-						Children(func() { ui.Icon(c, iconTrash).Size(16, 16) }).
-						Clicked() {
+					if ui.Button(c, locales.AccountCardSignOut()).Disabled(a.busy).Clicked() {
 						a.removeAccount(primary)
 						c.Invalidate()
 					}
