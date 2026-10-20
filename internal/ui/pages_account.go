@@ -9,6 +9,10 @@ import (
 	"github.com/windedge/biowarden/locales"
 )
 
+// iconTrash is Lucide's trash-2, the delete action's mark; like the nav
+// icons it draws in currentColor, so the button's TextColor paints it.
+var iconTrash = icon(`<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>`)
+
 // accountPage is the landing page: who is signed in, whether a key is stored,
 // and the v1 escape hatches behind the Advanced disclosure. It keeps the
 // reference KeyTab's store-and-verify flow, now under the account it belongs
@@ -69,7 +73,7 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		switch v.state {
 		case cardSignedIn, cardConfigured:
 			// Re-login and delete share one row; delete sits at the right end
-			// as small red text so it reads as the dangerous action.
+			// as a small red trash icon so it reads as the dangerous action.
 			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
 					// Re-login re-derives the key, which always needs the master
@@ -80,9 +84,12 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 				}
 				if v.deletable {
 					ui.Spacer(c).Grow(1)
-					if ui.Button(c, locales.Delete()).Disabled(a.busy).
-						FontSize(t.Rem(0.85)).PaddingX(8).PaddingY(4).
-						TextColor(t.Danger).Clicked() {
+					if ui.Button(c, "").Disabled(a.busy).
+						PaddingX(6).PaddingY(6).
+						TextColor(t.Danger).
+						Label(locales.Delete()).Tooltip(locales.Delete()).
+						Children(func() { ui.Icon(c, iconTrash).Size(16, 16) }).
+						Clicked() {
 						a.removeAccount(primary)
 						c.Invalidate()
 					}
