@@ -25,9 +25,9 @@ type accountCardView struct {
 	title  string
 	detail string
 	hint   string
-	// loginLabel is the secondary button that opens the login window. The
-	// configured state words it as a re-login, because refreshing the key is
-	// the only reason to sign in again when a key is already stored.
+	// loginLabel labels the signed-out card's primary button, which opens the
+	// login window. The other states offer no sign-in button: refreshing the
+	// key goes through sign-out, then sign-in.
 	loginLabel string
 	// primary marks the login button as the card's primary action, which only
 	// the signed-out state needs; the other states lead with the stored key.
@@ -51,12 +51,11 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 			detail = locales.AccountCardSignedInKey(sess.email, sess.serverURL, primary.created)
 		}
 		return accountCardView{
-			state:      cardSignedIn,
-			title:      locales.AccountCardSignedIn(),
-			detail:     detail,
-			loginLabel: locales.AccountCardReLogin(),
-			removable:  primary != nil,
-			identity:   true,
+			state:     cardSignedIn,
+			title:     locales.AccountCardSignedIn(),
+			detail:    detail,
+			removable: primary != nil,
+			identity:  true,
 		}
 	}
 	if primary != nil {
@@ -69,12 +68,11 @@ func accountCardViewFor(sess accountSession, primary *accountRow) accountCardVie
 			server = defaultServerURL
 		}
 		return accountCardView{
-			state:      cardConfigured,
-			title:      locales.AccountCardConfigured(),
-			detail:     locales.AccountCardConfiguredDetail(who, server, primary.created),
-			hint:       locales.AccountCardConfiguredHint(),
-			loginLabel: locales.AccountCardReLogin(),
-			removable:  true,
+			state:     cardConfigured,
+			title:     locales.AccountCardConfigured(),
+			detail:    locales.AccountCardConfiguredDetail(who, server, primary.created),
+			hint:      locales.AccountCardConfiguredHint(),
+			removable: true,
 		}
 	}
 	return accountCardView{

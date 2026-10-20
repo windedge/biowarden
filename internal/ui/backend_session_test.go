@@ -417,8 +417,8 @@ func TestAccountCardStates(t *testing.T) {
 			t.Fatalf("configured detail = %q, want it to contain %q", configured.detail, want)
 		}
 	}
-	if configured.loginLabel != locales.AccountCardReLogin() || configured.primary {
-		t.Fatalf("configured button = %q primary=%v", configured.loginLabel, configured.primary)
+	if configured.loginLabel != "" || configured.primary {
+		t.Fatalf("configured view must offer no sign-in button: label=%q primary=%v", configured.loginLabel, configured.primary)
 	}
 	if !configured.removable {
 		t.Fatal("a configured card with a stored key must offer sign-out")
@@ -433,8 +433,8 @@ func TestAccountCardStates(t *testing.T) {
 			t.Fatalf("signed-in detail = %q, want it to contain %q", signedIn.detail, want)
 		}
 	}
-	if signedIn.loginLabel != locales.AccountCardReLogin() || signedIn.primary {
-		t.Fatalf("signed-in button = %q primary=%v", signedIn.loginLabel, signedIn.primary)
+	if signedIn.loginLabel != "" || signedIn.primary {
+		t.Fatalf("signed-in view must offer no sign-in button: label=%q primary=%v", signedIn.loginLabel, signedIn.primary)
 	}
 	if !signedIn.removable {
 		t.Fatal("a signed-in card with a stored key must offer sign-out")

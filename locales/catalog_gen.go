@@ -1354,22 +1354,6 @@ func (msgs Messages) AccountCardVerifying() string {
 	return Catalog.Format(msgs.locale, "accountCardVerifying", nil)
 }
 
-// AccountCardReLogin says "Sign in again"
-// in the language the app shows.
-//
-// The signed-in account card's button that opens the login window to
-// refresh the key.
-func AccountCardReLogin() string { return In(i18n.Locale()).AccountCardReLogin() }
-
-// AccountCardReLogin says "Sign in again"
-// in the language of msgs.
-//
-// The signed-in account card's button that opens the login window to
-// refresh the key.
-func (msgs Messages) AccountCardReLogin() string {
-	return Catalog.Format(msgs.locale, "accountCardReLogin", nil)
-}
-
 // AccountCardSignOut says "Sign out"
 // in the language the app shows.
 //
@@ -1416,16 +1400,18 @@ func (msgs Messages) AccountCardConfiguredDetail(who string, server string, crea
 	return Catalog.Format(msgs.locale, "accountCardConfiguredDetail", map[string]any{"who": who, "server": server, "created": created})
 }
 
-// AccountCardConfiguredHint says "Unlocking already works, no need to sign in again; sign in only after the master password or KDF changed and the key …"
+// AccountCardConfiguredHint says "Unlocking already works, no need to sign in again; if the master password or KDF changed and unlocking stopped workin…"
 // in the language the app shows.
 //
-// The configured card's hint.
+// The configured card's hint: when a sign-in is needed and how to refresh
+// the key.
 func AccountCardConfiguredHint() string { return In(i18n.Locale()).AccountCardConfiguredHint() }
 
-// AccountCardConfiguredHint says "Unlocking already works, no need to sign in again; sign in only after the master password or KDF changed and the key …"
+// AccountCardConfiguredHint says "Unlocking already works, no need to sign in again; if the master password or KDF changed and unlocking stopped workin…"
 // in the language of msgs.
 //
-// The configured card's hint.
+// The configured card's hint: when a sign-in is needed and how to refresh
+// the key.
 func (msgs Messages) AccountCardConfiguredHint() string {
 	return Catalog.Format(msgs.locale, "accountCardConfiguredHint", nil)
 }

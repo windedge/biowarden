@@ -61,7 +61,7 @@ PIN. Any other process running as you can in principle read the same credential;
 threat model you already accept with the official desktop client.
 
 The master password you type in the login window lives in memory only. It is kept for the length
-of the run so **Refresh key** and **Re-login** can re-derive the key after a password or KDF
+of the run so signing in (or signing back in) can re-derive the key after a password or KDF
 change, and it is never written to disk or to a log. The access token is memory-only too. To keep
 you signed in across restarts, biowarden persists the refresh token, your email and your server
 address as a separate `Biowarden/Session/<userId>` entry, encrypted by Windows DPAPI under your

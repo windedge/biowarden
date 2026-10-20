@@ -472,10 +472,6 @@
   "@accountCardVerifying": {
     "description": "The weak hint while the startup session restore is on the wire."
   },
-  "accountCardReLogin": "Sign in again",
-  "@accountCardReLogin": {
-    "description": "The signed-in account card's button that opens the login window to refresh the key."
-  },
   "accountCardSignOut": "Sign out",
   "@accountCardSignOut": {
     "description": "The account card's button that removes the stored key (after a Windows Hello confirmation) and forgets the session."
@@ -502,9 +498,9 @@
       }
     }
   },
-  "accountCardConfiguredHint": "Unlocking already works, no need to sign in again; sign in only after the master password or KDF changed and the key needs refreshing.",
+  "accountCardConfiguredHint": "Unlocking already works, no need to sign in again; if the master password or KDF changed and unlocking stopped working, sign out first, then sign in again to refresh the key.",
   "@accountCardConfiguredHint": {
-    "description": "The configured card's hint."
+    "description": "The configured card's hint: when a sign-in is needed and how to refresh the key."
   },
   "accountCardSignedOut": "Not signed in",
   "@accountCardSignedOut": {

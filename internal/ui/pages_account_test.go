@@ -44,9 +44,8 @@ func TestAccountCardRendersThreeStatesInBothLanguages(t *testing.T) {
 						locales.AccountCardGroup(),
 						locales.AccountCardSignedIn(),
 						locales.AccountCardSignedInKey("ada@example.com", defaultServerURL, "2026-01-12 09:24"),
-						locales.AccountCardReLogin(),
 					},
-					absent: []string{locales.AccountNoKeyHint()},
+					absent: []string{locales.AccountNoKeyHint(), "Sign in again"},
 				},
 				{
 					name: "configured",
@@ -56,10 +55,9 @@ func TestAccountCardRendersThreeStatesInBothLanguages(t *testing.T) {
 						locales.AccountCardConfigured(),
 						locales.AccountCardConfiguredDetail("ada@example.com", defaultServerURL, "2026-01-12 09:24"),
 						locales.AccountCardConfiguredHint(),
-						locales.AccountCardReLogin(),
 						locales.AccountCardSignOut(),
 					},
-					absent: []string{locales.LoginTitle()},
+					absent: []string{locales.LoginTitle(), "Sign in again"},
 				},
 				{
 					name: "signed out",
@@ -71,7 +69,7 @@ func TestAccountCardRendersThreeStatesInBothLanguages(t *testing.T) {
 						locales.LoginTitle(),
 						locales.Refresh(),
 					},
-					absent: []string{locales.AccountCardSignOut(), locales.AccountCardReLogin()},
+					absent: []string{locales.AccountCardSignOut(), "Sign in again"},
 				},
 			}
 			for _, tc := range states {
@@ -131,6 +129,28 @@ func TestAccountCardSignOut(t *testing.T) {
 	}
 	if len(acct.forgotten) != 1 || acct.forgotten[0] != "user-1" {
 		t.Fatalf("forgetSession calls = %v, want user-1", acct.forgotten)
+	}
+}
+
+// The configured hint must point at the refresh path: unlocking already
+// works, and a stale key is fixed by signing out first, then signing in.
+func TestAccountCardConfiguredHintWording(t *testing.T) {
+	for _, tt := range []struct {
+		tag      string
+		contains []string
+	}{
+		{tag: "en", contains: []string{"sign out", "sign in again"}},
+		{tag: "zh-Hans", contains: []string{"退出登录", "重新登录以更新密钥"}},
+	} {
+		t.Run(tt.tag, func(t *testing.T) {
+			appLanguage(t, tt.tag)
+			want := locales.AccountCardConfiguredHint()
+			for _, phrase := range tt.contains {
+				if !strings.Contains(want, phrase) {
+					t.Errorf("%s hint %q does not mention %q", tt.tag, want, phrase)
+				}
+			}
+		})
 	}
 }
 

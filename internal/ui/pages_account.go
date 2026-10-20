@@ -66,7 +66,7 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		primary := a.primary()
 		v := accountCardViewFor(a.session, primary)
 		// Sign out is the low-frequency corner action on the title row, out of
-		// the main flow; re-login alone owns the action row below.
+		// the main flow; the card has no other action row.
 		a.accountIdentity(c, v, t, func() {
 			if !v.removable {
 				return
@@ -79,15 +79,8 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		})
 		switch v.state {
 		case cardSignedIn, cardConfigured:
-			ui.Row(c).Children(func() {
-				if ui.Button(c, v.loginLabel).Disabled(a.busy).Clicked() {
-					// Re-login re-derives the key, which always needs the master
-					// password (a restored session kept only the refresh token),
-					// so the login window is the one path that always works.
-					login.begin()
-					c.Invalidate()
-				}
-			})
+			// No action row: refreshing the key goes through sign-out, then
+			// sign-in, and unlocking never needs the login window.
 		default:
 			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 				if ui.PrimaryButton(c, v.loginLabel).Disabled(a.busy).Clicked() {
