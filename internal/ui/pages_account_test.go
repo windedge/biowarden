@@ -57,7 +57,7 @@ func TestAccountCardRendersEveryStateInBothLanguages(t *testing.T) {
 						locales.AccountCardConfiguredHint(),
 						locales.AccountCardSignOut(),
 					},
-					absent: []string{locales.LoginTitle(), "Sign in again"},
+					absent: []string{locales.LoginTitle(), locales.Refresh(), "Sign in again"},
 				},
 				{
 					// The key was removed outside this page: the card must still
@@ -71,7 +71,7 @@ func TestAccountCardRendersEveryStateInBothLanguages(t *testing.T) {
 						locales.AccountNoKeyHint(),
 						locales.LoginTitle(),
 					},
-					absent: []string{locales.AccountCardSignOut(), locales.AccountCardSignedOut()},
+					absent: []string{locales.AccountCardSignOut(), locales.AccountCardSignedOut(), locales.Refresh()},
 				},
 				{
 					name: "signed out",
@@ -81,9 +81,9 @@ func TestAccountCardRendersEveryStateInBothLanguages(t *testing.T) {
 						locales.AccountCardSignedOut(),
 						locales.AccountNoKeyHint(),
 						locales.LoginTitle(),
-						locales.Refresh(),
 					},
-					absent: []string{locales.AccountCardSignOut(), "Sign in again"},
+					// No manual refresh: every write in the GUI reloads the card.
+					absent: []string{locales.AccountCardSignOut(), locales.Refresh(), "Sign in again"},
 				},
 			}
 			for _, tc := range states {

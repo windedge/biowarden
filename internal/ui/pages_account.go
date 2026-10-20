@@ -86,15 +86,11 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		// A view that names a login action gets the same row: the signed-out
 		// card, and a signed-in card whose key is gone (removed on another
 		// device), which would otherwise be a dead end with no button.
+		// Every write in the GUI reloads the card by itself, so the row holds
+		// only the login action.
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			if ui.PrimaryButton(c, v.loginLabel).Disabled(a.busy).Clicked() {
 				login.begin()
-				c.Invalidate()
-			}
-			// No key is stored here, so re-read the local credential store,
-			// e.g. after the host saved one outside the GUI.
-			if ui.Button(c, locales.Refresh()).Disabled(a.busy).Clicked() {
-				a.reload()
 				c.Invalidate()
 			}
 		})
