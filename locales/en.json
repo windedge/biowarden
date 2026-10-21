@@ -14,7 +14,7 @@
     "placeholders": {
       "app": {
         "type": "String",
-        "example": "biowarden"
+        "example": "Biowarden"
       }
     }
   },
@@ -128,7 +128,7 @@
   },
   "loginUnsupportedAlso": "The server also offers {methods}; {note}",
   "@loginUnsupportedAlso": {
-    "description": "The hint naming the offered methods biowarden cannot answer, after the ones it can.",
+    "description": "The hint naming the offered methods Biowarden cannot answer, after the ones it can.",
     "placeholders": {
       "methods": {
         "type": "String",
@@ -136,7 +136,7 @@
       },
       "note": {
         "type": "String",
-        "example": "this method is not supported by biowarden yet"
+        "example": "this method is not supported by Biowarden yet"
       }
     }
   },
@@ -150,11 +150,11 @@
       }
     }
   },
-  "loginUnsupportedTitle": "This method is not supported by biowarden yet. Use the extraction script under Advanced on the account page to enter the key.",
+  "loginUnsupportedTitle": "This method is not supported by Biowarden yet. Use the extraction script under Advanced on the account page to enter the key.",
   "@loginUnsupportedTitle": {
-    "description": "The panel shown when the server offers only methods biowarden cannot answer."
+    "description": "The panel shown when the server offers only methods Biowarden cannot answer."
   },
-  "loginUnsupportedNote": "this method is not supported by biowarden yet, so use the extraction script under Advanced on the account page to enter the key",
+  "loginUnsupportedNote": "this method is not supported by Biowarden yet, so use the extraction script under Advanced on the account page to enter the key",
   "@loginUnsupportedNote": {
     "description": "The same explanation as loginUnsupportedTitle, worded to follow the semicolon in loginUnsupportedAlso."
   },
@@ -358,7 +358,7 @@
   "@loginStateLoggedIn": {
     "description": "The account page's label for the signed-in login state."
   },
-  "appTitle": "biowarden",
+  "appTitle": "Biowarden",
   "@appTitle": {
     "description": "The main window's title, the app's name."
   },
@@ -1006,7 +1006,7 @@
   "@browserAbsentHint": {
     "description": "The tooltip that explains a disabled write action."
   },
-  "browserStatusOurs": "Installed (biowarden)",
+  "browserStatusOurs": "Installed (Biowarden)",
   "@browserStatusOurs": {
     "description": "The row state when our manifest is registered."
   },
@@ -1222,11 +1222,11 @@
   "@browsersConfirmOfficialNote": {
     "description": "The confirmation window's warning shown when a foreign registration is listed."
   },
-  "browsersConfirmIntroForeign": "The registrations below do not belong to biowarden right now; they may come from the official Bitwarden desktop client or another tool. Confirming hands them to biowarden and disables the official client's biometric unlock; cancelling changes nothing.",
+  "browsersConfirmIntroForeign": "The registrations below do not belong to Biowarden right now; they may come from the official Bitwarden desktop client or another tool. Confirming hands them to Biowarden and disables the official client's biometric unlock; cancelling changes nothing.",
   "@browsersConfirmIntroForeign": {
     "description": "The confirmation window's intro when it lists a foreign registration."
   },
-  "browsersConfirmIntroHijacked": "biowarden's configuration in the browsers below was overwritten by another program. Confirming restores biowarden's manifest; cancelling changes nothing.",
+  "browsersConfirmIntroHijacked": "Biowarden's configuration in the browsers below was overwritten by another program. Confirming restores Biowarden's manifest; cancelling changes nothing.",
   "@browsersConfirmIntroHijacked": {
     "description": "The confirmation window's intro when every listed row was hijacked."
   },
@@ -1264,7 +1264,7 @@
       }
     }
   },
-  "browsersTakeoverRestore": "Restore biowarden's configuration",
+  "browsersTakeoverRestore": "Restore Biowarden's configuration",
   "@browsersTakeoverRestore": {
     "description": "A confirmation card's headline for a hijacked row."
   },
@@ -1272,7 +1272,7 @@
   "@browsersTakeoverForeign": {
     "description": "A confirmation card's headline for a foreign row."
   },
-  "browsersTakeoverOwnerHijacked": " (biowarden's configuration was overwritten by it)",
+  "browsersTakeoverOwnerHijacked": " (Biowarden's configuration was overwritten by it)",
   "@browsersTakeoverOwnerHijacked": {
     "description": "The likely-owner hint for a hijacked row."
   },
@@ -1344,15 +1344,15 @@
       }
     }
   },
-  "helloReasonTestUnlock": "Test unlock of the biowarden key",
+  "helloReasonTestUnlock": "Test unlock of the Biowarden key",
   "@helloReasonTestUnlock": {
     "description": "The Windows Hello prompt's reason for a test unlock."
   },
-  "helloReasonSaveKey": "Save the biowarden key",
+  "helloReasonSaveKey": "Save the Biowarden key",
   "@helloReasonSaveKey": {
     "description": "The Windows Hello prompt's reason for saving a key."
   },
-  "helloReasonRemoveKey": "Delete the biowarden key",
+  "helloReasonRemoveKey": "Delete the Biowarden key",
   "@helloReasonRemoveKey": {
     "description": "The Windows Hello prompt's reason for deleting a key."
   },

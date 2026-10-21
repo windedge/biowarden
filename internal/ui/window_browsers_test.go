@@ -34,9 +34,9 @@ func TestBrowsersConfirmViewListsTakeovers(t *testing.T) {
 
 	for _, want := range []string{
 		"Edge · 接管此前属于其他程序的注册",
-		"Firefox · 恢复 biowarden 的配置",
+		"Firefox · 恢复 Biowarden 的配置",
 		"当前指向：C:\\official\\edge.json（可能是官方 Bitwarden 桌面客户端）",
-		"当前指向：C:\\other\\firefox.json（biowarden 的配置已被它覆盖）",
+		"当前指向：C:\\other\\firefox.json（Biowarden 的配置已被它覆盖）",
 		"覆盖后指向：C:\\biowarden\\manifests\\edge.json",
 		"恢复为：C:\\biowarden\\manifests\\firefox.json",
 		"确认覆盖",

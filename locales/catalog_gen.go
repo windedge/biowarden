@@ -435,7 +435,7 @@ func (msgs Messages) LoginEmailCodeSentTo(email string) string {
 // LoginUnsupportedAlso says "The server also offers {methods}; {note}"
 // in the language the app shows.
 //
-// The hint naming the offered methods biowarden cannot answer, after the
+// The hint naming the offered methods Biowarden cannot answer, after the
 // ones it can.
 func LoginUnsupportedAlso(methods string, note string) string {
 	return In(i18n.Locale()).LoginUnsupportedAlso(methods, note)
@@ -444,7 +444,7 @@ func LoginUnsupportedAlso(methods string, note string) string {
 // LoginUnsupportedAlso says "The server also offers {methods}; {note}"
 // in the language of msgs.
 //
-// The hint naming the offered methods biowarden cannot answer, after the
+// The hint naming the offered methods Biowarden cannot answer, after the
 // ones it can.
 func (msgs Messages) LoginUnsupportedAlso(methods string, note string) string {
 	return Catalog.Format(msgs.locale, "loginUnsupportedAlso", map[string]any{"methods": methods, "note": note})
@@ -468,30 +468,30 @@ func (msgs Messages) LoginUnsupportedOffered(methods string) string {
 	return Catalog.Format(msgs.locale, "loginUnsupportedOffered", map[string]any{"methods": methods})
 }
 
-// LoginUnsupportedTitle says "This method is not supported by biowarden yet. Use the extraction script under Advanced on the account page to enter …"
+// LoginUnsupportedTitle says "This method is not supported by Biowarden yet. Use the extraction script under Advanced on the account page to enter …"
 // in the language the app shows.
 //
-// The panel shown when the server offers only methods biowarden cannot
+// The panel shown when the server offers only methods Biowarden cannot
 // answer.
 func LoginUnsupportedTitle() string { return In(i18n.Locale()).LoginUnsupportedTitle() }
 
-// LoginUnsupportedTitle says "This method is not supported by biowarden yet. Use the extraction script under Advanced on the account page to enter …"
+// LoginUnsupportedTitle says "This method is not supported by Biowarden yet. Use the extraction script under Advanced on the account page to enter …"
 // in the language of msgs.
 //
-// The panel shown when the server offers only methods biowarden cannot
+// The panel shown when the server offers only methods Biowarden cannot
 // answer.
 func (msgs Messages) LoginUnsupportedTitle() string {
 	return Catalog.Format(msgs.locale, "loginUnsupportedTitle", nil)
 }
 
-// LoginUnsupportedNote says "this method is not supported by biowarden yet, so use the extraction script under Advanced on the account page to ent…"
+// LoginUnsupportedNote says "this method is not supported by Biowarden yet, so use the extraction script under Advanced on the account page to ent…"
 // in the language the app shows.
 //
 // The same explanation as loginUnsupportedTitle, worded to follow the
 // semicolon in loginUnsupportedAlso.
 func LoginUnsupportedNote() string { return In(i18n.Locale()).LoginUnsupportedNote() }
 
-// LoginUnsupportedNote says "this method is not supported by biowarden yet, so use the extraction script under Advanced on the account page to ent…"
+// LoginUnsupportedNote says "this method is not supported by Biowarden yet, so use the extraction script under Advanced on the account page to ent…"
 // in the language of msgs.
 //
 // The same explanation as loginUnsupportedTitle, worded to follow the
@@ -1054,13 +1054,13 @@ func (msgs Messages) LoginStateLoggedIn() string {
 	return Catalog.Format(msgs.locale, "loginStateLoggedIn", nil)
 }
 
-// AppTitle says "biowarden"
+// AppTitle says "Biowarden"
 // in the language the app shows.
 //
 // The main window's title, the app's name.
 func AppTitle() string { return In(i18n.Locale()).AppTitle() }
 
-// AppTitle says "biowarden"
+// AppTitle says "Biowarden"
 // in the language of msgs.
 //
 // The main window's title, the app's name.
@@ -2742,13 +2742,13 @@ func (msgs Messages) BrowserAbsentHint() string {
 	return Catalog.Format(msgs.locale, "browserAbsentHint", nil)
 }
 
-// BrowserStatusOurs says "Installed (biowarden)"
+// BrowserStatusOurs says "Installed (Biowarden)"
 // in the language the app shows.
 //
 // The row state when our manifest is registered.
 func BrowserStatusOurs() string { return In(i18n.Locale()).BrowserStatusOurs() }
 
-// BrowserStatusOurs says "Installed (biowarden)"
+// BrowserStatusOurs says "Installed (Biowarden)"
 // in the language of msgs.
 //
 // The row state when our manifest is registered.
@@ -3204,13 +3204,13 @@ func (msgs Messages) BrowsersConfirmOfficialNote() string {
 	return Catalog.Format(msgs.locale, "browsersConfirmOfficialNote", nil)
 }
 
-// BrowsersConfirmIntroForeign says "The registrations below do not belong to biowarden right now; they may come from the official Bitwarden desktop clien…"
+// BrowsersConfirmIntroForeign says "The registrations below do not belong to Biowarden right now; they may come from the official Bitwarden desktop clien…"
 // in the language the app shows.
 //
 // The confirmation window's intro when it lists a foreign registration.
 func BrowsersConfirmIntroForeign() string { return In(i18n.Locale()).BrowsersConfirmIntroForeign() }
 
-// BrowsersConfirmIntroForeign says "The registrations below do not belong to biowarden right now; they may come from the official Bitwarden desktop clien…"
+// BrowsersConfirmIntroForeign says "The registrations below do not belong to Biowarden right now; they may come from the official Bitwarden desktop clien…"
 // in the language of msgs.
 //
 // The confirmation window's intro when it lists a foreign registration.
@@ -3218,13 +3218,13 @@ func (msgs Messages) BrowsersConfirmIntroForeign() string {
 	return Catalog.Format(msgs.locale, "browsersConfirmIntroForeign", nil)
 }
 
-// BrowsersConfirmIntroHijacked says "biowarden's configuration in the browsers below was overwritten by another program. Confirming restores biowarden's m…"
+// BrowsersConfirmIntroHijacked says "Biowarden's configuration in the browsers below was overwritten by another program. Confirming restores Biowarden's m…"
 // in the language the app shows.
 //
 // The confirmation window's intro when every listed row was hijacked.
 func BrowsersConfirmIntroHijacked() string { return In(i18n.Locale()).BrowsersConfirmIntroHijacked() }
 
-// BrowsersConfirmIntroHijacked says "biowarden's configuration in the browsers below was overwritten by another program. Confirming restores biowarden's m…"
+// BrowsersConfirmIntroHijacked says "Biowarden's configuration in the browsers below was overwritten by another program. Confirming restores Biowarden's m…"
 // in the language of msgs.
 //
 // The confirmation window's intro when every listed row was hijacked.
@@ -3280,13 +3280,13 @@ func (msgs Messages) BrowsersConfirmRestoreTarget(path string) string {
 	return Catalog.Format(msgs.locale, "browsersConfirmRestoreTarget", map[string]any{"path": path})
 }
 
-// BrowsersTakeoverRestore says "Restore biowarden's configuration"
+// BrowsersTakeoverRestore says "Restore Biowarden's configuration"
 // in the language the app shows.
 //
 // A confirmation card's headline for a hijacked row.
 func BrowsersTakeoverRestore() string { return In(i18n.Locale()).BrowsersTakeoverRestore() }
 
-// BrowsersTakeoverRestore says "Restore biowarden's configuration"
+// BrowsersTakeoverRestore says "Restore Biowarden's configuration"
 // in the language of msgs.
 //
 // A confirmation card's headline for a hijacked row.
@@ -3308,13 +3308,13 @@ func (msgs Messages) BrowsersTakeoverForeign() string {
 	return Catalog.Format(msgs.locale, "browsersTakeoverForeign", nil)
 }
 
-// BrowsersTakeoverOwnerHijacked says " (biowarden's configuration was overwritten by it)"
+// BrowsersTakeoverOwnerHijacked says " (Biowarden's configuration was overwritten by it)"
 // in the language the app shows.
 //
 // The likely-owner hint for a hijacked row.
 func BrowsersTakeoverOwnerHijacked() string { return In(i18n.Locale()).BrowsersTakeoverOwnerHijacked() }
 
-// BrowsersTakeoverOwnerHijacked says " (biowarden's configuration was overwritten by it)"
+// BrowsersTakeoverOwnerHijacked says " (Biowarden's configuration was overwritten by it)"
 // in the language of msgs.
 //
 // The likely-owner hint for a hijacked row.
@@ -3424,13 +3424,13 @@ func (msgs Messages) FirstRunNoticeMarkerError(detail string) string {
 	return Catalog.Format(msgs.locale, "firstRunNoticeMarkerError", map[string]any{"detail": detail})
 }
 
-// HelloReasonTestUnlock says "Test unlock of the biowarden key"
+// HelloReasonTestUnlock says "Test unlock of the Biowarden key"
 // in the language the app shows.
 //
 // The Windows Hello prompt's reason for a test unlock.
 func HelloReasonTestUnlock() string { return In(i18n.Locale()).HelloReasonTestUnlock() }
 
-// HelloReasonTestUnlock says "Test unlock of the biowarden key"
+// HelloReasonTestUnlock says "Test unlock of the Biowarden key"
 // in the language of msgs.
 //
 // The Windows Hello prompt's reason for a test unlock.
@@ -3438,13 +3438,13 @@ func (msgs Messages) HelloReasonTestUnlock() string {
 	return Catalog.Format(msgs.locale, "helloReasonTestUnlock", nil)
 }
 
-// HelloReasonSaveKey says "Save the biowarden key"
+// HelloReasonSaveKey says "Save the Biowarden key"
 // in the language the app shows.
 //
 // The Windows Hello prompt's reason for saving a key.
 func HelloReasonSaveKey() string { return In(i18n.Locale()).HelloReasonSaveKey() }
 
-// HelloReasonSaveKey says "Save the biowarden key"
+// HelloReasonSaveKey says "Save the Biowarden key"
 // in the language of msgs.
 //
 // The Windows Hello prompt's reason for saving a key.
@@ -3452,13 +3452,13 @@ func (msgs Messages) HelloReasonSaveKey() string {
 	return Catalog.Format(msgs.locale, "helloReasonSaveKey", nil)
 }
 
-// HelloReasonRemoveKey says "Delete the biowarden key"
+// HelloReasonRemoveKey says "Delete the Biowarden key"
 // in the language the app shows.
 //
 // The Windows Hello prompt's reason for deleting a key.
 func HelloReasonRemoveKey() string { return In(i18n.Locale()).HelloReasonRemoveKey() }
 
-// HelloReasonRemoveKey says "Delete the biowarden key"
+// HelloReasonRemoveKey says "Delete the Biowarden key"
 // in the language of msgs.
 //
 // The Windows Hello prompt's reason for deleting a key.

@@ -249,7 +249,7 @@ func (a *accountState) manualEntry(c *ui.Context) {
 // empty email still needs something, or the avatar draws nothing.
 func avatarName(email string) string {
 	if strings.TrimSpace(email) == "" {
-		return "biowarden"
+		return appName
 	}
 	return email
 }

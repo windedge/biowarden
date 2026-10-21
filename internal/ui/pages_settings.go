@@ -96,7 +96,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 					})
 					ui.Fieldset(c, locales.SettingsGroupAbout(), func() {
 						ui.Field(c, locales.SettingsVersion(), func() {
-							ui.Text(c, "biowarden "+appVersion)
+							ui.Text(c, appName+" "+appVersion)
 						})
 						ui.Field(c, locales.SettingsAboutNote(), func() {
 							// A text wraps at the width it gets, so it needs no Wrap

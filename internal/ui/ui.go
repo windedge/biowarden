@@ -14,7 +14,11 @@ import (
 	"github.com/windedge/biowarden/locales"
 )
 
-const appName = "biowarden"
+// appName is the app's name as people read it. It is display only: the
+// identifiers the app stores data under (the executable, the registry keys,
+// the credential prefix, the protocol's app id) are spelled elsewhere and
+// must not follow this name.
+const appName = "Biowarden"
 
 // appVersion is shown on the Settings page and substitutes into fakeLog.
 // Keep it in sync with mygo.json's version.

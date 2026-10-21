@@ -12,7 +12,10 @@ import (
 
 const hostName = "com.8bit.bitwarden"
 
-const manifestDescription = "biowarden: Bitwarden browser bridge via Windows Hello"
+// manifestDescription is the human-readable description in the manifest
+// file. It is display only: the browser matches the host by its name and
+// path, never by this text.
+const manifestDescription = "Biowarden: Bitwarden browser bridge via Windows Hello"
 
 // The official Bitwarden extension IDs, copied from the macOS reference
 // (bw-bio-handler/manifests.go). Chrome and Edge allow them as origins;

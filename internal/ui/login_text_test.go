@@ -23,7 +23,7 @@ func TestLoginErrorTextMapsSentinels(t *testing.T) {
 		{"network", errNetworkUnreachable, "Cannot reach the server", "无法连接服务器"},
 		{"server", errServerFailure, "returned an error", "服务器返回错误"},
 		{"no method", errNoTwoFactorMethod, "offered no usable method", "没有返回可用的验证方式"},
-		{"unsupported", errTwoFactorUnsupported, "not supported by biowarden", "暂不支持"},
+		{"unsupported", errTwoFactorUnsupported, "not supported by Biowarden", "暂不支持"},
 		{"no challenge", errNoTwoFactorChallenge, "no login waiting for a code", "没有等待验证码的登录"},
 		{"empty code", errTwoFactorEmptyCode, "Enter the two-factor code", "请输入两步验证码"},
 		{"email method missing", errEmailMethodMissing, "did not offer the email code method", "没有提供邮箱验证码方式"},
@@ -236,7 +236,7 @@ func TestLoginUnsupportedPanelRendersInBothLanguages(t *testing.T) {
 	cases := []struct {
 		name, tag, want string
 	}{
-		{"english", "en", "not supported by biowarden"},
+		{"english", "en", "not supported by Biowarden"},
 		{"chinese", "zh-Hans", "暂不支持"},
 	}
 	for _, tc := range cases {
