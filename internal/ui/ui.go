@@ -121,10 +121,22 @@ func Reveal(w *mygo.Window) {
 // language changes: RoleQuit relabels itself, the app's own item does not.
 func trayMenu(win *mygo.Window) *mygo.Menu {
 	return mygo.NewMenu([]*mygo.MenuItem{
-		{Label: locales.TrayOpen(appName), Click: func(*mygo.MenuItem, *mygo.Window) { win.Show() }},
+		{Label: trayOpenLabel(), Click: func(*mygo.MenuItem, *mygo.Window) { win.Show() }},
 		mygo.Separator(),
 		{Role: mygo.RoleQuit},
 	})
+}
+
+// trayOpenLabel is the tray menu's item that shows the window.
+//
+// The trailing space is not a mistake: MyGo sizes a menu item from the width
+// of its text, but Windows draws that text a few pixels wider (the item's
+// rect is inset inside the menu, which MyGo's measurement does not know),
+// and cuts what does not fit. The cut falls on the last letter, which is why
+// the app's name lost its "n". The space gives the text the room it needs;
+// the menu shows it as nothing.
+func trayOpenLabel() string {
+	return locales.TrayOpen(appName) + " "
 }
 
 // appIconPNG is resources/icon.png, the same square icon mygo.json points at,

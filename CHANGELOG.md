@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The tray menu's first item lost the app name's last letter: the menu item
+  is sized from the width of its text, but Windows draws that text a few
+  pixels wider and cuts what does not fit. The label now ends with a space,
+  which takes the cut instead of the letter.
+
 ## [0.1.3] - 2026-10-21
 
 ### Changed
