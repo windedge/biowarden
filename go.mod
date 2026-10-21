@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/danieljoos/wincred v1.2.3
-	github.com/egoist/mygo v0.5.5
+	github.com/egoist/mygo v0.6.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/sys v0.49.0
 )
