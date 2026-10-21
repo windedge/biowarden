@@ -7,8 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Five more interface languages: Traditional Chinese, Japanese, German, French
+  and Spanish join English and Simplified Chinese, seven in all. The language
+  list on the Settings page shows every language under its own name
+  (English / 简体中文 / 繁體中文 / 日本語 / Deutsch / français / español), with
+  "Follow the system" first.
+- The text fields' right-click menu (Undo, Cut, Copy, Paste, Delete, Select
+  All) now speaks the chosen language instead of staying Chinese.
+
+### Changed
+
+- Upgraded mygo to v0.6.0: a long drop-down list stays inside the window and
+  scrolls there instead of sticking out of it, and the layout follows the
+  stylesheet more closely.
+- Every page is now checked in all seven languages, so text that would run
+  past the window is caught in the tests instead of in front of the user.
+- The Settings page no longer repeats the server address. The account card
+  already shows it, and the repeated row kept naming the official cloud
+  address after a sign-out, which was misleading.
+
 ### Fixed
 
+- Long texts on the Settings page ran past the right edge of the window and
+  were cut off; the page's margins now follow the layout.
+- The log path field and the drop-downs on the Settings page were wider than
+  the room the window had, so in a narrow window or in a language with longer
+  labels they were clipped; they now shrink to the available width and keep
+  their size on a wide window.
 - The tray menu's first item lost the app name's last letter: the menu item
   is sized from the width of its text, but Windows draws that text a few
   pixels wider and cuts what does not fit. The label now ends with a space,
