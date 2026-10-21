@@ -8,8 +8,8 @@ import (
 )
 
 // catalogs are the app's languages: English is the source, whose catalog also
-// describes each message, and Simplified Chinese its translation.
-var catalogs = []string{"en.json", "zh-Hans.json"}
+// describes each message, and the others its translations.
+var catalogs = []string{"en.json", "zh-Hans.json", "zh-Hant.json", "ja.json", "de.json", "fr.json", "es.json"}
 
 // messages reads a catalog and returns its message keys, leaving out @@locale
 // and the @key entries: the source language's describes the messages.

@@ -245,5 +245,11 @@
   "keyErrorNotBase64": "密钥不是合法的 base64：{detail}",
   "accountErrorRemoveKey": "删除密钥失败：{detail}",
   "accountErrorClearSession": "清除登录会话失败：{detail}",
-  "mygo.appDescription": "Windows 上为 Bitwarden 浏览器扩展提供生物识别解锁。"
+  "mygo.appDescription": "Windows 上为 Bitwarden 浏览器扩展提供生物识别解锁。",
+  "mygo.undo": "撤销",
+  "mygo.cut": "剪切",
+  "mygo.copy": "复制",
+  "mygo.paste": "粘贴",
+  "mygo.delete": "删除",
+  "mygo.selectAll": "全选"
 }

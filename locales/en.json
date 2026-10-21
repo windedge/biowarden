@@ -1425,5 +1425,29 @@
   "mygo.appDescription": "Biometric unlock for the Bitwarden browser extension on Windows.",
   "@mygo.appDescription": {
     "description": "The app's description, which packaging writes where systems list the app."
+  },
+  "mygo.undo": "Undo",
+  "@mygo.undo": {
+    "description": "The text input's context menu item that undoes the last edit."
+  },
+  "mygo.cut": "Cut",
+  "@mygo.cut": {
+    "description": "The text input's context menu item that cuts the selection."
+  },
+  "mygo.copy": "Copy",
+  "@mygo.copy": {
+    "description": "The text input's context menu item that copies the selection."
+  },
+  "mygo.paste": "Paste",
+  "@mygo.paste": {
+    "description": "The text input's context menu item that pastes the clipboard."
+  },
+  "mygo.delete": "Delete",
+  "@mygo.delete": {
+    "description": "The text input's context menu item that deletes the selection."
+  },
+  "mygo.selectAll": "Select All",
+  "@mygo.selectAll": {
+    "description": "The text input's context menu item that selects the whole text."
   }
 }
