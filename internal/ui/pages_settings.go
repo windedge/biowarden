@@ -22,12 +22,13 @@ const (
 func (app *appState) settingsPage(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Grow(1).Children(func() {
-		ui.Column(c).Padding(16, 16, 16, 8).Gap(4).Children(func() {
+		// The padding is CSS order: top, right, bottom and left.
+		ui.Column(c).Padding(16, 16, 16, 16).Gap(4).Children(func() {
 			ui.Text(c, locales.SettingsTitle()).FontSize(18).Bold()
 			muted(c, locales.SettingsIntro())
 		})
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Padding(16, 4, 16, 16).Gap(12).Children(func() {
+			ui.Column(c).Padding(16, 16, 16, 16).Gap(12).Children(func() {
 				notice(c, app.settings.notice.text(), app.settings.notice.ok)
 				ui.Form(c, func() {
 					ui.Fieldset(c, locales.SettingsGroupEntry(), func() {
@@ -93,8 +94,14 @@ func (app *appState) settingsPage(c *ui.Context) {
 							ui.Text(c, "biowarden "+appVersion)
 						})
 						ui.Field(c, locales.SettingsAboutNote(), func() {
+							// A text wraps at the width it gets, so it needs no Wrap
+							// of its own: that is for containers, and it would measure
+							// the note as one long line. The width is capped because
+							// a form's label column grows with the longest label, which
+							// in a verbose language leaves the note less room than the
+							// window has, and the note then runs past the window.
 							ui.Text(c, locales.SettingsAboutText()).
-								FontSize(12).TextColor(t.TextMuted).Wrap()
+								FontSize(12).TextColor(t.TextMuted).MaxWidth(settingsFieldWidth)
 						})
 					})
 				})
