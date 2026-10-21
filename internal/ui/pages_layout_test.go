@@ -46,13 +46,9 @@ func TestPagesKeepTheirTextsInsideTheWindow(t *testing.T) {
 			}
 			// The tester reports the box of the element that shows a text
 			// or that is labeled with it, and a widget's box is the
-			// widget's own: the log path field is a fixed width and does
-			// not fit the column of a verbose language, so its box says
-			// nothing about a text running off the page. The labels of
-			// the pages' own widgets are left out of the measure.
-			widgetLabels := map[string]bool{
-				locales.SettingsLogPathLabel(): true,
-			}
+			// widget's own: a control that does not fit the column of a
+			// verbose language runs past the content area as well, so it
+			// is measured like a text.
 			for _, tc := range cases {
 				t.Run(tc.name, func(t *testing.T) {
 					// The sidebar and the page stand side by side, as they
@@ -70,9 +66,6 @@ func TestPagesKeepTheirTextsInsideTheWindow(t *testing.T) {
 
 					for _, text := range tester.Texts() {
 						if strings.TrimSpace(text) == "" {
-							continue
-						}
-						if widgetLabels[text] {
 							continue
 						}
 						r, ok := tester.Find(text)

@@ -11,6 +11,11 @@ import (
 // as an editor. The text fields match the login window's own field width for a
 // consistent look, and the log level dropdown is narrower because its options
 // are a word each.
+//
+// The cap is a maximum, not a fixed width: a form's label column grows with
+// the longest label, so in a verbose language the room a control gets can be
+// less than the cap, and a fixed width would then run past the content area,
+// where the window cuts the control's border off.
 const (
 	settingsFieldWidth  = 400
 	settingsSelectWidth = 260
@@ -86,7 +91,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 						})
 						ui.Field(c, locales.SettingsLogPath(), func() {
 							ui.TextInput(c, &app.settings.logPath).ReadOnly(true).FontSize(11).
-								Width(settingsFieldWidth).Label(locales.SettingsLogPathLabel())
+								MaxWidth(settingsFieldWidth).Label(locales.SettingsLogPathLabel())
 						})
 					})
 					ui.Fieldset(c, locales.SettingsGroupAbout(), func() {

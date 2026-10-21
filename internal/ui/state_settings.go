@@ -153,7 +153,7 @@ func (s *settingsState) logLevelSelect(c *ui.Context) {
 	sel := ui.SelectBase(c, &s.logLevel)
 	sel.Trigger.Gap(6).Padding(4, 10).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).
-		Justify(ui.SpaceBetween).Width(settingsSelectWidth).
+		Justify(ui.SpaceBetween).MaxWidth(settingsSelectWidth).
 		Label(locales.SettingsLogLevelLabel()).
 		Children(func() {
 			ui.Text(c, s.logLevel.label()).SingleLine()
@@ -202,7 +202,7 @@ func (s *settingsState) languageSelect(c *ui.Context) (chosen string, changed bo
 	sel := ui.SelectBase(c, &chosen)
 	sel.Trigger.Gap(6).Padding(4, 10).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).
-		Justify(ui.SpaceBetween).Width(settingsSelectWidth).
+		Justify(ui.SpaceBetween).MaxWidth(settingsSelectWidth).
 		Children(func() {
 			ui.Text(c, s.languageLabelFor(chosen)).SingleLine()
 			ui.Text(c, "▾").TextColor(t.TextMuted)
