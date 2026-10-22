@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-21
+
 ### Added
 
 - Five more interface languages: Traditional Chinese, Japanese, German, French
