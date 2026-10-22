@@ -57,8 +57,8 @@ refresh token、邮箱和服务器地址作为独立的 `Biowarden/Session/<user
 
 ## 安装
 
-1. 从本仓库 Releases 页下载 `biowarden Setup <版本> amd64.exe` 运行安装（按用户安装），或下载免安装的
-   `biowarden.exe` 放到固定位置 - manifest 里记的是 host 的绝对路径，**换位置后要重新「安装」一次**。
+1. 从本仓库 Releases 页下载 `biowarden Setup <版本> amd64.exe` 运行安装（按用户安装）。Releases 上只发布
+   安装器，另附一个 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt` 校验下载的文件。
 2. 启动 biowarden。在干净的机器上它会自行配置；见下面「使用步骤」。
 3. 想自己编译见「从源码构建」。
 

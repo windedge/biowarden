@@ -80,3 +80,21 @@ two applies.
 `resources/icon.png` is generated, not hand-drawn. `go run ./scripts/icongen`
 draws the blue ring the tray icon uses, with the standard library alone;
 regenerate it instead of editing it.
+
+## Releasing
+
+A GitHub release carries **the installer and `SHA256SUMS.txt` only**. The
+portable `biowarden.exe` stays a local build artifact - it is what the tests
+and the on-device acceptance runs use - and is not uploaded.
+
+Upload the installer under the name GitHub gives it (spaces become dots,
+`biowarden Setup 0.1.4 amd64.exe` -> `biowarden.Setup.0.1.4.amd64.exe`) and
+write `SHA256SUMS.txt` with one line per published asset, two spaces between
+the digest and the file name, using the **uploaded** names:
+
+```
+<64 hex digits>  biowarden.Setup.0.1.4.amd64.exe
+```
+
+Then check the result with `sha256sum -c SHA256SUMS.txt` in a temporary
+directory, and delete that directory afterwards.

@@ -6,6 +6,10 @@
 #   pwsh scripts/build.ps1 -platform windows/amd64,windows/arm64 -debug
 #
 # Everything after the named parameters goes to `go tool mygo build`.
+#
+# The build also produces the portable `biowarden.exe`. Keep it: the tests and
+# the on-device acceptance runs use it. It is not a release asset though -
+# a release carries the installer and SHA256SUMS.txt only (see docs/build.md).
 [CmdletBinding()]
 param(
     [Parameter(ValueFromRemainingArguments = $true)]

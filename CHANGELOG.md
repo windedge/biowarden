@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Releases now publish the installer and a `SHA256SUMS.txt` only. The portable
+  `biowarden.exe` is no longer uploaded; it stays a local build artifact for
+  development and testing.
+
 ## [0.1.4] - 2026-10-22
 
 ### Added

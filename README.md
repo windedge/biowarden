@@ -74,8 +74,8 @@ and the stored session after a Windows Hello consent.
 ## Installation
 
 1. Download `biowarden Setup <version> amd64.exe` from this repository's Releases page and run it
-   (per-user install), or download the portable `biowarden.exe` and put it somewhere stable - the
-   native messaging manifest records its absolute path, so **re-install the manifest if you move it**.
+   (per-user install). The installer is the only thing published there, next to a
+   `SHA256SUMS.txt` you can check the download against (`sha256sum -c SHA256SUMS.txt`).
 2. Launch biowarden. On a fresh machine it configures itself; see "Usage" below.
 3. Prefer building it yourself? See "Build from source".
 
