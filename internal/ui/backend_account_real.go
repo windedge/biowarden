@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/internal/hello"
+	"github.com/windedge/biowarden/internal/hostlog"
 	"github.com/windedge/biowarden/internal/secrets"
 	"github.com/windedge/biowarden/locales"
 )
@@ -128,6 +131,11 @@ type realAccount struct {
 	// registry.
 	prefs serverPref
 
+	// log records how the startup session verify went: attempt counts and
+	// error classes only, through hostlog so a value that slips in is still
+	// redacted. Nop by default, so tests and non-GUI paths stay silent.
+	log *hostlog.Logger
+
 	mu   sync.Mutex
 	sess accountSession
 	// lastLoggedIn is the session to fall back to when a pending login is
@@ -158,6 +166,7 @@ func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accoun
 		sessions: nopSessionStore{},
 		refresh:  newSessionRefresher(),
 		prefs:    nopServerPref{},
+		log:      hostlog.Nop(),
 	}
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
 	a.lastLoggedIn = a.sess
@@ -186,6 +195,15 @@ func newRealAccountState() accountState {
 	prefs := newServerPref()
 	account := newRealAccountWith(store, verifier, newAuthFlowFactory(), sessions, newSessionRefresher())
 	account.prefs = prefs
+	// The startup verify runs in a goroutine off the UI thread; hostlog is
+	// mutex-guarded per write, so sharing the file with the host is safe.
+	if path, err := hostlog.DefaultPath(); err != nil {
+		account.log = hostlog.Nop()
+	} else if l, err := hostlog.New(path, hostlog.ParseLevel(os.Getenv("BIOWARDEN_LOG"))); err != nil {
+		account.log = hostlog.Nop()
+	} else {
+		account.log = l
+	}
 	s := newAccountStateWith(newRealKeysWith(store, verifier), account)
 	s.prefs = prefs
 	return s
@@ -635,7 +653,9 @@ func (a *realAccount) restoreSession() (accountSession, error) {
 		a.adoptRestored(fallback)
 		return fallback, nil
 	}
-	tok, err := a.refresh(context.Background(), rec.ServerURL, rec.RefreshToken)
+	start := time.Now()
+	tok, attempts, err := a.verifySession(context.Background(), rec)
+	a.logSessionVerify(attempts, err, time.Since(start))
 	if err != nil {
 		if sessionRevoked(err) {
 			_ = a.sessions.clear(rec.UserID)
@@ -643,7 +663,10 @@ func (a *realAccount) restoreSession() (accountSession, error) {
 			return fallback, errSessionRevoked
 		}
 		a.adoptRestored(fallback)
-		return fallback, errSessionUnverified
+		// The underlying failure travels as the detail: without it an
+		// unverified banner gave no way to tell transport trouble from a
+		// server bug, and errors.Is(err, errSessionUnverified) still holds.
+		return fallback, fmt.Errorf("%w: %v", errSessionUnverified, err)
 	}
 	// The server may rotate the refresh token; keep the newest one so the next
 	// restart still verifies.
@@ -670,6 +693,29 @@ func (a *realAccount) adoptRestored(sess accountSession) {
 	a.mu.Lock()
 	a.sess = sess
 	a.mu.Unlock()
+}
+
+// verifySession runs the refresh through the shared retry policy and counts
+// the attempts, so the log line can say whether the backoff was ever used.
+func (a *realAccount) verifySession(ctx context.Context, rec sessionRecord) (auth.TokenResponse, int, error) {
+	attempts := 0
+	refresher := func(ctx context.Context, serverURL, token string) (auth.TokenResponse, error) {
+		attempts++
+		return a.refresh(ctx, serverURL, token)
+	}
+	tok, err := refreshWithRetry(ctx, refresher, rec.ServerURL, rec.RefreshToken)
+	return tok, attempts, err
+}
+
+// logSessionVerify records one startup verify outcome: the attempt count, the
+// failure class and the elapsed time. Never a token, an email or a server
+// address; hostlog still redacts whatever a future edit adds here.
+func (a *realAccount) logSessionVerify(attempts int, err error, elapsed time.Duration) {
+	if attempts <= 0 {
+		return
+	}
+	a.log.Info(fmt.Sprintf("ui: session verify attempts=%d outcome=%s elapsed=%s",
+		attempts, refreshRetryClass(err), elapsed.Round(time.Millisecond)))
 }
 
 // forgetSession drops the persisted login for an account whose stored key was

@@ -157,15 +157,106 @@ func (s *wincredSessionStore) clear(userID string) error {
 // the only place the session store's contents meet the network.
 type sessionRefresher func(ctx context.Context, serverURL, refreshToken string) (auth.TokenResponse, error)
 
-// sessionRefreshTimeout bounds the startup restore's one network call. It runs
-// while the account page waits to show the stored keys, so a dead or slow
-// server must fail fast: the unverified fallback is fine, hanging is not.
-const sessionRefreshTimeout = 5 * time.Second
+// sessionRefreshTimeout bounds one refresh attempt in the startup restore. It
+// stays well under the login path's 30s because the account page is on screen
+// waiting, but must clear a self-hosted server behind a CDN or a proxy: the
+// lightest request on such a host measures 1.6-1.9s, so a cold-start token
+// POST can legitimately take several seconds and must not be declared dead.
+const sessionRefreshTimeout = 12 * time.Second
+
+// The backoff between refresh attempts, in milliseconds. Package vars so the
+// tests shrink them to nothing; the values match the ticket: short waits for
+// transport jitter, a longer one when the server said 429 and asked for it.
+var (
+	refreshRetryBackoffsMs = []int{200, 600}
+	refreshRateLimitWaitMs = 1000
+)
+
+// refreshRetryWait waits one backoff, or returns immediately when ctx is
+// cancelled while waiting.
+func refreshRetryWait(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+// refreshRetryClass names the failure class a refresh ended in, for the log
+// line restoreSession writes. It says which sentinel matched, never the
+// error's own text.
+func refreshRetryClass(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, auth.ErrUnauthorized):
+		return "unauthorized"
+	case errors.Is(err, auth.ErrForbidden):
+		return "forbidden"
+	case errors.Is(err, auth.ErrRateLimited):
+		return "rate-limited"
+	case errors.Is(err, auth.ErrTwoFactorRequired):
+		return "two-factor-required"
+	case errors.Is(err, auth.ErrCaptchaRequired):
+		return "captcha-required"
+	case errors.Is(err, auth.ErrNetwork):
+		return "network"
+	case errors.Is(err, auth.ErrServer):
+		return "server"
+	default:
+		return "other"
+	}
+}
+
+// refreshRetryable reports whether a failed refresh is worth trying again:
+// transport and server trouble can clear on its own, credential and policy
+// answers cannot. Two-factor and captcha are terminal here too - a refresh
+// token cannot answer an interactive challenge.
+func refreshRetryable(err error) bool {
+	switch {
+	case errors.Is(err, auth.ErrNetwork), errors.Is(err, auth.ErrServer):
+		return true
+	case errors.Is(err, auth.ErrRateLimited):
+		return true
+	default:
+		return false
+	}
+}
+
+// refreshWithRetry runs refresher with up to len(refreshRetryBackoffsMs)+1
+// attempts and per-class backoff: 200ms/600ms for transport and server
+// failures, a longer 1s wait after a 429. It stops at the first success and
+// never retries a credential or policy refusal, so a dead token still answers
+// after one round trip.
+func refreshWithRetry(ctx context.Context, refresher sessionRefresher, serverURL, refreshToken string) (auth.TokenResponse, error) {
+	var (
+		tok auth.TokenResponse
+		err error
+	)
+	for attempt := 0; ; attempt++ {
+		tok, err = refresher(ctx, serverURL, refreshToken)
+		if err == nil || attempt >= len(refreshRetryBackoffsMs) || !refreshRetryable(err) {
+			return tok, err
+		}
+		wait := time.Duration(refreshRetryBackoffsMs[attempt]) * time.Millisecond
+		if errors.Is(err, auth.ErrRateLimited) {
+			wait = time.Duration(refreshRateLimitWaitMs) * time.Millisecond
+		}
+		if waitErr := refreshRetryWait(ctx, wait); waitErr != nil {
+			return auth.TokenResponse{}, waitErr
+		}
+	}
+}
 
 // newSessionRefresher builds the real refresher through internal/auth. The
 // refresh grant returns no account key, so a restored session can prove the
 // login but still needs the master password to re-derive the key. The client
-// gets the short startup timeout instead of the login path's 30 seconds.
+// gets the short startup timeout instead of the login path's 30 seconds;
+// transport failures are retried by refreshWithRetry, not here, so the real
+// path and the tests share one policy.
 func newSessionRefresher() sessionRefresher {
 	return func(ctx context.Context, serverURL, refreshToken string) (auth.TokenResponse, error) {
 		cfg, err := auth.NewServerConfig(serverURL)

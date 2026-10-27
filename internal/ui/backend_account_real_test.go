@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -498,8 +499,86 @@ func TestRealAccountRejectsInvalidServerURL(t *testing.T) {
 	}
 }
 
-// The stored-account list is the source of truth for the multi-account view:
-// every key in the store must show up, with its metadata.
+// A transient failure is retried: the restore succeeds once the server
+// answers, and nothing is cleared.
+func TestRealAccountRestoreRetriesTransientFailure(t *testing.T) {
+	shrinkBackoffs(t)
+	store := seedStore("user-1", "ada@example.com")
+	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
+	}}
+	refresh := &scriptedRefresher{
+		tokens:  []auth.TokenResponse{auth.TokenResponse{}, auth.TokenResponse{RefreshToken: "r-2"}},
+		results: []error{fmt.Errorf("%w: dial tcp", auth.ErrNetwork), nil},
+	}
+	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh.refresh)
+
+	sess, err := a.restoreSession()
+	if err != nil {
+		t.Fatalf("restoreSession: %v", err)
+	}
+	if sess.state != loginLoggedIn || sess.userID != "user-1" {
+		t.Fatalf("session = %+v, want the restored login", sess)
+	}
+	if refresh.calls != 2 {
+		t.Fatalf("refresh calls = %d, want 2: one failure then the retry", refresh.calls)
+	}
+	if sessions.rec.RefreshToken != "r-2" {
+		t.Fatalf("stored refresh token = %q, want the rotated r-2", sessions.rec.RefreshToken)
+	}
+}
+
+// A persistent transport failure keeps the stored session and wraps the
+// original error under errSessionUnverified, so the page keeps its notice and
+// the log can still say what went wrong.
+func TestRealAccountRestoreWrapsUnverifiedErrorDetail(t *testing.T) {
+	shrinkBackoffs(t)
+	store := seedStore("user-1", "ada@example.com")
+	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
+	}}
+	refresh := fixedRefresher(auth.TokenResponse{}, fmt.Errorf("%w: dial tcp 1.2.3.4:443", auth.ErrNetwork))
+	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh)
+
+	sess, err := a.restoreSession()
+	if !errors.Is(err, errSessionUnverified) {
+		t.Fatalf("restoreSession error = %v, want errSessionUnverified", err)
+	}
+	if !strings.Contains(err.Error(), "dial tcp 1.2.3.4:443") {
+		t.Fatalf("error = %v, want the underlying failure kept as the detail", err)
+	}
+	if sess.state != loginLoggedOut || !sessions.has {
+		t.Fatalf("session = %+v stored = %v, want the conservative fallback", sess, sessions.has)
+	}
+}
+
+// A rejected token is still answered after one round trip: the revocation
+// must not be retried, and the page still gets its revoked notice.
+func TestRealAccountRestoreDoesNotRetryRevocation(t *testing.T) {
+	shrinkBackoffs(t)
+	store := seedStore("user-1", "ada@example.com")
+	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
+	}}
+	refresh := &scriptedRefresher{
+		results: []error{fmt.Errorf("%w: invalid_grant", auth.ErrUnauthorized)},
+	}
+	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh.refresh)
+
+	sess, err := a.restoreSession()
+	if !errors.Is(err, errSessionRevoked) {
+		t.Fatalf("restoreSession error = %v, want errSessionRevoked", err)
+	}
+	if sess.state != loginLoggedOut || sessions.has {
+		t.Fatalf("session = %+v stored = %v, want the session cleared", sess, sessions.has)
+	}
+	if refresh.calls != 1 {
+		t.Fatalf("refresh calls = %d, want 1: a dead token is not retried", refresh.calls)
+	}
+}
+
+// The first stored-account list is the source of truth for the multi-account
+// view: every key in the store must show up, with its metadata.
 func TestRealKeysListsAllStoredAccounts(t *testing.T) {
 	store := newFakeStore()
 	store.Put(secrets.Account{UserID: "user-1", Email: "ada@example.com"}, secrets.Key("k1"))
