@@ -1880,6 +1880,106 @@ func (msgs Messages) AccountNoticeSessionUnverified() string {
 	return Catalog.Format(msgs.locale, "accountNoticeSessionUnverified", nil)
 }
 
+// AccountNoticeSessionChecking says "Checking the login session…"
+// in the language the app shows.
+//
+// The account page's status line while the login-session check is on the
+// wire.
+func AccountNoticeSessionChecking() string { return In(i18n.Locale()).AccountNoticeSessionChecking() }
+
+// AccountNoticeSessionChecking says "Checking the login session…"
+// in the language of msgs.
+//
+// The account page's status line while the login-session check is on the
+// wire.
+func (msgs Messages) AccountNoticeSessionChecking() string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionChecking", nil)
+}
+
+// AccountNoticeSessionVerified says "Login session confirmed."
+// in the language the app shows.
+//
+// The account page's status line after the login-session check confirmed
+// the session.
+func AccountNoticeSessionVerified() string { return In(i18n.Locale()).AccountNoticeSessionVerified() }
+
+// AccountNoticeSessionVerified says "Login session confirmed."
+// in the language of msgs.
+//
+// The account page's status line after the login-session check confirmed
+// the session.
+func (msgs Messages) AccountNoticeSessionVerified() string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionVerified", nil)
+}
+
+// AccountNoticeSessionUnverifiedNetwork says "Cannot confirm the login session right now: the network is slow or unreachable. Your key is still saved, so unlock wo…"
+// in the language the app shows.
+//
+// The account page's status line when the session check could not reach the
+// server.
+func AccountNoticeSessionUnverifiedNetwork() string {
+	return In(i18n.Locale()).AccountNoticeSessionUnverifiedNetwork()
+}
+
+// AccountNoticeSessionUnverifiedNetwork says "Cannot confirm the login session right now: the network is slow or unreachable. Your key is still saved, so unlock wo…"
+// in the language of msgs.
+//
+// The account page's status line when the session check could not reach the
+// server.
+func (msgs Messages) AccountNoticeSessionUnverifiedNetwork() string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionUnverifiedNetwork", nil)
+}
+
+// AccountNoticeSessionUnverifiedRateLimited says "The server is asking us to slow down right now. Your key is still saved, so unlock works. It retries on its own."
+// in the language the app shows.
+//
+// The account page's status line when the server answered the session check
+// with a slow-down.
+func AccountNoticeSessionUnverifiedRateLimited() string {
+	return In(i18n.Locale()).AccountNoticeSessionUnverifiedRateLimited()
+}
+
+// AccountNoticeSessionUnverifiedRateLimited says "The server is asking us to slow down right now. Your key is still saved, so unlock works. It retries on its own."
+// in the language of msgs.
+//
+// The account page's status line when the server answered the session check
+// with a slow-down.
+func (msgs Messages) AccountNoticeSessionUnverifiedRateLimited() string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionUnverifiedRateLimited", nil)
+}
+
+// AccountNoticeSessionUnverifiedServer says "The server did not answer properly right now. Your key is still saved, so unlock works. It retries on its own."
+// in the language the app shows.
+//
+// The account page's status line when the server answered the session check
+// badly.
+func AccountNoticeSessionUnverifiedServer() string {
+	return In(i18n.Locale()).AccountNoticeSessionUnverifiedServer()
+}
+
+// AccountNoticeSessionUnverifiedServer says "The server did not answer properly right now. Your key is still saved, so unlock works. It retries on its own."
+// in the language of msgs.
+//
+// The account page's status line when the server answered the session check
+// badly.
+func (msgs Messages) AccountNoticeSessionUnverifiedServer() string {
+	return Catalog.Format(msgs.locale, "accountNoticeSessionUnverifiedServer", nil)
+}
+
+// AccountActionRecheck says "Check again"
+// in the language the app shows.
+//
+// The account page's button that reruns the login-session check right away.
+func AccountActionRecheck() string { return In(i18n.Locale()).AccountActionRecheck() }
+
+// AccountActionRecheck says "Check again"
+// in the language of msgs.
+//
+// The account page's button that reruns the login-session check right away.
+func (msgs Messages) AccountActionRecheck() string {
+	return Catalog.Format(msgs.locale, "accountActionRecheck", nil)
+}
+
 // AccountNoticeSessionReadFailed says "Reading the login state failed: {detail}"
 // in the language the app shows.
 //

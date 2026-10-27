@@ -670,6 +670,30 @@
   "@accountNoticeSessionUnverified": {
     "description": "The account page's status line when the persisted session could not be checked."
   },
+  "accountNoticeSessionChecking": "Checking the login session…",
+  "@accountNoticeSessionChecking": {
+    "description": "The account page's status line while the login-session check is on the wire."
+  },
+  "accountNoticeSessionVerified": "Login session confirmed.",
+  "@accountNoticeSessionVerified": {
+    "description": "The account page's status line after the login-session check confirmed the session."
+  },
+  "accountNoticeSessionUnverifiedNetwork": "Cannot confirm the login session right now: the network is slow or unreachable. Your key is still saved, so unlock works. It retries on its own.",
+  "@accountNoticeSessionUnverifiedNetwork": {
+    "description": "The account page's status line when the session check could not reach the server."
+  },
+  "accountNoticeSessionUnverifiedRateLimited": "The server is asking us to slow down right now. Your key is still saved, so unlock works. It retries on its own.",
+  "@accountNoticeSessionUnverifiedRateLimited": {
+    "description": "The account page's status line when the server answered the session check with a slow-down."
+  },
+  "accountNoticeSessionUnverifiedServer": "The server did not answer properly right now. Your key is still saved, so unlock works. It retries on its own.",
+  "@accountNoticeSessionUnverifiedServer": {
+    "description": "The account page's status line when the server answered the session check badly."
+  },
+  "accountActionRecheck": "Check again",
+  "@accountActionRecheck": {
+    "description": "The account page's button that reruns the login-session check right away."
+  },
   "accountNoticeSessionReadFailed": "Reading the login state failed: {detail}",
   "@accountNoticeSessionReadFailed": {
     "description": "The account page's status line when the persisted session could not be read.",
