@@ -76,6 +76,10 @@ var (
 	// ErrCaptchaRequired means the server demands a CAPTCHA, which cannot be
 	// solved headless.
 	ErrCaptchaRequired = errors.New("auth: captcha required")
+	// ErrRateLimited means the server answered HTTP 429: it throttled the
+	// request before the application saw it. The body is advisory and is not
+	// inspected; this is a back-off signal, not a credential verdict.
+	ErrRateLimited = errors.New("auth: rate limited")
 	// ErrNetwork wraps a transport failure.
 	ErrNetwork = errors.New("auth: network error")
 	// ErrServer wraps an unexpected HTTP status or an unreadable response.
@@ -256,13 +260,23 @@ func isTwoFactorMessage(message string) bool {
 }
 
 // classifyResponse maps an HTTP status and body onto the sentinel errors.
-// It returns nil for any 2xx status.
+// It returns nil for any 2xx status. A 429 is ErrRateLimited before the body
+// is looked at, and a 4xx whose body is not JSON is ErrServer: without a
+// readable reply there is no evidence a credential was rejected.
 func classifyResponse(resp *http.Response, body []byte) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return fmt.Errorf("%w: %s", ErrRateLimited, statusDetail(resp))
+	}
 	var er errorResponse
-	_ = json.Unmarshal(body, &er)
+	// Everything below reads the parsed JSON. A body that does not parse (a
+	// gateway challenge page, an empty reply) never reached the application,
+	// so the status alone cannot be read as a credential verdict.
+	if err := json.Unmarshal(body, &er); err != nil {
+		return fmt.Errorf("%w: %s", ErrServer, statusDetail(resp))
+	}
 	message := strings.ToLower(strings.Join([]string{
 		er.Error, er.ErrorDescription, er.ErrorModel.Message,
 	}, " "))

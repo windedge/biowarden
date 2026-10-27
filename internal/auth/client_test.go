@@ -165,8 +165,8 @@ func TestClassifyResponse(t *testing.T) {
 	}{
 		{"ok", http.StatusOK, `{}`, nil},
 		{"created", http.StatusCreated, `{}`, nil},
-		{"unauthorized", http.StatusUnauthorized, ``, ErrUnauthorized},
-		{"forbidden", http.StatusForbidden, ``, ErrForbidden},
+		{"unauthorized", http.StatusUnauthorized, `{}`, ErrUnauthorized},
+		{"forbidden", http.StatusForbidden, `{}`, ErrForbidden},
 		{"forbidden with body", http.StatusForbidden, `{"error":"forbidden"}`, ErrForbidden},
 		{"invalid grant", http.StatusBadRequest, `{"error":"invalid_grant"}`, ErrUnauthorized},
 		{"two factor required", http.StatusBadRequest, `{"TwoFactorProviders2":{"0":{"challenge":"x"}}}`, ErrTwoFactorRequired},
@@ -180,7 +180,20 @@ func TestClassifyResponse(t *testing.T) {
 		{"two factor message", http.StatusBadRequest, `{"error":"invalid_grant","error_description":"Two factor required."}`, ErrTwoFactorRequired},
 		{"captcha message", http.StatusBadRequest, `{"ErrorModel":{"Message":"Captcha required."}}`, ErrCaptchaRequired},
 		{"captcha field", http.StatusBadRequest, `{"CaptchaRequired":true}`, ErrCaptchaRequired},
+		// 429 is a throttle verdict before anything else; the body is advisory
+		// and never parsed (Vaultwarden throttles the token endpoint).
+		{"rate limited json", http.StatusTooManyRequests, `{"error":"Rate limit exceeded."}`, ErrRateLimited},
+		{"rate limited html", http.StatusTooManyRequests, `<!DOCTYPE html><html>Slow down</html>`, ErrRateLimited},
+		{"rate limited empty", http.StatusTooManyRequests, ``, ErrRateLimited},
+		// A 4xx whose body is not JSON never reached the application (a
+		// Cloudflare challenge page, an empty gateway reply), so it must not
+		// read as a dead credential or a revoked session.
+		{"challenge page not forbidden", http.StatusForbidden, `<!DOCTYPE html><html>Checking your browser</html>`, ErrServer},
+		{"challenge page not unauthorized", http.StatusUnauthorized, `<html>Just a moment...</html>`, ErrServer},
+		{"empty body not unauthorized", http.StatusUnauthorized, ``, ErrServer},
+		{"invalid json not forbidden", http.StatusForbidden, `not json at all`, ErrServer},
 		{"server error", http.StatusInternalServerError, ``, ErrServer},
+		{"server error html", http.StatusInternalServerError, `<html>502 Bad Gateway</html>`, ErrServer},
 		{"bad request", http.StatusBadRequest, `{"ErrorModel":{"Message":"nope"}}`, ErrServer},
 	}
 	for _, tc := range cases {
@@ -197,6 +210,29 @@ func TestClassifyResponse(t *testing.T) {
 				t.Fatalf("classifyResponse() = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// A 200 with a non-JSON body is still ErrServer: classifyResponse passes 2xx
+// through and decodeJSON rejects the payload.
+func TestClientMapsInvalidBodyToServerError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<!DOCTYPE html><html>not the vault</html>`))
+	}))
+	defer srv.Close()
+
+	cfg, err := NewServerConfig(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := NewClient(cfg, "device-123")
+	var out struct {
+		OK bool `json:"ok"`
+	}
+	err = c.getJSON(context.Background(), c.apiURL("/accounts/profile"), &out)
+	if !errors.Is(err, ErrServer) {
+		t.Fatalf("getJSON error = %v, want ErrServer", err)
 	}
 }
 
