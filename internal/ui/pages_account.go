@@ -66,16 +66,25 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		primary := a.primary()
 		v := accountCardViewFor(a.session, primary)
 		// Sign out is the low-frequency corner action on the title row, out of
-		// the main flow; the card has no other action row.
+		// the main flow; the recheck button sits beside it only while a
+		// session check outcome is on the page, so the quiet card stays quiet.
 		a.accountIdentity(c, v, t, func() {
-			if !v.removable {
-				return
-			}
-			if ui.Button(c, locales.AccountCardSignOut()).Disabled(a.busy).
-				FontSize(t.Rem(0.85)).Clicked() {
-				a.removeAccount(primary)
-				c.Invalidate()
-			}
+			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+				if a.sessionCheckFailed() || a.verifying {
+					if ui.Button(c, locales.AccountActionRecheck()).MaxWidth(150).
+						Disabled(a.busy || a.verifying).FontSize(t.Rem(0.85)).Clicked() {
+						a.recheck()
+						c.Invalidate()
+					}
+				}
+				if v.removable {
+					if ui.Button(c, locales.AccountCardSignOut()).Disabled(a.busy).
+						FontSize(t.Rem(0.85)).Clicked() {
+						a.removeAccount(primary)
+						c.Invalidate()
+					}
+				}
+			})
 		})
 		// No action row when the view names none: refreshing the key goes
 		// through sign-out, then sign-in, and unlocking never needs the login

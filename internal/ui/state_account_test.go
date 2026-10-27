@@ -1,8 +1,12 @@
 package ui
 
 import (
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/egoist/mygo/ui"
+	"github.com/windedge/biowarden/locales"
 )
 
 // TestNavPageRoundTrip keeps the sidebar's string IDs and the app's page enum
@@ -188,4 +192,237 @@ func (a *stubAccount) forgetSession(userID string) error {
 		a.sess = loggedOutSession()
 	}
 	return nil
+}
+
+// shrinkSessionRetries makes the retry waits and the verified linger
+// milliseconds-scale for one test, the way shrinkBackoffs does.
+func shrinkSessionRetries(t *testing.T) {
+	t.Helper()
+	oldDelays, oldLinger := sessionRetryDelays, sessionVerifiedLinger
+	sessionRetryDelays = []time.Duration{10 * time.Millisecond, 10 * time.Millisecond, 10 * time.Millisecond}
+	sessionVerifiedLinger = 10 * time.Millisecond
+	t.Cleanup(func() {
+		sessionRetryDelays, sessionVerifiedLinger = oldDelays, oldLinger
+	})
+}
+
+// Each transient class of a failed session check gets its own wording, and an
+// unrecognized failure falls back to the generic unverified line.
+func TestAccountStateNoticesSessionCheckClasses(t *testing.T) {
+	appLanguage(t, "en")
+	for _, tc := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"network", &sessionUnverifiedError{class: errSessionNetwork, cause: errors.New("dial")}, locales.AccountNoticeSessionUnverifiedNetwork()},
+		{"rate limited", &sessionUnverifiedError{class: errSessionRateLimited, cause: errors.New("429")}, locales.AccountNoticeSessionUnverifiedRateLimited()},
+		{"server", &sessionUnverifiedError{class: errSessionServerError, cause: errors.New("502")}, locales.AccountNoticeSessionUnverifiedServer()},
+		{"other", errSessionUnverified, locales.AccountNoticeSessionUnverified()},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			acct := &stubAccount{restoreSet: true, restoreSess: loggedOutSession(), restoreErr: tc.err}
+			s := newAccountStateWith(fakeKeys{}, acct)
+			waitRestore(t, &s)
+			if got := s.notice.text(); got != tc.want {
+				t.Fatalf("notice = %q, want %q", got, tc.want)
+			}
+			if !s.sessionCheckFailed() {
+				t.Fatal("sessionCheckFailed = false, want the recheck button offered")
+			}
+		})
+	}
+}
+
+// The recheck button reruns the check: the notice turns to checking, a
+// second restore goes out (with the one-shot latch held closed, so a reload
+// meanwhile cannot stack a third), and a success lands on the verified line.
+func TestAccountStateRecheckRecoversToVerified(t *testing.T) {
+	shrinkSessionRetries(t)
+	appLanguage(t, "en")
+	acct := &stubAccount{restoreSet: true, restoreSess: loggedOutSession(),
+		restoreErr: &sessionUnverifiedError{class: errSessionNetwork, cause: errors.New("dial")}}
+	s := newAccountStateWith(fakeKeys{}, acct)
+	waitRestore(t, &s)
+	if acct.restoreCalls != 1 || !s.sessionCheckFailed() {
+		t.Fatalf("setup: restoreCalls=%d notice=%q", acct.restoreCalls, s.notice.text())
+	}
+
+	// The recheck's answer is scripted before the call: stubAccount's
+	// fields are not synchronized, so writing them while the recheck is
+	// already on the wire would race.
+	acct.restoreErr = nil
+	acct.restoreSess = loggedInSession()
+
+	s.recheck()
+	if s.notice.text() != locales.AccountNoticeSessionChecking() {
+		t.Fatalf("notice while rechecking = %q, want the checking line", s.notice.text())
+	}
+	if !s.verifying {
+		t.Fatal("verifying = false, want the recheck on the wire")
+	}
+	if !s.verified {
+		t.Fatal("verified = false, want the latch closed, or a reload during the recheck would stack a second check")
+	}
+	// The manual path dropped the scheduled silent retry.
+	if !s.retryAt.IsZero() {
+		t.Fatal("recheck left a scheduled retry behind")
+	}
+	waitRestore(t, &s)
+	if s.notice.text() != locales.AccountNoticeSessionVerified() || !s.notice.ok {
+		t.Fatalf("notice after recovery = %q, want the verified line", s.notice.text())
+	}
+	if s.session.state != loginLoggedIn {
+		t.Fatalf("session = %+v, want the restored login", s.session)
+	}
+}
+
+// A failed check schedules its own bounded retries: the first fires and
+// rechecks, and a success there turns the notice verified with no retry left.
+func TestAccountStateSchedulesSilentRetryAfterFailure(t *testing.T) {
+	shrinkSessionRetries(t)
+	appLanguage(t, "en")
+	acct := &stubAccount{restoreSet: true, restoreSess: loggedOutSession(),
+		restoreErr: &sessionUnverifiedError{class: errSessionRateLimited, cause: errors.New("429")}}
+	s := newAccountStateWith(fakeKeys{}, acct)
+	waitRestore(t, &s)
+	// armRetry becomes a deadline on the next tick's frame.
+	tester := ui.NewTester(func(c *ui.Context) { s.tick(c) }, 100, 100)
+	tester.Frame()
+	if s.retryCount != 1 {
+		t.Fatalf("retryCount = %d, want the first retry armed", s.retryCount)
+	}
+
+	// The retry fires through tick's clock and rechecks silently: no checking
+	// line replaces the failure while it runs, and the answer that lands is
+	// another failure, so the same wording stays.
+	tester.Advance(sessionRetryDelays[0])
+	waitRestore(t, &s)
+	if acct.restoreCalls != 2 {
+		t.Fatalf("restoreCalls = %d, want the silent retry to have gone out", acct.restoreCalls)
+	}
+	if got := s.notice.text(); got != locales.AccountNoticeSessionUnverifiedRateLimited() {
+		t.Fatalf("notice while retrying = %q, want the failure line kept", got)
+	}
+
+	// The second retry succeeds: the notice turns verified and the schedule
+	// is gone.
+	acct.restoreErr = nil
+	acct.restoreSess = loggedInSession()
+	tester.Frame() // arms the second retry
+	tester.Advance(sessionRetryDelays[1])
+	waitRestore(t, &s)
+	if got := s.notice.text(); got != locales.AccountNoticeSessionVerified() {
+		t.Fatalf("notice after the retry succeeded = %q, want verified", got)
+	}
+	if !s.retryAt.IsZero() || s.retryCount != 0 {
+		t.Fatalf("retryAt=%v retryCount=%d, want the schedule cleared", s.retryAt, s.retryCount)
+	}
+}
+
+// The retries stop after the last one in the schedule; no fourth attempt.
+func TestAccountStateStopsRetryingAfterTheLastDelay(t *testing.T) {
+	shrinkSessionRetries(t)
+	appLanguage(t, "en")
+	acct := &stubAccount{restoreSet: true, restoreSess: loggedOutSession(),
+		restoreErr: &sessionUnverifiedError{class: errSessionNetwork, cause: errors.New("dial")}}
+	s := newAccountStateWith(fakeKeys{}, acct)
+	waitRestore(t, &s)
+	// armRetry becomes a deadline on the next tick's frame; each fired
+	// retry's failure arms the next one until the budget is spent, at which
+	// point no deadline is left and the loop must stop instead of waiting
+	// for an answer that will never come.
+	tester := ui.NewTester(func(c *ui.Context) { s.tick(c) }, 100, 100)
+	tester.Frame()
+	for rounds := 0; !s.retryAt.IsZero(); rounds++ {
+		if rounds > len(sessionRetryDelays) {
+			t.Fatal("the retries never stopped")
+		}
+		tester.Advance(20 * time.Millisecond)
+		waitRestore(t, &s)
+		tester.Frame()
+	}
+	if acct.restoreCalls != 1+len(sessionRetryDelays) {
+		t.Fatalf("restoreCalls = %d, want exactly %d (the first check plus the bounded retries)",
+			acct.restoreCalls, 1+len(sessionRetryDelays))
+	}
+	if !s.retryAt.IsZero() {
+		t.Fatal("a fourth retry was scheduled")
+	}
+}
+
+// Logout clears the schedule: no retry may dial the server afterwards.
+func TestAccountStateLogoutCancelsScheduledRetry(t *testing.T) {
+	shrinkSessionRetries(t)
+	acct := &stubAccount{restoreSet: true, restoreSess: loggedOutSession(),
+		restoreErr: &sessionUnverifiedError{class: errSessionNetwork, cause: errors.New("dial")}}
+	s := newAccountStateWith(fakeKeys{}, acct)
+	waitRestore(t, &s)
+	tester := ui.NewTester(func(c *ui.Context) { s.tick(c) }, 100, 100)
+	tester.Frame() // arms the first retry
+	if s.retryAt.IsZero() {
+		t.Fatal("setup: no retry was scheduled")
+	}
+
+	s.logout()
+	drain(t, &s)
+	if !s.retryAt.IsZero() || s.retryCount != 0 {
+		t.Fatalf("retryAt=%v retryCount=%d, want the schedule cleared by logout", s.retryAt, s.retryCount)
+	}
+	calls := acct.restoreCalls
+	tester.Frame()
+	tester.Advance(50 * time.Millisecond)
+	if acct.restoreCalls != calls {
+		t.Fatalf("restoreCalls = %d after logout, want it to stay %d", acct.restoreCalls, calls)
+	}
+}
+
+// A check still on the wire when the logout lands must not come back to
+// resurrect it: neither its failure notice nor a retry schedule.
+func TestAccountStateLogoutDropsARestoreStillOnTheWire(t *testing.T) {
+	shrinkSessionRetries(t)
+	appLanguage(t, "en")
+	gate := make(chan struct{})
+	acct := &stubAccount{restoreGate: gate, restoreSet: true,
+		restoreSess: loggedOutSession(),
+		restoreErr: &sessionUnverifiedError{class: errSessionNetwork, cause: errors.New("dial")}}
+	s := newAccountStateWith(fakeKeys{}, acct)
+
+	// The startup check is frozen on the wire when the logout lands.
+	s.logout()
+	drain(t, &s)
+	if got := s.notice.text(); got != locales.AccountNoticeLoggedOut() {
+		t.Fatalf("notice = %q, want the logged-out line", got)
+	}
+
+	close(gate) // the frozen check answers with an unverified failure
+	waitRestore(t, &s)
+	if got := s.notice.text(); got != locales.AccountNoticeLoggedOut() {
+		t.Fatalf("late answer resurrected the notice: %q, want the logged-out line kept", got)
+	}
+	if s.verifying {
+		t.Fatal("verifying = true, want the late answer to have only closed it")
+	}
+	if !s.retryAt.IsZero() || s.armRetry || s.retryCount != 0 {
+		t.Fatalf("late answer re-armed the retry schedule: retryAt=%v armRetry=%v retryCount=%d",
+			s.retryAt, s.armRetry, s.retryCount)
+	}
+}
+
+// The verified line fades on its own timer and takes nothing else with it.
+func TestAccountStateVerifiedNoticeFades(t *testing.T) {
+	shrinkSessionRetries(t)
+	appLanguage(t, "en")
+	acct := &stubAccount{restoreSet: true, restoreSess: loggedInSession()}
+	s := newAccountStateWith(fakeKeys{}, acct)
+	waitRestore(t, &s)
+	if s.notice.text() != locales.AccountNoticeSessionVerified() {
+		t.Fatalf("notice = %q, want the verified line", s.notice.text())
+	}
+	tester := ui.NewTester(func(c *ui.Context) { s.tick(c) }, 100, 100)
+	tester.Frame()
+	tester.Advance(sessionVerifiedLinger + 5*time.Millisecond)
+	if s.notice.text() != "" {
+		t.Fatalf("notice = %q after the linger, want none", s.notice.text())
+	}
 }

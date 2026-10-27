@@ -51,10 +51,14 @@ type accountState struct {
 	// stored to verify. Later reloads (after a save, logout, ...) only read
 	// the in-memory session and must not dial the server again.
 	verified bool
-	// verifying is true while the startup restore is still on the wire. The
+	// verified is true while the startup restore is still on the wire. The
 	// card shows a weak "checking" hint and tick keeps a frame coming for its
 	// result.
 	verifying bool
+	// restoreGen counts the checks begun; an answer carrying an older count is
+	// stale - a logout happened meanwhile - and lands as nothing, so it cannot
+	// resurrect the session the logout cleared nor re-arm the retry schedule.
+	restoreGen int
 	// restoreResult carries the finished startup restore on its own lane, so a
 	// slow server cannot hold results, which the Hello and key calls share.
 	restoreResult chan func(*accountState)
@@ -63,6 +67,17 @@ type accountState struct {
 	results chan func(*accountState)
 
 	notice pageNotice
+
+	// retryAt is when the next silent session-check retry fires, zero when
+	// none is scheduled; armRetry asks tick to schedule it on the UI clock,
+	// and retryCount bounds the retries to sessionRetryDelays' schedule.
+	retryAt    time.Time
+	armRetry   bool
+	retryCount int
+	// verifiedAt is when the verified notice fades, zero when it is not
+	// showing; armVerified asks tick to schedule the fade on the UI clock.
+	verifiedAt  time.Time
+	armVerified bool
 }
 
 type accountRow struct {
@@ -99,6 +114,15 @@ func newAccountStateWith(keys keysBackend, account accountBackend) accountState 
 	return s
 }
 
+// The delays before the silent retries of a failed session check, in order:
+// quick hope first, then a steadier pair. Package vars so the tests can
+// shrink them to milliseconds, like refreshRetryBackoffsMs.
+var sessionRetryDelays = []time.Duration{30 * time.Second, 2 * time.Minute, 5 * time.Minute}
+
+// sessionVerifiedLinger is how long the verified notice stays once the check
+// confirmed the login, before the page returns to no notice at all.
+var sessionVerifiedLinger = 5 * time.Second
+
 func (s *accountState) tick(c *ui.Context) {
 	select {
 	case apply := <-s.results:
@@ -124,6 +148,47 @@ func (s *accountState) tick(c *ui.Context) {
 			c.After(left)
 		} else {
 			s.copiedAt = time.Time{}
+		}
+	}
+	// A failed session check schedules its own silent retries and a verified
+	// notice its fade, both on the UI clock the same way copiedAt uses the
+	// real one. The arm flags are set by a restore that just landed, so its
+	// deadlines start from this frame's time.
+	now := c.Now()
+	if s.armRetry {
+		s.armRetry = false
+		if s.retryCount < len(sessionRetryDelays) {
+			s.retryAt = now.Add(sessionRetryDelays[s.retryCount])
+			s.retryCount++
+		}
+	}
+	if s.armVerified {
+		s.armVerified = false
+		s.verifiedAt = now.Add(sessionVerifiedLinger)
+	}
+	if !s.retryAt.IsZero() {
+		if now.Before(s.retryAt) {
+			c.After(s.retryAt.Sub(now))
+		} else {
+			s.retryAt = time.Time{}
+			// A session that settled meanwhile (a fresh login through the
+			// window, a logout) needs no retry; the logout already stopped
+			// the schedule itself.
+			if s.session.state != loginLoggedIn && s.session.state != loginNeeds2FA {
+				s.beginRestore()
+			}
+		}
+	}
+	if !s.verifiedAt.IsZero() {
+		if now.Before(s.verifiedAt) {
+			c.After(s.verifiedAt.Sub(now))
+		} else {
+			s.verifiedAt = time.Time{}
+			// Only the verified line fades; a newer notice (a save, a logout)
+			// must survive it.
+			if s.notice.kind == noticeAccountSessionVerified {
+				s.notice = pageNotice{}
+			}
 		}
 	}
 }
@@ -229,15 +294,67 @@ func (s *accountState) reload() {
 	// The persisted login is checked exactly once, so a later save or logout
 	// never dials the server again.
 	s.verified = true
+	s.beginRestore()
+}
+
+// beginRestore starts one persisted-login check on its own lane, refused
+// while one is already on the wire. The startup check, the manual recheck
+// and the scheduled silent retry all come through here, so they share one
+// single-flight gate instead of stacking goroutines.
+func (s *accountState) beginRestore() {
+	if s.verifying {
+		return
+	}
 	s.verifying = true
+	s.restoreGen++
+	gen := s.restoreGen
 	account := s.account
 	go func() {
 		sess, sessErr := account.restoreSession()
 		s.restoreResult <- func(st *accountState) {
 			st.verifying = false
-			st.applySession(sess, sessErr)
+			if gen != st.restoreGen {
+				return
+			}
+			st.applyRestore(sess, sessErr)
 		}
 	}()
+}
+
+// recheck reruns the persisted-login check on demand. It swaps the failure
+// notice for the checking one and drops any scheduled silent retry, so the
+// manual path and the automatic one cannot stack. The one-shot verified
+// latch stays closed: it only opens for reload's first call, so a later
+// save or logout never dials the server through here again.
+func (s *accountState) recheck() {
+	if s.verifying {
+		return
+	}
+	s.stopSessionRetry()
+	s.verifiedAt = time.Time{}
+	s.armVerified = false
+	s.notice = pageNotice{kind: noticeAccountSessionChecking}
+	s.beginRestore()
+}
+
+// stopSessionRetry drops the silent-retry schedule entirely: after a settled
+// check (verified, revoked or unreadable) and after a logout, no retry may
+// fire on its own.
+func (s *accountState) stopSessionRetry() {
+	s.retryAt = time.Time{}
+	s.retryCount = 0
+	s.armRetry = false
+}
+
+// sessionCheckFailed reports whether the last session check failed in a way
+// a manual recheck can answer: one of the unverified wordings is showing.
+func (s *accountState) sessionCheckFailed() bool {
+	switch s.notice.kind {
+	case noticeAccountSessionUnverified, noticeAccountSessionUnverifiedNetwork,
+		noticeAccountSessionUnverifiedRateLimited, noticeAccountSessionUnverifiedServer:
+		return true
+	}
+	return false
 }
 
 // applyReload lands a full reload answer, the local stage and the session
@@ -287,12 +404,34 @@ func (s *accountState) applySession(sess accountSession, sessErr error) {
 	case errors.Is(sessErr, errSessionRevoked):
 		s.notice = pageNotice{kind: noticeAccountSessionRevoked}
 	case errors.Is(sessErr, errSessionUnverified):
-		s.notice = pageNotice{kind: noticeAccountSessionUnverified}
+		s.notice = pageNotice{kind: sessionUnverifiedKind(sessErr)}
 	case sessErr != nil:
 		s.notice = pageNotice{kind: noticeAccountSessionReadFailed, err: sessErr}
 	}
 	if sessErr == nil || errors.Is(sessErr, errSessionRevoked) || errors.Is(sessErr, errSessionUnverified) {
 		s.session = sess
+	}
+}
+
+// applyRestore lands a finished persisted-login check on the page: the
+// session fields and their notice first, then the outcome's own schedule - a
+// confirmed login shows the verified notice that fades, a transient failure
+// arms the next silent retry, and anything else stops the retries.
+func (s *accountState) applyRestore(sess accountSession, sessErr error) {
+	s.applySession(sess, sessErr)
+	switch {
+	case sessErr == nil:
+		s.stopSessionRetry()
+		// Only a confirmed login says so: nothing stored is the normal
+		// fresh-install answer, not a success worth a green line.
+		if sess.state == loginLoggedIn {
+			s.notice = pageNotice{kind: noticeAccountSessionVerified, ok: true}
+			s.armVerified = true
+		}
+	case errors.Is(sessErr, errSessionUnverified):
+		s.armRetry = true
+	default:
+		s.stopSessionRetry()
 	}
 }
 
@@ -388,8 +527,12 @@ func (s *accountState) logout() {
 			}
 			st.session = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
 			// The persisted login was just deleted on purpose; the card must
-			// not wait for any restore that could still be on the wire.
+			// not wait for any restore that could still be on the wire, and
+			// its late answer must not resurrect anything.
 			st.verified = true
+			st.restoreGen++
+			st.stopSessionRetry()
+			st.verifiedAt = time.Time{}
 			// Reload first: a local read error it reports must not clobber
 			// the logged-out line, so the line is set after it.
 			st.reload()

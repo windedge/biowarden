@@ -58,6 +58,68 @@ var (
 	errClearSession       = errors.New("ui: clearing the login session failed")
 )
 
+// The session check's transient failure classes, in ui terms. The pages never
+// import internal/auth, so restoreSession translates each auth sentinel into
+// one of these next to errSessionUnverified (see sessionUnverifiedError).
+var (
+	errSessionNetwork     = errors.New("ui: session check failed on the network")
+	errSessionRateLimited = errors.New("ui: session check was rate limited")
+	errSessionServerError = errors.New("ui: session check failed on the server")
+)
+
+// sessionUnverifiedError is the failure restoreSession reports when the
+// persisted login could not be checked. It unwraps to errSessionUnverified,
+// the ui-level class and the original auth error at once, so the page can pick
+// a notice without importing auth while errors.Is still matches every
+// sentinel. The earlier fmt.Errorf("%w: %v") wrap lost the auth sentinel.
+type sessionUnverifiedError struct {
+	class error // errSessionRateLimited / errSessionNetwork / errSessionServerError, or nil
+	cause error
+}
+
+func (e *sessionUnverifiedError) Error() string {
+	return errSessionUnverified.Error() + ": " + e.cause.Error()
+}
+
+func (e *sessionUnverifiedError) Unwrap() []error {
+	errs := []error{errSessionUnverified}
+	if e.class != nil {
+		errs = append(errs, e.class)
+	}
+	return append(errs, e.cause)
+}
+
+// sessionUnverifiedClass maps the auth sentinel a failed refresh ended in to
+// its ui-level class; anything else (and nil) has no class and falls back to
+// the generic unverified notice.
+func sessionUnverifiedClass(err error) error {
+	switch {
+	case errors.Is(err, auth.ErrRateLimited):
+		return errSessionRateLimited
+	case errors.Is(err, auth.ErrNetwork):
+		return errSessionNetwork
+	case errors.Is(err, auth.ErrServer):
+		return errSessionServerError
+	default:
+		return nil
+	}
+}
+
+// sessionUnverifiedKind is the notice kind a failed session check shows: one
+// per transient class, the generic wording for anything unrecognized.
+func sessionUnverifiedKind(err error) noticeKind {
+	switch {
+	case errors.Is(err, errSessionRateLimited):
+		return noticeAccountSessionUnverifiedRateLimited
+	case errors.Is(err, errSessionNetwork):
+		return noticeAccountSessionUnverifiedNetwork
+	case errors.Is(err, errSessionServerError):
+		return noticeAccountSessionUnverifiedServer
+	default:
+		return noticeAccountSessionUnverified
+	}
+}
+
 // loginError wraps a sentinel with the detail its wording interpolates, such
 // as the validator's own message for a bad server address. Unwrap keeps
 // errors.Is(err, sentinel) working for the UI's mapping.
@@ -663,10 +725,11 @@ func (a *realAccount) restoreSession() (accountSession, error) {
 			return fallback, errSessionRevoked
 		}
 		a.adoptRestored(fallback)
-		// The underlying failure travels as the detail: without it an
-		// unverified banner gave no way to tell transport trouble from a
-		// server bug, and errors.Is(err, errSessionUnverified) still holds.
-		return fallback, fmt.Errorf("%w: %v", errSessionUnverified, err)
+		// The underlying failure travels under the unverified sentinel with its
+		// ui-level class, so the notice can tell the three transient failures
+		// apart while errors.Is still matches errSessionUnverified and the auth
+		// sentinel.
+		return fallback, &sessionUnverifiedError{class: sessionUnverifiedClass(err), cause: err}
 	}
 	// The server may rotate the refresh token; keep the newest one so the next
 	// restart still verifies.

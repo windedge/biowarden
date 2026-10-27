@@ -21,6 +21,11 @@ const (
 	noticeAccountHelloUnavailable
 	noticeAccountSessionRevoked
 	noticeAccountSessionUnverified
+	noticeAccountSessionUnverifiedNetwork
+	noticeAccountSessionUnverifiedRateLimited
+	noticeAccountSessionUnverifiedServer
+	noticeAccountSessionChecking
+	noticeAccountSessionVerified
 	noticeAccountSessionReadFailed
 	noticeAccountKeySaved
 	noticeAccountVerified
@@ -110,6 +115,16 @@ func (n pageNotice) text() string {
 		return locales.AccountNoticeSessionRevoked()
 	case noticeAccountSessionUnverified:
 		return locales.AccountNoticeSessionUnverified()
+	case noticeAccountSessionUnverifiedNetwork:
+		return locales.AccountNoticeSessionUnverifiedNetwork()
+	case noticeAccountSessionUnverifiedRateLimited:
+		return locales.AccountNoticeSessionUnverifiedRateLimited()
+	case noticeAccountSessionUnverifiedServer:
+		return locales.AccountNoticeSessionUnverifiedServer()
+	case noticeAccountSessionChecking:
+		return locales.AccountNoticeSessionChecking()
+	case noticeAccountSessionVerified:
+		return locales.AccountNoticeSessionVerified()
 	case noticeAccountSessionReadFailed:
 		return locales.AccountNoticeSessionReadFailed(errorDetail(n.err))
 	case noticeAccountKeySaved:

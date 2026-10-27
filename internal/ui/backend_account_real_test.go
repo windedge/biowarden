@@ -712,3 +712,48 @@ func TestRealAccountLoginRecordsServerURLInMetadata(t *testing.T) {
 		t.Fatalf("rows = %+v, want the stored address", rows)
 	}
 }
+
+// The unverified failure keeps both sentinels: the ui's errSessionUnverified
+// and the auth one the refresh ended in, so the notice can pick its wording
+// and the log (and errors.Is) still sees the class. The %v wrap lost the
+// second one.
+func TestRealAccountRestoreKeepsBothUnverifiedSentinels(t *testing.T) {
+	shrinkBackoffs(t)
+	store := seedStore("user-1", "ada@example.com")
+	for _, tc := range []struct {
+		name  string
+		err   error
+		class error
+	}{
+		{"network", fmt.Errorf("%w: dial tcp", auth.ErrNetwork), errSessionNetwork},
+		{"rate limited", fmt.Errorf("%w: slow down", auth.ErrRateLimited), errSessionRateLimited},
+		{"server", fmt.Errorf("%w: 502", auth.ErrServer), errSessionServerError},
+		{"other", errors.New("boom"), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+				UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
+			}}
+			refresh := fixedRefresher(auth.TokenResponse{}, tc.err)
+			a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh)
+
+			_, err := a.restoreSession()
+			if !errors.Is(err, errSessionUnverified) {
+				t.Fatalf("restoreSession error = %v, want errSessionUnverified", err)
+			}
+			var want error = tc.err
+			if !errors.Is(err, want) {
+				t.Fatalf("errors.Is(err, underlying) = false for %v", err)
+			}
+			if tc.class != nil && !errors.Is(err, tc.class) {
+				t.Fatalf("errors.Is(err, class) = false for %v", err)
+			}
+			if got := sessionUnverifiedKind(err); tc.class != nil && got == noticeAccountSessionUnverified {
+				t.Fatalf("kind = generic for %v, want a classed notice", err)
+			}
+			if tc.class == nil && sessionUnverifiedKind(err) != noticeAccountSessionUnverified {
+				t.Fatalf("kind = %v for %v, want the generic fallback", sessionUnverifiedKind(err), err)
+			}
+		})
+	}
+}
