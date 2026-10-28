@@ -21,7 +21,7 @@ func (app *appState) accountPage(c *ui.Context) {
 			ui.Column(c).Padding(pagePadding).Gap(spaceMedium).Children(func() {
 				ui.Text(c, locales.AccountTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 				muted(c, locales.AccountIntro())
-				notice(c, a.notice.text(), a.notice.ok)
+				noticeOf(c, a.notice)
 
 				a.accountCard(c, &app.login)
 				a.advanced(c)

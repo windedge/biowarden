@@ -41,7 +41,7 @@ func (app *appState) browsersPage(c *ui.Context) {
 		case hijacked > 0:
 			notice(c, locales.BrowsersHijacked(hijacked), false)
 		default:
-			notice(c, bs.notice.text(), bs.notice.ok)
+			noticeOf(c, bs.notice)
 		}
 		ui.Divider(c)
 		ui.List(c, nil, len(app.browsers.rows), func(i int) {

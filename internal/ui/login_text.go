@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 
+	"github.com/egoist/mygo/ui"
 	"github.com/windedge/biowarden/locales"
 )
 
@@ -117,6 +118,24 @@ func (n loginNotice) arg(i int) string {
 	}
 	return n.args[i]
 }
+
+// severity buckets the login window's kinds the same way the pages' notices
+// are bucketed: a refusal or a rejected code is a danger, a bad address is a
+// warning to correct, and everything the window says about its own progress is
+// info.
+func (n loginNotice) severity() noticeSeverity {
+	switch n.kind {
+	case loginNoticeBadServer:
+		return severityWarning
+	case loginNoticeCodeRejected, loginNoticeFailure:
+		return severityDanger
+	default:
+		return severityInfo
+	}
+}
+
+// glyph is the mark the banner leads with for this notice.
+func (n loginNotice) glyph() *ui.SVG { return noticeGlyph(n.severity(), n.ok) }
 
 // text says the notice in the language the app shows, "" when there is none.
 func (n loginNotice) text() string {

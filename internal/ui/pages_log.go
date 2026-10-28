@@ -18,7 +18,7 @@ func (app *appState) logPage(c *ui.Context) {
 			ui.Spacer(c)
 			muted(c, locales.LogLevelLine(app.settings.logLevel.label(), app.settings.logPath))
 		})
-		notice(c, app.log.notice.text(), app.log.notice.ok)
+		noticeOf(c, app.log.notice)
 		ui.TextArea(c, &app.log.text).ReadOnly(true).Grow(1).FontSize(t.Rem(fontCaption)).
 			Label(locales.LogContent()).Placeholder(locales.LogPlaceholder())
 		ui.Row(c).Gap(spaceSmall).AlignItems(ui.Center).Children(func() {

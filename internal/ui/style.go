@@ -136,6 +136,29 @@ func applyPalette(c *ui.Context) {
 	c.SetTheme(&t)
 }
 
+// paletteFor returns the palette the frame's theme was made from, so a view can
+// reach the soft washes the theme itself does not carry.
+func paletteFor(c *ui.Context) palette {
+	if c.Theme().Dark {
+		return darkPalette()
+	}
+	return lightPalette()
+}
+
+// tone is a severity's two colors: the ink its icon and its text are drawn in,
+// and the wash under the whole row. Both sides come from the palette, so the
+// day and the night appearances are the same banner in two palettes.
+func (p palette) tone(sev noticeSeverity) (ink, wash ui.Color) {
+	switch sev {
+	case severityDanger:
+		return p.danger, p.dangerSoft
+	case severityWarning:
+		return p.warning, p.warningSoft
+	default:
+		return p.accent, p.accentSoft
+	}
+}
+
 // inkOn returns the ink to read text drawn on fill. The palette's own text
 // color is not it: the question is only what stands out on that one fill, so a
 // light accent takes dark ink and a dark one takes light ink. It is about a

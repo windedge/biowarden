@@ -61,7 +61,7 @@ func (s *loginWindow) credentialsForm(c *ui.Context) {
 		})
 		muted(c, locales.LoginServerHint())
 	})
-	notice(c, s.notice.text(), s.notice.ok)
+	noticeOf(c, s.notice)
 	ready := strings.TrimSpace(s.email) != "" && s.password != ""
 	if s.submitOnEnter(entered) {
 		c.Invalidate()
@@ -125,7 +125,7 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 	if unsupported := s.challenge.unsupported(); len(unsupported) > 0 {
 		muted(c, locales.LoginUnsupportedAlso(methodTitles(unsupported), locales.LoginUnsupportedNote()))
 	}
-	notice(c, s.notice.text(), s.notice.ok)
+	noticeOf(c, s.notice)
 	if s.submitTwoFactorOnEnter(entered) {
 		c.Invalidate()
 	}
@@ -155,7 +155,7 @@ func (s *loginWindow) unsupportedMethods(c *ui.Context) {
 		ui.Text(c, locales.LoginUnsupportedTitle()).Bold()
 		muted(c, locales.LoginUnsupportedOffered(methodTitles(s.challenge.methods)))
 	})
-	notice(c, s.notice.text(), s.notice.ok)
+	noticeOf(c, s.notice)
 	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 		if ui.PrimaryButton(c, locales.LoginCancel()).Disabled(s.busy).Clicked() {
 			s.cancel()

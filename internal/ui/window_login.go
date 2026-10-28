@@ -34,11 +34,12 @@ const (
 	loginWindowEmailHeight       = 60
 	loginWindowUnsupportedHeight = 40
 	// The rows a visible status line and a refused-address field error add,
-	// measured against the rendered form: the first notice line is a 16 DIP
-	// text row plus the column's 12 DIP gap, each wrap after it another 16 DIP
-	// text row, and the refusal under the server address field (only shown with
-	// Advanced open) a measured 23 DIP error row.
-	loginWindowNoticeHeight     = 28
+	// measured against the rendered form: the first notice line is the
+	// severity banner, whose soft wash and padding make it a 28 DIP row on top
+	// of the column's 12 DIP gap, each wrap after it another 16 DIP text row,
+	// and the refusal under the server address field (only shown with Advanced
+	// open) a measured 23 DIP error row.
+	loginWindowNoticeHeight     = 40
 	loginWindowNoticeLineHeight = 16
 	loginWindowServerErrHeight  = 24
 )

@@ -88,19 +88,52 @@ func (app *appState) tick(c *ui.Context) {
 	app.login.tick(c)
 }
 
-// notice renders a page's status line: orange for what still needs a human,
-// green for a success. Empty text draws nothing, so a settled page keeps its
-// layout.
+// noticeSource is a status line that knows how loud it is. The pages keep the
+// notice struct rather than rendered text, so a language change re-says the
+// line at the next frame and the severity comes from the kind, not the words.
+type noticeSource interface {
+	text() string
+	severity() noticeSeverity
+	glyph() *ui.SVG
+}
+
+// The banner's padding: a line of secondary text plus the room that keeps the
+// row one notice line high on the pages.
+const (
+	noticePadY float32 = spaceSnug
+	noticePadX float32 = spaceSmall
+)
+
+// noticeOf draws a page's status banner from the notice that carries its own
+// severity.
+func noticeOf(c *ui.Context, n noticeSource) {
+	if n == nil {
+		return
+	}
+	noticeBanner(c, n.text(), n.severity(), n.glyph())
+}
+
+// notice draws a status line whose only severity signal is whether it reports
+// a success; see plainNotice.
 func notice(c *ui.Context, text string, ok bool) {
+	noticeOf(c, plainNotice{line: text, ok: ok})
+}
+
+// noticeBanner draws one status line as a banner: the severity's soft wash
+// under the whole content width, its mark at the leading edge, and the wording
+// in the severity's ink. Empty text draws nothing, so a settled page keeps its
+// layout.
+func noticeBanner(c *ui.Context, text string, sev noticeSeverity, glyph *ui.SVG) {
 	if text == "" {
 		return
 	}
 	t := c.Theme()
-	col := t.Warning
-	if ok {
-		col = t.Success
-	}
-	ui.Text(c, text).FontSize(t.Rem(fontSecondary)).TextColor(col)
+	ink, wash := paletteFor(c).tone(sev)
+	ui.Row(c).FillWidth().Padding(noticePadY, noticePadX).Radius(t.Radius).
+		Background(wash).Gap(spaceSmall).AlignItems(ui.Center).Children(func() {
+		ui.Icon(c, glyph).FontSize(t.Rem(fontBody)).Shrink(0).TextColor(ink)
+		ui.Text(c, text).Grow(1).FontSize(t.Rem(fontSecondary)).FontWeight(600).TextColor(ink)
+	})
 }
 
 func muted(c *ui.Context, text string) {
