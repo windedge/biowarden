@@ -1,0 +1,78 @@
+name: Bug report
+description: Unlock failed, registration failed, or anything else that misbehaves
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: >-
+        Describe the problem and what you expected instead. Paste the relevant
+        lines from the host log at %LOCALAPPDATA%\biowarden\host.log - the log
+        is already redacted, so it is safe to paste as-is.
+      placeholder: Unlock from the browser extension fails with ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: biowarden version
+      description: Shown on the Settings page.
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Chromium
+        - Brave
+        - Vivaldi
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: Bitwarden extension version
+      description: Shown on the extension details page.
+      placeholder: "2025.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: official-desktop
+    attributes:
+      label: Official Bitwarden desktop client installed
+      options:
+        - Yes, and I use it
+        - Yes, but I do not use it
+        - "No"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      options:
+        - Bitwarden cloud
+        - Vaultwarden
+        - Other self-hosted
+    validations:
+      required: true
+
+  - type: textarea
+    id: other
+    attributes:
+      label: Other
+      description: Anything else that might help (setup steps, first run vs. later runs, etc.).
+    validations:
+      required: false
