@@ -7,11 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The session check now says which of the three ways it can fail applies:
+  network trouble, a rate-limited server, or a server that did not answer
+  properly, each with its own wording in all seven languages, plus a
+  **Check again** button and a bounded silent retry (30 s / 2 min / 5 min) so
+  a flaky start no longer sticks until the next relaunch.
+
+### Fixed
+
+- The session check no longer starves under its own timeout: it allows 12 s
+  instead of 5 s and retries the transient failures, so a slow first hop
+  (server config plus token exchange through a CDN) no longer reads as
+  "cannot verify". A 403 page from a gateway no longer deletes the stored
+  login session, and 429 is told apart from a dead server. Failures are
+  logged (attempts, classification, elapsed) instead of vanishing.
+
 ### Changed
 
 - Releases now publish the installer and a `SHA256SUMS.txt` only. The portable
   `biowarden.exe` is no longer uploaded; it stays a local build artifact for
   development and testing.
+- Pre-publication documentation pass: the READMEs disclose why the host
+  registers under the official `com.8bit.bitwarden` connection name and drop
+  the "impersonating" wording; THIRD_PARTY_NOTICES.md resolves its unverified
+  license entries (bw-bio-handler is MIT, WardenBio declares none) and lists
+  x/crypto correctly; a SECURITY.md spells out the threat model; the stale
+  version and dependency facts are fixed; AGENTS.md stops pointing at files
+  that do not exist; CHANGELOG gains compare links; CI runs the acceptance
+  command on windows-latest and the bug template asks for the log up front.
 
 ## [0.1.4] - 2026-10-22
 
