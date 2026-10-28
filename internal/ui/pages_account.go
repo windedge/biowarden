@@ -15,10 +15,11 @@ import (
 // to.
 func (app *appState) accountPage(c *ui.Context) {
 	a := &app.account
+	t := c.Theme()
 	ui.Column(c).Grow(1).Children(func() {
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Padding(16).Gap(12).Children(func() {
-				ui.Text(c, locales.AccountTitle()).FontSize(18).Bold()
+			ui.Column(c).Padding(pagePadding).Gap(spaceMedium).Children(func() {
+				ui.Text(c, locales.AccountTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 				muted(c, locales.AccountIntro())
 				notice(c, a.notice.text(), a.notice.ok)
 
@@ -47,7 +48,7 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 				muted(c, locales.AccountCard2FAMethod(a.session.twoFAMethod))
 			}
 			muted(c, locales.AccountCard2FAUnfinished())
-			ui.Row(c).Gap(10).Children(func() {
+			ui.Row(c).Gap(spaceRow).Children(func() {
 				if ui.PrimaryButton(c, locales.AccountCardContinue()).Disabled(a.busy).Clicked() {
 					login.begin()
 					c.Invalidate()
@@ -69,7 +70,7 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		// the main flow; the recheck button sits beside it only while a
 		// session check outcome is on the page, so the quiet card stays quiet.
 		a.accountIdentity(c, v, t, func() {
-			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 				if a.sessionCheckFailed() || a.verifying {
 					if ui.Button(c, locales.AccountActionRecheck()).MaxWidth(150).
 						Disabled(a.busy || a.verifying).FontSize(t.Rem(0.85)).Clicked() {
@@ -97,7 +98,7 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		// device), which would otherwise be a dead end with no button.
 		// Every write in the GUI reloads the card by itself, so the row holds
 		// only the login action.
-		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 			if ui.PrimaryButton(c, v.loginLabel).Disabled(a.busy).Clicked() {
 				login.begin()
 				c.Invalidate()
@@ -111,11 +112,11 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 // login, the normal text color for the configured and signed-out states.
 // corner, when not nil, draws at the right end of the title row.
 func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.Theme, corner func()) {
-	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Gap(spaceMedium).AlignItems(ui.Center).Children(func() {
 		if v.identity {
 			ui.Avatar(c, avatarName(a.session.email), nil)
 		}
-		ui.Column(c).Grow(1).Gap(2).Children(func() {
+		ui.Column(c).Grow(1).Gap(spaceHair).Children(func() {
 			color := t.Text
 			if v.state == cardSignedIn {
 				color = t.Success
@@ -140,13 +141,14 @@ func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.T
 // identityRow is the avatar, email, server and state line the 2FA branch
 // draws while it waits for a code.
 func (a *accountState) identityRow(c *ui.Context, stateColor ui.Color) {
-	ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+	t := c.Theme()
+	ui.Row(c).Gap(spaceMedium).AlignItems(ui.Center).Children(func() {
 		ui.Avatar(c, avatarName(a.session.email), nil)
-		ui.Column(c).Grow(1).Gap(2).Children(func() {
+		ui.Column(c).Grow(1).Gap(spaceHair).Children(func() {
 			ui.Text(c, a.session.email).Bold()
 			muted(c, locales.AccountServerLabel(a.session.serverURL))
 		})
-		ui.Text(c, a.session.state.label()).FontSize(12).TextColor(stateColor)
+		ui.Text(c, a.session.state.label()).FontSize(t.Rem(fontSecondary)).TextColor(stateColor)
 	})
 }
 
@@ -155,18 +157,19 @@ func (a *accountState) identityRow(c *ui.Context, stateColor ui.Color) {
 // paste form. Both were the whole Keys page before; folding them away keeps
 // the default account page short.
 func (a *accountState) advanced(c *ui.Context) {
+	t := c.Theme()
 	ui.Collapsible(c, locales.AccountAdvanced(), &a.advancedOpen, func() {
-		ui.Column(c).Gap(12).Children(func() {
+		ui.Column(c).Gap(spaceMedium).Children(func() {
 			ui.Text(c, locales.AccountExtractTitle()).Bold()
 			muted(c, locales.AccountExtractHint())
-			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 				if ui.Button(c, locales.AccountCopyScript()).Clicked() {
 					mygo.Clipboard.WriteText(extractSnippet)
 					a.copiedAt = time.Now()
 				}
 				if !a.copiedAt.IsZero() {
 					ui.Text(c, locales.AccountCopied(len(extractSnippet))).
-						FontSize(12).TextColor(c.Theme().Success)
+						FontSize(t.Rem(fontSecondary)).TextColor(t.Success)
 				}
 			})
 			// The reference hides the snippet because a long script wrecks its
@@ -174,7 +177,7 @@ func (a *accountState) advanced(c *ui.Context) {
 			// still stays behind a collapsed disclosure so it can be audited.
 			ui.Collapsible(c, locales.AccountViewScript(), &a.scriptOpen, func() {
 				ui.TextArea(c, &a.scriptBody).ReadOnly(true).Lines(6, 14).
-					FontSize(11).Placeholder(locales.AccountScriptPreview())
+					FontSize(t.Rem(fontCaption)).Placeholder(locales.AccountScriptPreview())
 			})
 			ui.Divider(c)
 			a.manualEntry(c)
@@ -185,6 +188,7 @@ func (a *accountState) advanced(c *ui.Context) {
 // manualEntry is the v1 form and the stored-account list, kept as the
 // fallback for accounts the script path still handles.
 func (a *accountState) manualEntry(c *ui.Context) {
+	t := c.Theme()
 	ui.Text(c, locales.AccountManualTitle()).Bold()
 	muted(c, locales.AccountManualHint())
 	ui.Form(c, func() {
@@ -198,7 +202,7 @@ func (a *accountState) manualEntry(c *ui.Context) {
 		})
 	})
 	ready := strings.TrimSpace(a.userId) != "" && strings.TrimSpace(a.keyB64) != ""
-	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 		if ui.PrimaryButton(c, locales.AccountManualSave()).Disabled(!ready || a.busy).Clicked() {
 			a.saveKey()
 			// The consent runs off the UI thread, so ask for the frame
@@ -208,7 +212,7 @@ func (a *accountState) manualEntry(c *ui.Context) {
 		if a.busy {
 			ui.Spinner(c).Label(locales.AccountVerifyingSpinner())
 			ui.Text(c, locales.AccountCallingHello()).
-				FontSize(12).TextColor(c.Theme().TextMuted)
+				FontSize(t.Rem(fontSecondary)).TextColor(t.TextMuted)
 		}
 	})
 	muted(c, locales.AccountManualWarning())
@@ -222,10 +226,10 @@ func (a *accountState) manualEntry(c *ui.Context) {
 	muted(c, locales.AccountStoredAccounts())
 	for _, acc := range a.accounts {
 		acc := acc
-		ui.Row(c).Key(acc.userID).Gap(12).Padding(8, 6).
+		ui.Row(c).Key(acc.userID).Gap(spaceMedium).Padding(spaceSmall, spaceSnug).
 			AlignItems(ui.Center).Children(func() {
-			ui.Column(c).Grow(1).Gap(2).Children(func() {
-				ui.Text(c, acc.userID).FontSize(12).SingleLine().Tooltip(acc.userID)
+			ui.Column(c).Grow(1).Gap(spaceHair).Children(func() {
+				ui.Text(c, acc.userID).FontSize(t.Rem(fontSecondary)).SingleLine().Tooltip(acc.userID)
 				meta := locales.AccountRowCreated(acc.created)
 				if acc.email != "" {
 					meta = locales.AccountRowMeta(acc.email, meta)

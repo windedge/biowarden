@@ -20,73 +20,99 @@ import (
 // window's bounds would pass on a page whose text is visibly cut. The
 // padding of the pages is the gap between the content area and the window's
 // edge, so the texts must end before it.
+//
+// Every page is measured in both appearances. The palette only picks colors,
+// so a page that fits in one appearance fits in the other; measuring both is
+// what catches a palette change that moved a size, and it keeps the dark
+// screenshots of pages_shot_test.go honest.
 func TestPagesKeepTheirTextsInsideTheWindow(t *testing.T) {
 	// The window is as narrow as it may be, so the content area is at its
 	// smallest and a long text has the least room.
 	const windowWidth = 800
 	const windowHeight = 640
-	// The pages' padding, which keeps the texts off the window's edge and
-	// marks the content area's bounds.
-	const pagePadding = 16
-	for _, tag := range []string{"en", "de", "fr", "es", "ja", "zh-Hans", "zh-Hant"} {
-		t.Run(tag, func(t *testing.T) {
-			appLanguage(t, tag)
-			app := &appState{browsers: newBrowsersStateWith(&recordingBrowsersBackend{})}
-			app.settings.logLevel = logLevelError
-			app.settings.logPath = `C:\Users\ada\AppData\Local\biowarden\biowarden.log`
+	for _, dark := range []bool{false, true} {
+		for _, tag := range []string{"en", "de", "fr", "es", "ja", "zh-Hans", "zh-Hant"} {
+			t.Run(appearanceName(dark)+"/"+tag, func(t *testing.T) {
+				testPageTextsFit(t, dark, tag, windowWidth, windowHeight)
+			})
+		}
+	}
+}
 
-			cases := []struct {
-				name string
-				view func(*ui.Context)
-			}{
-				{"account", app.accountPage},
-				{"browsers", app.browsersPage},
-				{"settings", app.settingsPage},
-				{"log", app.logPage},
-			}
-			// The tester reports the box of the element that shows a text
-			// or that is labeled with it, and a widget's box is the
-			// widget's own: a control that does not fit the column of a
-			// verbose language runs past the content area as well, so it
-			// is measured like a text.
-			for _, tc := range cases {
-				t.Run(tc.name, func(t *testing.T) {
-					// The sidebar and the page stand side by side, as they
-					// do in the window, so a text gets the room the
-					// content area really has.
-					tester := ui.NewTester(func(c *ui.Context) {
-						ui.Row(c).Fill().Children(func() {
-							ui.Column(c).Width(sidebarWidth).FillHeight().Shrink(0)
-							ui.Column(c).Grow(1).FillHeight().Children(func() {
-								tc.view(c)
-							})
-						})
-					}, windowWidth, windowHeight)
-					tester.Frame()
+// appearanceName names one run of a test case: the same page in the day and in
+// the night appearance are two cases, and the output has to tell them apart.
+func appearanceName(dark bool) string {
+	if dark {
+		return "dark"
+	}
+	return "light"
+}
 
-					for _, text := range tester.Texts() {
-						if strings.TrimSpace(text) == "" {
-							continue
-						}
-						r, ok := tester.Find(text)
-						if !ok {
-							continue
-						}
-						right := r.X + r.W
-						bottom := r.Y + r.H
-						// The text must stay inside the content area: it ends
-						// before the padding that keeps it off the window's
-						// edge, or it is cut there.
-						if right > windowWidth-pagePadding {
-							t.Errorf("%q ends at %v, past the content area of %v",
-								text, right, windowWidth-pagePadding)
-						}
-						if bottom > windowHeight-pagePadding {
-							t.Errorf("%q ends at %v, past the content area of %v",
-								text, bottom, windowHeight-pagePadding)
-						}
-					}
+// testPageTextsFit renders every page of one language in one appearance and
+// reports the texts that end outside the content area.
+func testPageTextsFit(t *testing.T, dark bool, tag string, windowWidth, windowHeight int) {
+	t.Helper()
+	appLanguage(t, tag)
+	app := &appState{browsers: newBrowsersStateWith(&recordingBrowsersBackend{})}
+	app.settings.logLevel = logLevelError
+	app.settings.logPath = `C:\Users\ada\AppData\Local\biowarden\biowarden.log`
+
+	cases := []struct {
+		name string
+		view func(*ui.Context)
+	}{
+		{"account", app.accountPage},
+		{"browsers", app.browsersPage},
+		{"settings", app.settingsPage},
+		{"log", app.logPage},
+	}
+	// The tester reports the box of the element that shows a text
+	// or that is labeled with it, and a widget's box is the
+	// widget's own: a control that does not fit the column of a
+	// verbose language runs past the content area as well, so it
+	// is measured like a text.
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// The sidebar and the page stand side by side, as they do in the
+			// window, so a text gets the room the content area really has.
+			// applyPalette is the test's own call because this root is the
+			// test's: the pages do not own a window and cannot paint themselves
+			// in the palette the app's window would have.
+			tester := ui.NewTester(func(c *ui.Context) {
+				applyPalette(c)
+				ui.Row(c).Fill().Children(func() {
+					ui.Column(c).Width(sidebarWidth).FillHeight().Shrink(0)
+					ui.Column(c).Grow(1).FillHeight().Children(func() {
+						tc.view(c)
+					})
 				})
+			}, windowWidth, windowHeight)
+			tester.SetDark(dark)
+			tester.Frame()
+
+			for _, text := range tester.Texts() {
+				if strings.TrimSpace(text) == "" {
+					continue
+				}
+				r, ok := tester.Find(text)
+				if !ok {
+					continue
+				}
+				right := r.X + r.W
+				bottom := r.Y + r.H
+				// The text must stay inside the content area: it ends before
+				// the page's padding, which is the gap that keeps it off the
+				// window's edge, or it is cut there.
+				contentRight := float32(windowWidth) - pagePadding
+				contentBottom := float32(windowHeight) - pagePadding
+				if right > contentRight {
+					t.Errorf("%q ends at %v, past the content area of %v",
+						text, right, contentRight)
+				}
+				if bottom > contentBottom {
+					t.Errorf("%q ends at %v, past the content area of %v",
+						text, bottom, contentBottom)
+				}
 			}
 		})
 	}

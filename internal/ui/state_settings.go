@@ -151,7 +151,7 @@ func (s *settingsState) setAutostart() {
 func (s *settingsState) logLevelSelect(c *ui.Context) {
 	t := c.Theme()
 	sel := ui.SelectBase(c, &s.logLevel)
-	sel.Trigger.Gap(6).Padding(4, 10).Radius(t.Radius).
+	sel.Trigger.Gap(spaceSnug).Padding(spaceTiny, spaceRow).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).
 		Justify(ui.SpaceBetween).MaxWidth(settingsSelectWidth).
 		Label(locales.SettingsLogLevelLabel()).
@@ -160,11 +160,11 @@ func (s *settingsState) logLevelSelect(c *ui.Context) {
 			ui.Text(c, "▾").TextColor(t.TextMuted)
 		})
 	sel.Popup(func(panel ui.Element) {
-		panel.Margin(4, 0, 0, 0).Padding(4).Radius(t.Radius+2).
+		panel.Margin(spaceTiny, 0, 0, 0).Padding(spaceTiny).Radius(radiusPopup).
 			Background(t.Background).Border(1, t.Border).
 			Shadow(0, 6, 20, 0, ui.RGBA(0, 0, 0, 0.18))
 		for _, lv := range logLevels {
-			item := sel.Item(lv).Padding(6, 10).Radius(t.Radius)
+			item := sel.Item(lv).Padding(spaceSnug, spaceRow).Radius(t.Radius)
 			if item.Highlighted() {
 				item.Background(t.Accent).TextColor(t.AccentText)
 			}
@@ -200,7 +200,7 @@ func (s *settingsState) languageSelect(c *ui.Context) (chosen string, changed bo
 	chosen = s.languageTag
 	t := c.Theme()
 	sel := ui.SelectBase(c, &chosen)
-	sel.Trigger.Gap(6).Padding(4, 10).Radius(t.Radius).
+	sel.Trigger.Gap(spaceSnug).Padding(spaceTiny, spaceRow).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).
 		Justify(ui.SpaceBetween).MaxWidth(settingsSelectWidth).
 		Children(func() {
@@ -208,11 +208,11 @@ func (s *settingsState) languageSelect(c *ui.Context) (chosen string, changed bo
 			ui.Text(c, "▾").TextColor(t.TextMuted)
 		})
 	sel.Popup(func(panel ui.Element) {
-		panel.Margin(4, 0, 0, 0).Padding(4).Radius(t.Radius+2).
+		panel.Margin(spaceTiny, 0, 0, 0).Padding(spaceTiny).Radius(radiusPopup).
 			Background(t.Background).Border(1, t.Border).
 			Shadow(0, 6, 20, 0, ui.RGBA(0, 0, 0, 0.18))
 		for i, tag := range tags {
-			item := sel.Item(tag).Padding(6, 10).Radius(t.Radius)
+			item := sel.Item(tag).Padding(spaceSnug, spaceRow).Radius(t.Radius)
 			if item.Highlighted() {
 				item.Background(t.Accent).TextColor(t.AccentText)
 			}

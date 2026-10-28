@@ -13,6 +13,7 @@ import (
 // page reloads so it shows what actually happened.
 func (app *appState) browsersPage(c *ui.Context) {
 	bs := &app.browsers
+	t := c.Theme()
 	configured := 0
 	hijacked := 0
 	for _, b := range app.browsers.rows {
@@ -23,9 +24,9 @@ func (app *appState) browsersPage(c *ui.Context) {
 			hijacked++
 		}
 	}
-	ui.Column(c).Grow(1).Padding(16).Gap(10).Children(func() {
-		ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, locales.BrowsersTitle()).FontSize(18).Bold()
+	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceRow).Children(func() {
+		ui.Row(c).Gap(spaceMedium).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, locales.BrowsersTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 			ui.Spacer(c)
 			if ui.PrimaryButton(c, locales.BrowsersInstallAll()).Disabled(len(app.browsers.rows) == 0).Clicked() {
 				bs.installAll()
@@ -55,20 +56,20 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 	t := c.Theme()
 	bs := &app.browsers
 	b := &app.browsers.rows[i]
-	ui.Row(c).Key(b.name).Gap(12).Padding(10, 8).AlignItems(ui.Center).Children(func() {
-		ui.Column(c).Grow(1).Gap(2).Children(func() {
-			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Key(b.name).Gap(spaceMedium).Padding(spaceRow, spaceSmall).AlignItems(ui.Center).Children(func() {
+		ui.Column(c).Grow(1).Gap(spaceHair).Children(func() {
+			ui.Row(c).Gap(spaceSnug).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, b.name).Bold()
 				if !b.installed {
-					ui.Text(c, locales.BrowserNotInstalled()).FontSize(11).TextColor(t.TextMuted).Tooltip(browserAbsentHint())
+					ui.Text(c, locales.BrowserNotInstalled()).FontSize(t.Rem(fontCaption)).TextColor(t.TextMuted).Tooltip(browserAbsentHint())
 				}
 			})
-			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, browserStatusLabel(b.state)).FontSize(11).TextColor(browserStatusColor(t, b.state))
-				ui.Text(c, connectionLabel(time.Now(), b.lastConnectedAt)).FontSize(11).
+			ui.Row(c).Gap(spaceSmall).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, browserStatusLabel(b.state)).FontSize(t.Rem(fontCaption)).TextColor(browserStatusColor(t, b.state))
+				ui.Text(c, connectionLabel(time.Now(), b.lastConnectedAt)).FontSize(t.Rem(fontCaption)).
 					TextColor(extensionColor(t, b.lastConnectedAt))
 			})
-			ui.Text(c, b.path).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(b.path)
+			ui.Text(c, b.path).FontSize(t.Rem(fontCaption)).TextColor(t.TextMuted).SingleLine().Tooltip(b.path)
 		})
 		// Actions run after the row is built: install/uninstall reload the rows,
 		// which must not happen while this one is still being constructed.

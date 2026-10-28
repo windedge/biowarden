@@ -28,12 +28,12 @@ func (app *appState) settingsPage(c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).Grow(1).Children(func() {
 		// The padding is CSS order: top, right, bottom and left.
-		ui.Column(c).Padding(16, 16, 16, 16).Gap(4).Children(func() {
-			ui.Text(c, locales.SettingsTitle()).FontSize(18).Bold()
+		ui.Column(c).Padding(pagePadding, pagePadding, pagePadding, pagePadding).Gap(spaceTiny).Children(func() {
+			ui.Text(c, locales.SettingsTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 			muted(c, locales.SettingsIntro())
 		})
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Padding(16, 16, 16, 16).Gap(12).Children(func() {
+			ui.Column(c).Padding(pagePadding, pagePadding, pagePadding, pagePadding).Gap(spaceMedium).Children(func() {
 				notice(c, app.settings.notice.text(), app.settings.notice.ok)
 				ui.Form(c, func() {
 					ui.Fieldset(c, locales.SettingsGroupEntry(), func() {
@@ -64,16 +64,16 @@ func (app *appState) settingsPage(c *ui.Context) {
 							}
 						})
 						ui.Field(c, locales.SettingsHello(), func() {
-							ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+							ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 								switch {
 								case app.settings.helloChecking:
 									ui.Spinner(c).Label(locales.SettingsHelloCheckingSpinner())
-									ui.Text(c, locales.SettingsHelloChecking()).FontSize(12).TextColor(t.TextMuted)
+									ui.Text(c, locales.SettingsHelloChecking()).FontSize(t.Rem(fontSecondary)).TextColor(t.TextMuted)
 								case app.settings.helloOK:
 									ui.Text(c, locales.SettingsHelloAvailable()).
-										FontSize(12).TextColor(t.Success)
+										FontSize(t.Rem(fontSecondary)).TextColor(t.Success)
 								default:
-									ui.Text(c, locales.SettingsHelloUnavailable()).FontSize(12).TextColor(t.Danger)
+									ui.Text(c, locales.SettingsHelloUnavailable()).FontSize(t.Rem(fontSecondary)).TextColor(t.Danger)
 								}
 								ui.Button(c, locales.SettingsHelloRecheck()).Disabled(app.settings.helloChecking).
 									OnClick(func() {
@@ -90,7 +90,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 							app.settings.logLevelSelect(c)
 						})
 						ui.Field(c, locales.SettingsLogPath(), func() {
-							ui.TextInput(c, &app.settings.logPath).ReadOnly(true).FontSize(11).
+							ui.TextInput(c, &app.settings.logPath).ReadOnly(true).FontSize(t.Rem(fontCaption)).
 								MaxWidth(settingsFieldWidth).Label(locales.SettingsLogPathLabel())
 						})
 					})
@@ -106,7 +106,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 							// in a verbose language leaves the note less room than the
 							// window has, and the note then runs past the window.
 							ui.Text(c, locales.SettingsAboutText()).
-								FontSize(12).TextColor(t.TextMuted).MaxWidth(settingsFieldWidth)
+								FontSize(t.Rem(fontSecondary)).TextColor(t.TextMuted).MaxWidth(settingsFieldWidth)
 						})
 					})
 				})

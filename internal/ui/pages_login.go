@@ -12,6 +12,7 @@ import (
 // two-factor prompt the server asked for. It is the only login entry; the
 // account page opens this window instead of drawing a form of its own.
 func (s *loginWindow) loginView(c *ui.Context) {
+	applyPalette(c)
 	s.tick(c)
 	// A frame after the Advanced disclosure toggled is where the window learns
 	// its new height; syncHeight keeps a steady form from resizing every frame.
@@ -21,8 +22,8 @@ func (s *loginWindow) loginView(c *ui.Context) {
 		// The window follows the form's height (syncHeight above), so the scroll
 		// view only catches the rare hint that wraps past its measured target.
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Padding(16).Gap(12).Children(func() {
-				ui.Text(c, locales.LoginTitle()).FontSize(16).Bold()
+			ui.Column(c).Padding(pagePadding).Gap(spaceMedium).Children(func() {
+				ui.Text(c, locales.LoginTitle()).FontSize(t.Rem(fontEmphasis)).Bold()
 				muted(c, locales.LoginSubtitle())
 				if s.challenge == nil {
 					s.credentialsForm(c)
@@ -37,6 +38,7 @@ func (s *loginWindow) loginView(c *ui.Context) {
 // credentialsForm is the email/password step, with the server address behind
 // the Advanced disclosure.
 func (s *loginWindow) credentialsForm(c *ui.Context) {
+	t := c.Theme()
 	// entered records Enter in any of the three fields; .Submitted is mygo's
 	// Enter-in-a-single-line-input signal, so the form needs no key hook.
 	entered := false
@@ -64,7 +66,7 @@ func (s *loginWindow) credentialsForm(c *ui.Context) {
 	if s.submitOnEnter(entered) {
 		c.Invalidate()
 	}
-	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 		if ui.PrimaryButton(c, locales.LoginSubmit()).Disabled(!ready || s.busy).Clicked() {
 			s.submit()
 			c.Invalidate()
@@ -75,7 +77,7 @@ func (s *loginWindow) credentialsForm(c *ui.Context) {
 		}
 		if s.busy {
 			ui.Spinner(c).Label(locales.LoginSpinnerLoggingIn())
-			ui.Text(c, locales.LoginBusySigningIn()).FontSize(12).TextColor(c.Theme().TextMuted)
+			ui.Text(c, locales.LoginBusySigningIn()).FontSize(t.Rem(fontSecondary)).TextColor(t.TextMuted)
 		}
 	})
 }
@@ -84,6 +86,7 @@ func (s *loginWindow) credentialsForm(c *ui.Context) {
 // in biowarden, so they are named but not offered; when the server offers
 // nothing else, the window says so and keeps Cancel as the only exit.
 func (s *loginWindow) twoFactorForm(c *ui.Context) {
+	t := c.Theme()
 	methods := s.challenge.codeMethods()
 	if len(methods) == 0 {
 		s.unsupportedMethods(c)
@@ -106,13 +109,13 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 		})
 	})
 	if m.provider == twoFactorEmail {
-		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 			if ui.Button(c, locales.LoginSendEmailCode()).Disabled(s.busy || s.emailSent).Clicked() {
 				s.sendEmailCode()
 				c.Invalidate()
 			}
 			if s.emailSent {
-				ui.Text(c, locales.LoginEmailCodeSent()).FontSize(12).TextColor(c.Theme().Success)
+				ui.Text(c, locales.LoginEmailCodeSent()).FontSize(t.Rem(fontSecondary)).TextColor(t.Success)
 			}
 		})
 		if m.email != "" {
@@ -126,7 +129,7 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 	if s.submitTwoFactorOnEnter(entered) {
 		c.Invalidate()
 	}
-	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 		if ui.PrimaryButton(c, locales.LoginSubmitCode()).Disabled(strings.TrimSpace(s.code) == "" || s.busy).Clicked() {
 			s.submit2FA()
 			c.Invalidate()
@@ -147,13 +150,13 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 // not an oversight.
 func (s *loginWindow) unsupportedMethods(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Padding(12).Gap(8).Radius(t.Radius).
+	ui.Column(c).Padding(spaceMedium).Gap(spaceSmall).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).Children(func() {
 		ui.Text(c, locales.LoginUnsupportedTitle()).Bold()
 		muted(c, locales.LoginUnsupportedOffered(methodTitles(s.challenge.methods)))
 	})
 	notice(c, s.notice.text(), s.notice.ok)
-	ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 		if ui.PrimaryButton(c, locales.LoginCancel()).Disabled(s.busy).Clicked() {
 			s.cancel()
 			c.Invalidate()

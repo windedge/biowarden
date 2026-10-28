@@ -11,16 +11,17 @@ import (
 // logPage tails the host's real log file. Clear only clears the view, and
 // Open log file hands the path to the shell's default program.
 func (app *appState) logPage(c *ui.Context) {
-	ui.Column(c).Grow(1).Padding(16).Gap(8).Children(func() {
-		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, locales.LogTitle()).FontSize(18).Bold()
+	t := c.Theme()
+	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceSmall).Children(func() {
+		ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, locales.LogTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 			ui.Spacer(c)
 			muted(c, locales.LogLevelLine(app.settings.logLevel.label(), app.settings.logPath))
 		})
 		notice(c, app.log.notice.text(), app.log.notice.ok)
-		ui.TextArea(c, &app.log.text).ReadOnly(true).Grow(1).FontSize(11).
+		ui.TextArea(c, &app.log.text).ReadOnly(true).Grow(1).FontSize(t.Rem(fontCaption)).
 			Label(locales.LogContent()).Placeholder(locales.LogPlaceholder())
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Gap(spaceSmall).AlignItems(ui.Center).Children(func() {
 			if ui.Button(c, locales.Refresh()).Clicked() {
 				app.log.refresh()
 			}

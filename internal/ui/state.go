@@ -95,22 +95,24 @@ func notice(c *ui.Context, text string, ok bool) {
 	if text == "" {
 		return
 	}
-	col := c.Theme().Warning
+	t := c.Theme()
+	col := t.Warning
 	if ok {
-		col = c.Theme().Success
+		col = t.Success
 	}
-	ui.Text(c, text).FontSize(12).TextColor(col)
+	ui.Text(c, text).FontSize(t.Rem(fontSecondary)).TextColor(col)
 }
 
 func muted(c *ui.Context, text string) {
-	ui.Text(c, text).FontSize(12).TextColor(c.Theme().TextMuted)
+	t := c.Theme()
+	ui.Text(c, text).FontSize(t.Rem(fontSecondary)).TextColor(t.TextMuted)
 }
 
 // groupBox stands in for the reference's GroupBox: visible grouping without
 // a real form layout behind it.
 func groupBox(c *ui.Context, title string, body func()) {
 	t := c.Theme()
-	ui.Column(c).Padding(12).Gap(8).Radius(t.Radius).
+	ui.Column(c).Padding(spaceMedium).Gap(spaceSmall).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).Children(func() {
 		ui.Text(c, title).Bold()
 		body()

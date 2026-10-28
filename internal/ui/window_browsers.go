@@ -86,11 +86,12 @@ func (app *appState) unsubscribeBrowsersConfirmLocale() {
 // bulk install would take over, and the two decisions. The column sits in a
 // Scroll so a machine with several rows never clips the buttons.
 func (s *browsersState) confirmView(c *ui.Context) {
+	applyPalette(c)
 	t := c.Theme()
 	ui.Column(c).Fill().Background(t.Background).Children(func() {
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Padding(16).Gap(12).Children(func() {
-				ui.Text(c, locales.BrowsersConfirmTitle()).FontSize(16).Bold()
+			ui.Column(c).Padding(pagePadding).Gap(spaceMedium).Children(func() {
+				ui.Text(c, locales.BrowsersConfirmTitle()).FontSize(t.Rem(fontEmphasis)).Bold()
 				muted(c, s.confirmIntro())
 				for _, row := range s.bulk {
 					s.confirmRow(c, row)
@@ -99,7 +100,7 @@ func (s *browsersState) confirmView(c *ui.Context) {
 				if s.hasForeign() {
 					muted(c, locales.BrowsersConfirmOfficialNote())
 				}
-				ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+				ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 					if ui.PrimaryButton(c, s.confirmLabel()).Clicked() {
 						s.confirmBulk()
 						c.Invalidate()
@@ -147,16 +148,16 @@ func (s *browsersState) confirmLabel() string {
 // the biowarden manifest that would replace it.
 func (s *browsersState) confirmRow(c *ui.Context, row browserRow) {
 	t := c.Theme()
-	ui.Column(c).Padding(10, 8).Gap(4).Radius(t.Radius).
+	ui.Column(c).Padding(spaceRow, spaceSmall).Gap(spaceTiny).Radius(t.Radius).
 		Background(t.Surface).Border(1, t.Border).Children(func() {
 		ui.Text(c, row.name+" · "+takeoverActionLabel(row.state)).Bold()
 		current := locales.BrowsersConfirmCurrent(row.path, takeoverOwnerHint(row.state))
-		ui.Text(c, current).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(current)
+		ui.Text(c, current).FontSize(t.Rem(fontCaption)).TextColor(t.TextMuted).SingleLine().Tooltip(current)
 		target := locales.BrowsersConfirmTarget(row.installPath)
 		if row.state == browserHijacked {
 			target = locales.BrowsersConfirmRestoreTarget(row.installPath)
 		}
-		ui.Text(c, target).FontSize(11).TextColor(t.TextMuted).SingleLine().Tooltip(target)
+		ui.Text(c, target).FontSize(t.Rem(fontCaption)).TextColor(t.TextMuted).SingleLine().Tooltip(target)
 	})
 }
 

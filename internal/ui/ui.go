@@ -35,6 +35,7 @@ func Run() error {
 // every click or switch: a fixed sidebar on the left, the chosen page
 // filling the rest.
 func (app *appState) view(c *ui.Context) {
+	applyPalette(c)
 	app.tick(c)
 	t := c.Theme()
 	ui.Row(c).Fill().Background(t.Background).Children(func() {
