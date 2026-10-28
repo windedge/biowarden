@@ -22,14 +22,14 @@ func (app *appState) logPage(c *ui.Context) {
 		ui.TextArea(c, &app.log.text).ReadOnly(true).Grow(1).FontSize(t.Rem(fontCaption)).
 			Label(locales.LogContent()).Placeholder(locales.LogPlaceholder())
 		ui.Row(c).Gap(spaceSmall).AlignItems(ui.Center).Children(func() {
-			if ui.Button(c, locales.Refresh()).Clicked() {
+			if secondaryButton(c, locales.Refresh(), false).Clicked() {
 				app.log.refresh()
 			}
-			if ui.Button(c, locales.LogClear()).Clicked() {
+			if plainButton(c, locales.LogClear(), false).Clicked() {
 				app.log.text = ""
 				app.log.notice = pageNotice{kind: noticeLogCleared, ok: true}
 			}
-			if ui.Button(c, locales.LogOpen()).Clicked() {
+			if plainButton(c, locales.LogOpen(), false).Clicked() {
 				app.openLogFile()
 			}
 			ui.Spacer(c)

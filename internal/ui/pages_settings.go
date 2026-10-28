@@ -88,7 +88,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 								default:
 									ui.Text(c, locales.SettingsHelloUnavailable()).FontSize(t.Rem(fontSecondary)).TextColor(t.Danger)
 								}
-								ui.Button(c, locales.SettingsHelloRecheck()).Disabled(app.settings.helloChecking).
+								secondaryButton(c, locales.SettingsHelloRecheck(), app.settings.helloChecking).
 									OnClick(func() {
 										app.settings.notice = pageNotice{}
 										app.settings.startHelloCheck()

@@ -67,11 +67,11 @@ func (s *loginWindow) credentialsForm(c *ui.Context) {
 		c.Invalidate()
 	}
 	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-		if ui.PrimaryButton(c, locales.LoginSubmit()).Disabled(!ready || s.busy).Clicked() {
+		if primaryButton(c, locales.LoginSubmit(), !ready || s.busy).Clicked() {
 			s.submit()
 			c.Invalidate()
 		}
-		if ui.Button(c, locales.LoginCancel()).Disabled(s.busy).Clicked() {
+		if plainButton(c, locales.LoginCancel(), s.busy).Clicked() {
 			s.cancel()
 			c.Invalidate()
 		}
@@ -110,7 +110,7 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 	})
 	if m.provider == twoFactorEmail {
 		ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-			if ui.Button(c, locales.LoginSendEmailCode()).Disabled(s.busy || s.emailSent).Clicked() {
+			if secondaryButton(c, locales.LoginSendEmailCode(), s.busy || s.emailSent).Clicked() {
 				s.sendEmailCode()
 				c.Invalidate()
 			}
@@ -130,11 +130,11 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 		c.Invalidate()
 	}
 	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-		if ui.PrimaryButton(c, locales.LoginSubmitCode()).Disabled(strings.TrimSpace(s.code) == "" || s.busy).Clicked() {
+		if primaryButton(c, locales.LoginSubmitCode(), strings.TrimSpace(s.code) == "" || s.busy).Clicked() {
 			s.submit2FA()
 			c.Invalidate()
 		}
-		if ui.Button(c, locales.LoginCancel()).Disabled(s.busy).Clicked() {
+		if plainButton(c, locales.LoginCancel(), s.busy).Clicked() {
 			s.cancel()
 			c.Invalidate()
 		}
@@ -157,7 +157,7 @@ func (s *loginWindow) unsupportedMethods(c *ui.Context) {
 	})
 	noticeOf(c, s.notice)
 	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-		if ui.PrimaryButton(c, locales.LoginCancel()).Disabled(s.busy).Clicked() {
+		if primaryButton(c, locales.LoginCancel(), s.busy).Clicked() {
 			s.cancel()
 			c.Invalidate()
 		}

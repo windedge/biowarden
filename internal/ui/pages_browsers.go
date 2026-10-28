@@ -28,7 +28,9 @@ func (app *appState) browsersPage(c *ui.Context) {
 		ui.Row(c).Gap(spaceMedium).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, locales.BrowsersTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 			ui.Spacer(c)
-			if ui.PrimaryButton(c, locales.BrowsersInstallAll()).Disabled(len(app.browsers.rows) == 0).Clicked() {
+			// The bulk install writes the registry and can take over a foreign
+			// manifest, so it is secondary and asks before it overwrites.
+			if secondaryButton(c, locales.BrowsersInstallAll(), len(app.browsers.rows) == 0).Clicked() {
 				bs.installAll()
 			}
 		})
@@ -65,7 +67,7 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 				}
 			})
 			ui.Row(c).Gap(spaceSmall).AlignItems(ui.Center).Children(func() {
-				ui.Text(c, browserStatusLabel(b.state)).FontSize(t.Rem(fontCaption)).TextColor(browserStatusColor(t, b.state))
+				badge(c, browserStatusLabel(b.state), browserStatusTone(b.state))
 				ui.Text(c, connectionLabel(time.Now(), b.lastConnectedAt)).FontSize(t.Rem(fontCaption)).
 					TextColor(extensionColor(t, b.lastConnectedAt))
 			})
@@ -77,58 +79,60 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 		case bs.confirmCover == i:
 			// The overwrite needs a second click: the reference only writes
 			// over a foreign manifest after a human confirms.
-			ui.Button(c, locales.LoginCancel()).OnClick(func() { bs.confirmCover = -1 })
+			plainButton(c, locales.LoginCancel(), false).OnClick(func() { bs.confirmCover = -1 })
 			confirm := locales.BrowsersActionConfirmOverwrite()
 			if b.state == browserHijacked {
 				confirm = locales.BrowsersActionConfirmRestore()
 			}
-			ui.PrimaryButton(c, confirm).OnClick(func() {
+			// The confirming click is the one that writes over someone else's
+			// registration, so it is the row's danger button.
+			dangerButton(c, confirm, !b.installed).OnClick(func() {
 				bs.confirmCover = -1
 				bs.install(b)
-			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
+			}).Tooltip(browserAbsentHint())
 		case b.state == browserOurs:
-			ui.Button(c, locales.BrowsersActionRepair()).OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
-			ui.Button(c, locales.BrowsersActionUninstall()).OnClick(func() { bs.uninstall(b) })
+			secondaryButton(c, locales.BrowsersActionRepair(), !b.installed).OnClick(func() { bs.install(b) }).Tooltip(browserAbsentHint())
+			dangerButton(c, locales.BrowsersActionUninstall(), false).OnClick(func() { bs.uninstall(b) })
 		case b.state == browserForeign:
-			ui.Button(c, locales.BrowsersActionOverwrite()).OnClick(func() {
+			secondaryButton(c, locales.BrowsersActionOverwrite(), !b.installed).OnClick(func() {
 				bs.confirmCover = i
 				bs.notice = pageNotice{}
-			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
+			}).Tooltip(browserAbsentHint())
 			if bs.confirmUninstall == i {
 				// Deleting a manifest that may be the official client's deserves
 				// the same second click as overwriting one.
-				ui.Button(c, locales.LoginCancel()).OnClick(func() { bs.confirmUninstall = -1 })
-				ui.PrimaryButton(c, locales.BrowsersActionConfirmUninstall()).OnClick(func() {
+				plainButton(c, locales.LoginCancel(), false).OnClick(func() { bs.confirmUninstall = -1 })
+				dangerButton(c, locales.BrowsersActionConfirmUninstall(), false).OnClick(func() {
 					bs.confirmUninstall = -1
 					bs.uninstall(b)
 				})
 				break
 			}
-			ui.Button(c, locales.BrowsersActionUninstall()).OnClick(func() {
+			dangerButton(c, locales.BrowsersActionUninstall(), false).OnClick(func() {
 				bs.confirmUninstall = i
 				bs.notice = pageNotice{}
 			})
 		case b.state == browserHijacked:
 			// Recovery is an overwrite of a foreign value, so it gets the same
 			// two-step confirmation as the foreign row.
-			ui.PrimaryButton(c, locales.BrowsersActionRestore()).OnClick(func() {
+			secondaryButton(c, locales.BrowsersActionRestore(), !b.installed).OnClick(func() {
 				bs.confirmCover = i
 				bs.notice = pageNotice{}
-			}).Disabled(!b.installed).Tooltip(browserAbsentHint())
+			}).Tooltip(browserAbsentHint())
 			if bs.confirmUninstall == i {
-				ui.Button(c, locales.LoginCancel()).OnClick(func() { bs.confirmUninstall = -1 })
-				ui.PrimaryButton(c, locales.BrowsersActionConfirmUninstall()).OnClick(func() {
+				plainButton(c, locales.LoginCancel(), false).OnClick(func() { bs.confirmUninstall = -1 })
+				dangerButton(c, locales.BrowsersActionConfirmUninstall(), false).OnClick(func() {
 					bs.confirmUninstall = -1
 					bs.uninstall(b)
 				})
 				break
 			}
-			ui.Button(c, locales.BrowsersActionUninstall()).OnClick(func() {
+			dangerButton(c, locales.BrowsersActionUninstall(), false).OnClick(func() {
 				bs.confirmUninstall = i
 				bs.notice = pageNotice{}
 			})
 		default:
-			ui.Button(c, locales.BrowsersActionInstall()).OnClick(func() { bs.install(b) }).Disabled(!b.installed).Tooltip(browserAbsentHint())
+			secondaryButton(c, locales.BrowsersActionInstall(), !b.installed).OnClick(func() { bs.install(b) }).Tooltip(browserAbsentHint())
 		}
 	})
 }
@@ -152,16 +156,19 @@ func browserStatusLabel(state int) string {
 	}
 }
 
-func browserStatusColor(t *ui.Theme, state int) ui.Color {
+// browserStatusTone is the pill's color language for a row's state: green for
+// ours is info, the two states that need a human are the warning and danger
+// tones, and a browser registered nowhere is a fact, not a problem.
+func browserStatusTone(state int) badgeTone {
 	switch state {
 	case browserOurs:
-		return t.Success
+		return badgeInfo
 	case browserHijacked:
-		return t.Danger
+		return badgeDanger
 	case browserForeign:
-		return t.Warning
+		return badgeWarning
 	default:
-		return t.TextMuted
+		return badgeNeutral
 	}
 }
 

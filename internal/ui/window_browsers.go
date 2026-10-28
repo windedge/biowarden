@@ -101,11 +101,11 @@ func (s *browsersState) confirmView(c *ui.Context) {
 					muted(c, locales.BrowsersConfirmOfficialNote())
 				}
 				ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-					if ui.PrimaryButton(c, s.confirmLabel()).Clicked() {
+					if dangerButton(c, s.confirmLabel(), false).Clicked() {
 						s.confirmBulk()
 						c.Invalidate()
 					}
-					if ui.Button(c, locales.LoginCancel()).Clicked() {
+					if plainButton(c, locales.LoginCancel(), false).Clicked() {
 						s.cancelBulk()
 						c.Invalidate()
 					}

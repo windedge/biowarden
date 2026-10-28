@@ -49,11 +49,11 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 			}
 			muted(c, locales.AccountCard2FAUnfinished())
 			ui.Row(c).Gap(spaceRow).Children(func() {
-				if ui.PrimaryButton(c, locales.AccountCardContinue()).Disabled(a.busy).Clicked() {
+				if primaryButton(c, locales.AccountCardContinue(), a.busy).Clicked() {
 					login.begin()
 					c.Invalidate()
 				}
-				if ui.Button(c, locales.AccountCardCancel()).Disabled(a.busy).Clicked() {
+				if plainButton(c, locales.AccountCardCancel(), a.busy).Clicked() {
 					login.cancel()
 					c.Invalidate()
 				}
@@ -72,14 +72,14 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		a.accountIdentity(c, v, t, func() {
 			ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 				if a.sessionCheckFailed() || a.verifying {
-					if ui.Button(c, locales.AccountActionRecheck()).MaxWidth(150).
-						Disabled(a.busy || a.verifying).FontSize(t.Rem(0.85)).Clicked() {
+					if secondaryButton(c, locales.AccountActionRecheck(), a.busy || a.verifying).
+						MaxWidth(150).FontSize(t.Rem(0.85)).Clicked() {
 						a.recheck()
 						c.Invalidate()
 					}
 				}
 				if v.removable {
-					if ui.Button(c, locales.AccountCardSignOut()).Disabled(a.busy).
+					if dangerButton(c, locales.AccountCardSignOut(), a.busy).
 						FontSize(t.Rem(0.85)).Clicked() {
 						a.removeAccount(primary)
 						c.Invalidate()
@@ -99,7 +99,7 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 		// Every write in the GUI reloads the card by itself, so the row holds
 		// only the login action.
 		ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-			if ui.PrimaryButton(c, v.loginLabel).Disabled(a.busy).Clicked() {
+			if primaryButton(c, v.loginLabel, a.busy).Clicked() {
 				login.begin()
 				c.Invalidate()
 			}
@@ -163,7 +163,7 @@ func (a *accountState) advanced(c *ui.Context) {
 			ui.Text(c, locales.AccountExtractTitle()).Bold()
 			muted(c, locales.AccountExtractHint())
 			ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-				if ui.Button(c, locales.AccountCopyScript()).Clicked() {
+				if secondaryButton(c, locales.AccountCopyScript(), false).Clicked() {
 					mygo.Clipboard.WriteText(extractSnippet)
 					a.copiedAt = time.Now()
 				}
@@ -203,7 +203,7 @@ func (a *accountState) manualEntry(c *ui.Context) {
 	})
 	ready := strings.TrimSpace(a.userId) != "" && strings.TrimSpace(a.keyB64) != ""
 	ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
-		if ui.PrimaryButton(c, locales.AccountManualSave()).Disabled(!ready || a.busy).Clicked() {
+		if primaryButton(c, locales.AccountManualSave(), !ready || a.busy).Clicked() {
 			a.saveKey()
 			// The consent runs off the UI thread, so ask for the frame
 			// that starts polling for its result.
@@ -236,21 +236,21 @@ func (a *accountState) manualEntry(c *ui.Context) {
 				}
 				muted(c, meta)
 			})
-			if ui.Button(c, locales.AccountTestUnlock()).Disabled(a.busy).Clicked() {
+			if secondaryButton(c, locales.AccountTestUnlock(), a.busy).Clicked() {
 				a.testUnlock(acc)
 				c.Invalidate()
 			}
 			// Selecting a row foregrounds it in the account card; it is the
 			// whole of account switching without parallel sessions.
 			if primary := a.primary(); primary == nil || primary.userID != acc.userID {
-				if ui.Button(c, locales.AccountSetCurrent()).Disabled(a.busy).Clicked() {
+				if secondaryButton(c, locales.AccountSetCurrent(), a.busy).Clicked() {
 					a.selectAccount(acc.userID)
 					c.Invalidate()
 				}
 			}
 			// Removal runs off the UI thread, so the row is dropped by
 			// a later tick rather than while this list is built.
-			if ui.Button(c, locales.Delete()).Disabled(a.busy).Clicked() {
+			if dangerButton(c, locales.Delete(), a.busy).Clicked() {
 				a.removeAccount(acc)
 				c.Invalidate()
 			}
