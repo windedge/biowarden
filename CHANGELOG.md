@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Upgraded mygo to v0.7.1 (no public API removed or renamed; the module now
+  requires Go 1.27.3, and the generated catalog imports mygo's own Japanese
+  strings). The installer asset changed with it: it is now
+  `biowarden-setup-0.1.4-amd64.exe` instead of `biowarden Setup 0.1.4 amd64.exe`,
+  so the name no longer needs rewriting on upload.
 - Releases now publish the installer and a `SHA256SUMS.txt` only. The portable
   `biowarden.exe` is no longer uploaded; it stays a local build artifact for
   development and testing.

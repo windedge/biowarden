@@ -1,8 +1,9 @@
 # Building biowarden
 
 `go.mod` pins the MyGo CLI as a [tool](https://go.dev/doc/modules/managing-dependencies#tools)
-(v0.4.8), so `go tool mygo build` runs the version the project is developed
-against. One command builds the app:
+(v0.7.1, the same version the library is pinned to), so `go tool mygo build` runs
+the version the project is developed against. The module requires Go 1.27.3; an
+older local toolchain is switched out automatically by `GOTOOLCHAIN=auto`. One command builds the app:
 
 ```sh
 go tool mygo build
@@ -52,7 +53,7 @@ machine's own target, `windows/amd64`:
 | File | |
 |---|---|
 | `biowarden.exe` | the app: tray and native messaging host in one binary |
-| `biowarden Setup 0.1.0 amd64.exe` | the per-user installer |
+| `biowarden-setup-0.1.4-amd64.exe` | the per-user installer |
 | `icon.png` | the icon copied from `resources/` into the app's files |
 
 `build/` is in `.gitignore`; nothing there is committed.
@@ -87,13 +88,13 @@ A GitHub release carries **the installer and `SHA256SUMS.txt` only**. The
 portable `biowarden.exe` stays a local build artifact - it is what the tests
 and the on-device acceptance runs use - and is not uploaded.
 
-Upload the installer under the name GitHub gives it (spaces become dots,
-`biowarden Setup 0.1.4 amd64.exe` -> `biowarden.Setup.0.1.4.amd64.exe`) and
-write `SHA256SUMS.txt` with one line per published asset, two spaces between
-the digest and the file name, using the **uploaded** names:
+Upload the installer under the name the build gives it
+(`biowarden-setup-0.1.4-amd64.exe`; the name is already a slug, GitHub does not
+change it) and write `SHA256SUMS.txt` with one line per published asset, two
+spaces between the digest and the file name, using the **uploaded** names:
 
 ```
-<64 hex digits>  biowarden.Setup.0.1.4.amd64.exe
+<64 hex digits>  biowarden-setup-0.1.4-amd64.exe
 ```
 
 Then check the result with `sha256sum -c SHA256SUMS.txt` in a temporary

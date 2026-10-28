@@ -62,7 +62,7 @@ refresh token、邮箱和服务器地址作为独立的 `Biowarden/Session/<user
 
 ## 安装
 
-1. 从本仓库 Releases 页下载 `biowarden Setup <版本> amd64.exe` 运行安装（按用户安装）。Releases 上只发布
+1. 从本仓库 Releases 页下载 `biowarden-setup-<版本>-amd64.exe` 运行安装（按用户安装）。Releases 上只发布
    安装器，另附一个 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt` 校验下载的文件。
 2. 程序未做代码签名，首次运行时 SmartScreen 会弹「Windows 已保护你的电脑」。点**更多信息** ->
    **仍要运行**即可；上一步的 SHA256 校验就是你防篡改的手段。
@@ -125,7 +125,7 @@ NSIS 3.13 下到 `%LOCALAPPDATA%\mygo`）。
 pwsh scripts/build.ps1
 ```
 
-产物在 `build/windows-amd64/`：`biowarden.exe`、`biowarden Setup <版本> amd64.exe`、`icon.png`。
+产物在 `build/windows-amd64/`：`biowarden.exe`、`biowarden-setup-<版本>-amd64.exe`、`icon.png`。
 脚本先构建到 staging 目录，再停掉运行中的 biowarden（GUI 与 host），然后换上新构建 - 运行中的 exe 可以
 改名但不能覆盖。没有任何进程占用时，直接 `go tool mygo build` 也可以。
 
@@ -177,13 +177,14 @@ biowarden 基于他人的工作构建：
 依赖及其许可证：
 
 - [github.com/danieljoos/wincred](https://github.com/danieljoos/wincred) v1.2.3 - MIT
-- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.6.0 - MIT
+- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.7.1 - MIT
 - [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto) v0.58.0 - BSD-3-Clause
 - [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.49.0 - BSD-3-Clause
 - [github.com/ebitengine/purego](https://github.com/ebitengine/purego) v0.11.1 - Apache-2.0
 - [github.com/go-text/typesetting](https://github.com/go-text/typesetting) v0.3.5 - Unlicense 或
   BSD-3-Clause
 - [golang.org/x/image](https://cs.opensource.google/go/x/image) v0.46.0 - BSD-3-Clause
+- [golang.org/x/net](https://cs.opensource.google/go/x/net) v0.60.0 - BSD-3-Clause
 - [golang.org/x/text](https://cs.opensource.google/go/x/text) v0.43.0 - BSD-3-Clause
 
 完整许可证文本与版权行见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。

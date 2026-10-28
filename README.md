@@ -81,7 +81,7 @@ and the stored session after a Windows Hello consent.
 
 ## Installation
 
-1. Download `biowarden Setup <version> amd64.exe` from this repository's Releases page and run it
+1. Download `biowarden-setup-<version>-amd64.exe` from this repository's Releases page and run it
    (per-user install). The installer is the only thing published there, next to a
    `SHA256SUMS.txt` you can check the download against (`sha256sum -c SHA256SUMS.txt`).
 2. Nothing is code-signed, so on first run SmartScreen shows "Windows protected your PC". Click
@@ -164,7 +164,7 @@ into `%LOCALAPPDATA%\mygo` when `makensis` is missing).
 pwsh scripts/build.ps1
 ```
 
-Output under `build/windows-amd64/`: `biowarden.exe`, `biowarden Setup <version> amd64.exe` and
+Output under `build/windows-amd64/`: `biowarden.exe`, `biowarden-setup-<version>-amd64.exe` and
 `icon.png`. The script builds into a staging directory, stops any running biowarden (GUI or host),
 and swaps the new build in - a running exe can be renamed but not overwritten. Plain
 `go tool mygo build` works too when nothing holds the executable.
@@ -221,13 +221,14 @@ biowarden stands on the work of others:
 Dependencies and their licenses:
 
 - [github.com/danieljoos/wincred](https://github.com/danieljoos/wincred) v1.2.3 - MIT
-- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.6.0 - MIT
+- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.7.1 - MIT
 - [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto) v0.58.0 - BSD-3-Clause
 - [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.49.0 - BSD-3-Clause
 - [github.com/ebitengine/purego](https://github.com/ebitengine/purego) v0.11.1 - Apache-2.0
 - [github.com/go-text/typesetting](https://github.com/go-text/typesetting) v0.3.5 - Unlicense OR
   BSD-3-Clause
 - [golang.org/x/image](https://cs.opensource.google/go/x/image) v0.46.0 - BSD-3-Clause
+- [golang.org/x/net](https://cs.opensource.google/go/x/net) v0.60.0 - BSD-3-Clause
 - [golang.org/x/text](https://cs.opensource.google/go/x/text) v0.43.0 - BSD-3-Clause
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for full license texts and copyright lines.

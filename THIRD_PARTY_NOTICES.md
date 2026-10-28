@@ -51,11 +51,11 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 
 ### github.com/egoist/mygo
 
-- Version: v0.6.0
+- Version: v0.7.1
 - License: MIT
 - Upstream: https://github.com/egoist/mygo
 - Copyright: Copyright (c) 2026 MyGo contributors
-- Evidence: `$(go env GOMODCACHE)/github.com/egoist/mygo@v0.6.0/LICENSE`
+- Evidence: `$(go env GOMODCACHE)/github.com/egoist/mygo@v0.7.1/LICENSE`
 
 ### golang.org/x/crypto
 
@@ -100,6 +100,15 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 - Upstream: https://cs.opensource.google/go/x/image
 - Copyright: Copyright 2009 The Go Authors.
 - Evidence: `$(go env GOMODCACHE)/golang.org/x/image@v0.46.0/LICENSE`
+
+### golang.org/x/net
+
+- Version: v0.60.0
+- License: BSD-3-Clause
+- Upstream: https://cs.opensource.google/go/x/net
+- Copyright: Copyright 2009 The Go Authors.
+- Evidence: `$(go env GOMODCACHE)/golang.org/x/net@v0.60.0/LICENSE`
+- Usage: `publicsuffix` arrives through MyGo's content rules
 
 ### golang.org/x/text
 

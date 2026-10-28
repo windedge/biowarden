@@ -13,7 +13,7 @@ Please include:
 
 - what an attacker would gain,
 - the steps or code to reproduce,
-- the biowarden version (`biowarden Setup <version> amd64.exe` or the commit).
+- the biowarden version (`biowarden-setup-<version>-amd64.exe` or the commit).
 
 Please do not open a public issue for anything that exposes key material.
 
