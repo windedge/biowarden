@@ -12,6 +12,13 @@ for a biometric unlock, biowarden shows a Windows Hello prompt, then reads that 
 encryption key from the Windows Credential Manager and hands it back over the channel the
 extension set up.
 
+The connection name is the official one, and that is on purpose. The extension asks the browser for
+a native messaging host called `com.8bit.bitwarden`; the name is hard-coded in the extension, so a
+host that wants to answer it has no choice but to register under that name and list the extension's
+ID as an allowed origin. Taking that registration over is the entire cost of not forking or patching
+the extension. Nothing else of the official client is disturbed: an existing registration is shown
+as "possibly the official client" and only replaced after you confirm it.
+
 You no longer need to copy a script out of the extension console. On a fresh machine biowarden
 logs into your Bitwarden account itself, derives the account key, stores it behind a Windows Hello
 consent, and the extension's "Unlock with biometrics" is ready. The old extraction script is still
@@ -32,8 +39,9 @@ browser extension -stdio(native messaging)-> biowarden host -> Windows Hello -> 
   (started by the browser on demand); started any other way it opens the GUI - a tray icon plus a
   window with a left sidebar of four pages: **Account** / **Browsers** / **Settings** / **Log**.
 - The login link is real. The login window types the email and master password into biowarden,
-  which talks to the Bitwarden identity and API endpoints while impersonating the official desktop
-  client (`client_id=desktop`, `deviceType=6`, `deviceName=windows`). It runs prelogin to read the
+  which talks to the Bitwarden identity and API endpoints while presenting itself as the official
+  desktop client (`client_id=desktop`, `deviceType=6`, `deviceName=windows`). It runs prelogin to
+  read the
   KDF parameters (PBKDF2-SHA256 or Argon2id), requests a token, derives the master key, decrypts
   the wrapped 64-byte userKey, and only then writes it to the Credential Manager. Windows Hello
   gates that write, so a refused prompt leaves the store untouched.
@@ -76,7 +84,10 @@ and the stored session after a Windows Hello consent.
 1. Download `biowarden Setup <version> amd64.exe` from this repository's Releases page and run it
    (per-user install). The installer is the only thing published there, next to a
    `SHA256SUMS.txt` you can check the download against (`sha256sum -c SHA256SUMS.txt`).
-2. Launch biowarden. On a fresh machine it configures itself; see "Usage" below.
+2. Nothing is code-signed, so on first run SmartScreen shows "Windows protected your PC". Click
+   **More info** -> **Run anyway**; the SHA256SUMS check above is your guard against a tampered
+   download.
+3. Launch biowarden. On a fresh machine it configures itself; see "Usage" below.
 3. Prefer building it yourself? See "Build from source".
 
 Requires Windows 10 1709 or later with Windows Hello configured.
@@ -153,14 +164,14 @@ into `%LOCALAPPDATA%\mygo` when `makensis` is missing).
 pwsh scripts/build.ps1
 ```
 
-Output under `build/windows-amd64/`: `biowarden.exe`, `biowarden Setup 0.1.0 amd64.exe` and
+Output under `build/windows-amd64/`: `biowarden.exe`, `biowarden Setup <version> amd64.exe` and
 `icon.png`. The script builds into a staging directory, stops any running biowarden (GUI or host),
 and swaps the new build in - a running exe can be renamed but not overwritten. Plain
 `go tool mygo build` works too when nothing holds the executable.
 
 The version lives in two places that must be kept in sync when releasing: `mygo.json`'s `version`
 (the build links it into the binary and names the installer after it) and `internal/ui/ui.go`'s
-`appVersion` (shown in the sidebar footer and on the Settings page). Both are `0.1.0` today.
+`appVersion` (shown in the sidebar footer and on the Settings page).
 
 ```sh
 CGO_ENABLED=0 go build ./... && CGO_ENABLED=0 go vet ./... && go test ./...
@@ -178,8 +189,10 @@ More build detail is in [docs/build.md](./docs/build.md).
 ## Disclaimer
 
 Not an official Bitwarden project, and not affiliated with Bitwarden or 8bit Solutions LLC in any
-way. Unlock problems belong here, not in Bitwarden's issue tracker. The key you store is your
-vault's encryption key: never keep a plaintext copy anywhere. Use at your own risk.
+way. Unlock problems belong here, not in Bitwarden's issue tracker. Bitwarden is a trademark of
+Bitwarden Inc.; the connection name `com.8bit.bitwarden` appears here only because the browser
+extension requires that exact name. The key you store is your vault's encryption key: never keep a
+plaintext copy anywhere. Use at your own risk.
 
 ## Repository layout
 
@@ -208,11 +221,13 @@ biowarden stands on the work of others:
 Dependencies and their licenses:
 
 - [github.com/danieljoos/wincred](https://github.com/danieljoos/wincred) v1.2.3 - MIT
-- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.4.8 - MIT
-- [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.48.0 - BSD-3-Clause
+- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.6.0 - MIT
+- [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto) v0.58.0 - BSD-3-Clause
+- [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.49.0 - BSD-3-Clause
 - [github.com/ebitengine/purego](https://github.com/ebitengine/purego) v0.11.1 - Apache-2.0
 - [github.com/go-text/typesetting](https://github.com/go-text/typesetting) v0.3.5 - Unlicense OR
   BSD-3-Clause
 - [golang.org/x/image](https://cs.opensource.google/go/x/image) v0.46.0 - BSD-3-Clause
+- [golang.org/x/text](https://cs.opensource.google/go/x/text) v0.43.0 - BSD-3-Clause
 
 See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for full license texts and copyright lines.

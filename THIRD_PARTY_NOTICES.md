@@ -21,18 +21,23 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 ### WardenBio
 
 - Version: not pinned (macOS/Swift reference implementation)
-- License: 未能核实 - the checked-out tree carries no LICENSE file
+- License: none declared. The upstream repository carries no license file (`gh api
+  repos/xVanTuring/WardenBio` reports no license) and the local checkout has none either.
 - Upstream: https://github.com/xVanTuring/WardenBio
-- Copyright: 未能核实
-- Usage: biowarden is a Windows port of WardenBio's behavior; no source code is copied verbatim.
+- Copyright: not stated
+- Usage: biowarden is a Windows port of WardenBio's behaviour. No source code is copied verbatim:
+  the protocol shape, the Windows API sequences and the page structure were read from the Swift
+  sources and rewritten in Go.
 
 ### bw-bio-handler
 
 - Version: not pinned (legacy command protocol reference)
-- License: 未能核实 - no local checkout was available to read the license text
+- License: MIT
 - Upstream: https://github.com/quexten/bw-bio-handler
-- Copyright: 未能核实
-- Usage: reference only for the legacy command protocol; no source code is copied verbatim.
+- Copyright: Copyright 2023 Bernd Schoolmann
+- Evidence: `LICENSE` in the checkout (first line is the copyright above), and `gh api
+  repos/quexten/bw-bio-handler` reporting `MIT`
+- Usage: reference for the legacy command protocol; no source code is copied verbatim.
 
 ## Direct dependencies (from go.mod)
 
@@ -46,19 +51,28 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 
 ### github.com/egoist/mygo
 
-- Version: v0.4.8
+- Version: v0.6.0
 - License: MIT
 - Upstream: https://github.com/egoist/mygo
 - Copyright: Copyright (c) 2026 MyGo contributors
-- Evidence: `$(go env GOMODCACHE)/github.com/egoist/mygo@v0.4.8/LICENSE`
+- Evidence: `$(go env GOMODCACHE)/github.com/egoist/mygo@v0.6.0/LICENSE`
+
+### golang.org/x/crypto
+
+- Version: v0.58.0
+- License: BSD-3-Clause
+- Upstream: https://cs.opensource.google/go/x/crypto
+- Copyright: Copyright 2009 The Go Authors.
+- Evidence: `$(go env GOMODCACHE)/golang.org/x/crypto@v0.58.0/LICENSE`
+- Usage: `argon2` and `pbkdf2` derive the master key from the master password, `hkdf` expands it
 
 ### golang.org/x/sys
 
-- Version: v0.48.0
+- Version: v0.49.0
 - License: BSD-3-Clause
 - Upstream: https://cs.opensource.google/go/x/sys
 - Copyright: Copyright 2009 The Go Authors.
-- Evidence: `$(go env GOMODCACHE)/golang.org/x/sys@v0.48.0/LICENSE`
+- Evidence: `$(go env GOMODCACHE)/golang.org/x/sys@v0.49.0/LICENSE`
 
 ## Indirect dependencies (from go.mod)
 
@@ -87,8 +101,17 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 - Copyright: Copyright 2009 The Go Authors.
 - Evidence: `$(go env GOMODCACHE)/golang.org/x/image@v0.46.0/LICENSE`
 
+### golang.org/x/text
+
+- Version: v0.43.0
+- License: BSD-3-Clause
+- Upstream: https://cs.opensource.google/go/x/text
+- Copyright: Copyright 2009 The Go Authors.
+- Evidence: `$(go env GOMODCACHE)/golang.org/x/text@v0.43.0/LICENSE`
+
 ## Notes
 
-- `golang.org/x/crypto` is not a dependency of biowarden and is therefore not listed here.
+- The list above mirrors `go.mod`: `wincred`, `mygo`, `x/crypto` and `x/sys` are direct
+  dependencies, the rest arrive through them. When `go.mod` changes, this file changes with it.
 - The full license text for each dependency is reproduced verbatim in that dependency's own module
   directory in the Go module cache, and is shipped with any binary that statically links it.

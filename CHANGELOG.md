@@ -151,3 +151,10 @@ Credential Manager behind a biometrics check.
   no longer blocks the page.
 - Deleting an account key also clears the stored login session.
 - Registry tests never touch the real user hive (private app hive instead).
+
+[unreleased]: https://github.com/windedge/biowarden/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/windedge/biowarden/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/windedge/biowarden/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/windedge/biowarden/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/windedge/biowarden/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/windedge/biowarden/compare/6f255fc8cb6d8e4a15cafa279f5b49c965999442...v0.1.0

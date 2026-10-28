@@ -66,4 +66,7 @@ GitHub Issues of windedge/biowarden via the `gh` CLI. See `docs/agents/issue-tra
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+`CONTEXT.md` and `docs/adr/` do not exist yet; protocol invariants currently live in
+`docs/research/*.md` and the WardenBio `AGENTS.md`. When a decision is worth keeping, record it
+as an ADR under `docs/adr/` (create the directory when the first one lands). See
+`docs/agents/domain.md` for the workflow.

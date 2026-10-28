@@ -10,6 +10,11 @@ native messaging host（与主程序同一个 exe，由浏览器按需拉起）�
 生物识别解锁时，biowarden 弹出 Windows Hello 验证，通过后从 Windows 凭据管理器取出该账户的加密密钥，
 在扩展建立的通道上回传。
 
+这个连接名用的是官方的，而且只能这样。扩展向浏览器要的是一个叫 `com.8bit.bitwarden` 的 native
+messaging host，名字硬编码在扩展里，想服务它的 host 没有第二个选择：必须注册在这个名字下，并把扩展的
+ID 列进允许来源。不用 fork、不用改扩展，代价就是接管注册表里这一项。除此之外不打扰官方客户端：已经存在
+的注册会显示成「可能是官方客户端」，只有你确认后才覆盖。
+
 现在不再需要从扩展控制台里复制脚本了。在一台干净的机器上，biowarden 会自己登录你的 Bitwarden 账号、
 派生出账号密钥、在 Windows Hello 确认后写入凭据管理器，扩展里的「Unlock with biometrics」即可使用。
 旧的提取脚本仍保留在账号页的「高级」折叠区，作为故障排查与兼容路径。
@@ -26,7 +31,7 @@ native messaging host（与主程序同一个 exe，由浏览器按需拉起）�
 
 - 一个 exe，两种模式。stdin 是管道时按 native messaging host 运行（浏览器按需拉起）；其他方式启动则打开
   GUI - 托盘加一个左侧栏窗口，四个页面：**账号** / **浏览器** / **设置** / **日志**。
-- 登录链路是真实的。你在登录窗里输入邮箱和主密码，biowarden 伪装官方桌面客户端
+- 登录链路是真实的。你在登录窗里输入邮箱和主密码，biowarden 以官方桌面客户端的身份
   （`client_id=desktop`、`deviceType=6`、`deviceName=windows`）与 Bitwarden 的身份与 API 端点通信：
   先走 prelogin 读取 KDF 参数（PBKDF2-SHA256 或 Argon2id），再请求 token、派生主密钥、解出被封装的
   64 字节 userKey，最后才写入凭据管理器。Windows Hello 在写入前放行，因此拒绝弹窗不会留下任何数据。
@@ -59,7 +64,9 @@ refresh token、邮箱和服务器地址作为独立的 `Biowarden/Session/<user
 
 1. 从本仓库 Releases 页下载 `biowarden Setup <版本> amd64.exe` 运行安装（按用户安装）。Releases 上只发布
    安装器，另附一个 `SHA256SUMS.txt`，可用 `sha256sum -c SHA256SUMS.txt` 校验下载的文件。
-2. 启动 biowarden。在干净的机器上它会自行配置；见下面「使用步骤」。
+2. 程序未做代码签名，首次运行时 SmartScreen 会弹「Windows 已保护你的电脑」。点**更多信息** ->
+   **仍要运行**即可；上一步的 SHA256 校验就是你防篡改的手段。
+3. 启动 biowarden。在干净的机器上它会自行配置；见下面「使用步骤」。
 3. 想自己编译见「从源码构建」。
 
 要求 Windows 10 1709 及以上，并已设置 Windows Hello。
@@ -118,12 +125,12 @@ NSIS 3.13 下到 `%LOCALAPPDATA%\mygo`）。
 pwsh scripts/build.ps1
 ```
 
-产物在 `build/windows-amd64/`：`biowarden.exe`、`biowarden Setup 0.1.0 amd64.exe`、`icon.png`。
+产物在 `build/windows-amd64/`：`biowarden.exe`、`biowarden Setup <版本> amd64.exe`、`icon.png`。
 脚本先构建到 staging 目录，再停掉运行中的 biowarden（GUI 与 host），然后换上新构建 - 运行中的 exe 可以
 改名但不能覆盖。没有任何进程占用时，直接 `go tool mygo build` 也可以。
 
 版本号在两处，发版时必须同步：`mygo.json` 的 `version`（构建会把它链进二进制并用它命名安装器）与
-`internal/ui/ui.go` 的 `appVersion`（显示在侧边栏底部与设置页）。当前两者都是 `0.1.0`。
+`internal/ui/ui.go` 的 `appVersion`（显示在侧边栏底部与设置页）。
 
 ```sh
 CGO_ENABLED=0 go build ./... && CGO_ENABLED=0 go vet ./... && go test ./...
@@ -140,8 +147,9 @@ CGO_ENABLED=0 go build ./... && CGO_ENABLED=0 go vet ./... && go test ./...
 ## 免责声明
 
 非 Bitwarden 官方项目，与 Bitwarden 及 8bit Solutions LLC 无任何关联。解锁问题请反馈到本仓库，
-不要提给 Bitwarden 的 issue 追踪。录入的密钥等同于保险库的加密密钥，请勿在任何地方明文留存。
-使用风险自负。
+不要提给 Bitwarden 的 issue 追踪。Bitwarden 是 Bitwarden Inc. 的商标；这里出现
+`com.8bit.bitwarden` 这个连接名，只是因为浏览器扩展要求必须叫这个名字。录入的密钥等同于保险库的
+加密密钥，请勿在任何地方明文留存。使用风险自负。
 
 ## 目录结构
 
@@ -169,11 +177,13 @@ biowarden 基于他人的工作构建：
 依赖及其许可证：
 
 - [github.com/danieljoos/wincred](https://github.com/danieljoos/wincred) v1.2.3 - MIT
-- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.4.8 - MIT
-- [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.48.0 - BSD-3-Clause
+- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.6.0 - MIT
+- [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto) v0.58.0 - BSD-3-Clause
+- [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.49.0 - BSD-3-Clause
 - [github.com/ebitengine/purego](https://github.com/ebitengine/purego) v0.11.1 - Apache-2.0
 - [github.com/go-text/typesetting](https://github.com/go-text/typesetting) v0.3.5 - Unlicense 或
   BSD-3-Clause
 - [golang.org/x/image](https://cs.opensource.google/go/x/image) v0.46.0 - BSD-3-Clause
+- [golang.org/x/text](https://cs.opensource.google/go/x/text) v0.43.0 - BSD-3-Clause
 
 完整许可证文本与版权行见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。
