@@ -3,6 +3,7 @@ package ui
 import (
 	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/i18n"
 	"github.com/egoist/mygo/ui"
 
@@ -57,6 +58,12 @@ type settingsState struct {
 	// language it shows, so newSettingsState guesses it back from the marker
 	// when there is one, and from mygo's shown language otherwise.
 	languageTag string
+	// appearance is the Appearance row's choice and appearancePref remembers
+	// it under HKCU. setSource is where the choice reaches the app; it is a
+	// field so a test can watch it without mygo's app.
+	appearance     appearance
+	appearancePref appearancePref
+	setSource      func(mygo.ThemeSource)
 
 	launchAtLogin bool
 	showTray      bool
@@ -74,16 +81,19 @@ type settingsState struct {
 func newSettingsState() settingsState {
 	backend := realSettingsInstance()
 	s := settingsState{
-		backend:     backend,
-		hello:       backend.Verifier,
-		locale:      mygoLocale{},
-		marker:      registryLocaleMarker{},
-		helloResult: make(chan helloOutcome, 1),
-		showTray:    true,
-		logLevel:    logLevelInfo,
-		logPath:     backend.logPath(),
+		backend:        backend,
+		hello:          backend.Verifier,
+		locale:         mygoLocale{},
+		marker:         registryLocaleMarker{},
+		appearancePref: newAppearancePref(),
+		setSource:      mygo.Theme.SetSource,
+		helloResult:    make(chan helloOutcome, 1),
+		showTray:       true,
+		logLevel:       logLevelInfo,
+		logPath:        backend.logPath(),
 	}
 	s.languageTag = s.guessLanguageTag()
+	s.appearance = s.appearancePref.load()
 	if on, err := backend.autostart(); err != nil {
 		s.notice = pageNotice{kind: noticeSettingsAutostartReadFailed, err: err}
 	} else {
@@ -142,6 +152,35 @@ func (s *settingsState) setAutostart() {
 		s.notice = pageNotice{kind: noticeSettingsAutostartOn, ok: true}
 	} else {
 		s.notice = pageNotice{kind: noticeSettingsAutostartOff, ok: true}
+	}
+}
+
+// appearanceSegmented renders the Appearance row and reports the choice made
+// this frame, if any. The value the control carries is the index of the choice
+// in appearances, so the labels follow the language and are never stored.
+func (s *settingsState) appearanceSegmented(c *ui.Context) (appearance, bool) {
+	labels := make([]string, len(appearances))
+	for i, a := range appearances {
+		labels[i] = a.label()
+	}
+	selected := int(s.appearance)
+	ui.Segmented(c, &selected, labels...)
+	if selected == int(s.appearance) {
+		return s.appearance, false
+	}
+	return appearance(selected), true
+}
+
+// setAppearance shows a at once and remembers it. The app's next frame reads
+// the appearance from the theme, which applyPalette picks the palette by, so
+// the open windows repaint in it; a failed write only costs the next launch.
+func (s *settingsState) setAppearance(a appearance) {
+	s.appearance = a
+	if s.setSource != nil {
+		s.setSource(a.source())
+	}
+	if s.appearancePref != nil {
+		s.appearancePref.save(a)
 	}
 }
 

@@ -748,6 +748,22 @@
   "@settingsGroupEntry": {
     "description": "The settings page's section title for the entry points."
   },
+  "settingsAppearance": "Appearance",
+  "@settingsAppearance": {
+    "description": "The settings page's row that chooses the app's appearance."
+  },
+  "settingsAppearanceSystem": "Follow the system",
+  "@settingsAppearanceSystem": {
+    "description": "The Appearance row's choice that follows the desktop's light or dark setting."
+  },
+  "settingsAppearanceLight": "Light",
+  "@settingsAppearanceLight": {
+    "description": "The Appearance row's choice that always shows the light appearance."
+  },
+  "settingsAppearanceDark": "Dark",
+  "@settingsAppearanceDark": {
+    "description": "The Appearance row's choice that always shows the dark appearance."
+  },
   "settingsAutostart": "Start at login",
   "@settingsAutostart": {
     "description": "The settings switch that toggles the login item."

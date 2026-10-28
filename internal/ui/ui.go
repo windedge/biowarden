@@ -58,6 +58,13 @@ func (app *appState) view(c *ui.Context) {
 // start runs on the main thread, which WhenReady guarantees.
 func start() {
 	app := newAppState()
+	// Before the first window: the Windows backend fixes the appearance it hands
+	// out at NewWindow, so a forced light or dark set afterwards would show the
+	// system's own for a frame first. "system" is mygo's default and is left
+	// alone, which keeps the app following the desktop until a human chooses.
+	if app.settings.appearance != appearanceSystem {
+		mygo.Theme.SetSource(app.settings.appearance.source())
+	}
 	win := mygo.NewWindow(mygo.WindowOptions{
 		Title:     locales.AppTitle(),
 		Width:     960,

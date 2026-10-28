@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"github.com/egoist/mygo/ui"
 
 	"github.com/windedge/biowarden/locales"
@@ -45,6 +47,17 @@ func (app *appState) settingsPage(c *ui.Context) {
 							// as a tag.
 							if tag, changed := app.settings.languageSelect(c); changed {
 								app.settings.setLanguage(tag)
+							}
+						})
+						ui.Field(c, locales.SettingsAppearance(), func() {
+							// The row works in an enum, so its labels follow the language
+							// while the value stays one the app can store and apply.
+							if a, changed := app.settings.appearanceSegmented(c); changed {
+								app.settings.setAppearance(a)
+								// This frame was painted in the old palette; ask for one
+								// more, where applyPalette reads the appearance the
+								// choice just set.
+								c.After(time.Millisecond)
 							}
 						})
 						ui.Field(c, locales.SettingsAutostart(), func() {

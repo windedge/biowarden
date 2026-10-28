@@ -2115,6 +2115,64 @@ func (msgs Messages) SettingsGroupEntry() string {
 	return Catalog.Format(msgs.locale, "settingsGroupEntry", nil)
 }
 
+// SettingsAppearance says "Appearance"
+// in the language the app shows.
+//
+// The settings page's row that chooses the app's appearance.
+func SettingsAppearance() string { return In(i18n.Locale()).SettingsAppearance() }
+
+// SettingsAppearance says "Appearance"
+// in the language of msgs.
+//
+// The settings page's row that chooses the app's appearance.
+func (msgs Messages) SettingsAppearance() string {
+	return Catalog.Format(msgs.locale, "settingsAppearance", nil)
+}
+
+// SettingsAppearanceSystem says "Follow the system"
+// in the language the app shows.
+//
+// The Appearance row's choice that follows the desktop's light or dark
+// setting.
+func SettingsAppearanceSystem() string { return In(i18n.Locale()).SettingsAppearanceSystem() }
+
+// SettingsAppearanceSystem says "Follow the system"
+// in the language of msgs.
+//
+// The Appearance row's choice that follows the desktop's light or dark
+// setting.
+func (msgs Messages) SettingsAppearanceSystem() string {
+	return Catalog.Format(msgs.locale, "settingsAppearanceSystem", nil)
+}
+
+// SettingsAppearanceLight says "Light"
+// in the language the app shows.
+//
+// The Appearance row's choice that always shows the light appearance.
+func SettingsAppearanceLight() string { return In(i18n.Locale()).SettingsAppearanceLight() }
+
+// SettingsAppearanceLight says "Light"
+// in the language of msgs.
+//
+// The Appearance row's choice that always shows the light appearance.
+func (msgs Messages) SettingsAppearanceLight() string {
+	return Catalog.Format(msgs.locale, "settingsAppearanceLight", nil)
+}
+
+// SettingsAppearanceDark says "Dark"
+// in the language the app shows.
+//
+// The Appearance row's choice that always shows the dark appearance.
+func SettingsAppearanceDark() string { return In(i18n.Locale()).SettingsAppearanceDark() }
+
+// SettingsAppearanceDark says "Dark"
+// in the language of msgs.
+//
+// The Appearance row's choice that always shows the dark appearance.
+func (msgs Messages) SettingsAppearanceDark() string {
+	return Catalog.Format(msgs.locale, "settingsAppearanceDark", nil)
+}
+
 // SettingsAutostart says "Start at login"
 // in the language the app shows.
 //
