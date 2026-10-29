@@ -69,7 +69,7 @@ func (app *appState) browserRow(c *ui.Context, i int) {
 			ui.Row(c).Gap(spaceSmall).AlignItems(ui.Center).Children(func() {
 				badge(c, browserStatusLabel(b.state), browserStatusTone(b.state))
 				ui.Text(c, connectionLabel(time.Now(), b.lastConnectedAt)).FontSize(t.Rem(fontCaption)).
-					TextColor(extensionColor(t, b.lastConnectedAt))
+					TextColor(extensionColor(paletteFor(c), b.lastConnectedAt))
 			})
 			ui.Text(c, b.path).FontSize(t.Rem(fontCaption)).TextColor(t.TextMuted).SingleLine().Tooltip(b.path)
 		})
@@ -202,9 +202,14 @@ func relativeTime(now, at time.Time) string {
 	}
 }
 
-func extensionColor(t *ui.Theme, at time.Time) ui.Color {
+// extensionColor is the connection caption's ink. A connected row reads
+// green, but the palette's success color is a fill color, not a caption ink
+// (#189a58 is 3.62:1 on a white card), so it takes the same readable green
+// the success badge paints; a row nothing has connected through is the muted
+// gray, which already clears the line on both surfaces.
+func extensionColor(p palette, at time.Time) ui.Color {
 	if !at.IsZero() {
-		return t.Success
+		return badgeInk(p.success, p.successSoft, p.text)
 	}
-	return t.TextMuted
+	return p.textMuted
 }

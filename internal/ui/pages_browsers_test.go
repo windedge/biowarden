@@ -47,6 +47,29 @@ func TestConnectionLabel(t *testing.T) {
 	}
 }
 
+// The connection caption paints its ink on the page's gray and on a white
+// card alike, so both surfaces are measured: a connected row must clear the
+// 4.5:1 a label needs (the raw success color was 3.62:1 on a card), and the
+// never-connected gray must keep doing what it already did.
+func TestExtensionColorClearsFourAndAHalfToOne(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		p := lightPalette()
+		if dark {
+			p = darkPalette()
+		}
+		for name, at := range map[string]time.Time{"connected": time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC), "never": {}} {
+			ink := extensionColor(p, at)
+			for surf, bg := range map[string]ui.Color{"card": p.surface, "page": p.bg} {
+				got := contrast(ink, bg)
+				t.Logf("%s %s caption on %s: %v on %v = %.2f:1", appearanceName(dark), name, surf, ink, bg, got)
+				if got < 4.5 {
+					t.Errorf("%s %s caption on the %s: contrast %.2f:1, want >= 4.5:1", appearanceName(dark), name, surf, got)
+				}
+			}
+		}
+	}
+}
+
 // The Chrome row stands for both chrome.exe and chromium.exe; the other rows
 // map one-to-one.
 func TestBrowserIDs(t *testing.T) {

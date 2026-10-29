@@ -171,8 +171,12 @@ const (
 // the color toward the palette's text color darkens it in the day palette and
 // lightens it in the night one, so one rule serves both appearances; the step
 // count is bounded so a palette that cannot get there still returns a color.
+//
+// The bar is 5.0:1 rather than the 4.5:1 WCAG AA line: a ratio that only
+// grazes it (the day success used to land on 4.53:1) reads thin under
+// ClearType and gamma drift, so the mix runs until there is headroom.
 func badgeInk(ink, wash, toward ui.Color) ui.Color {
-	for i := 0; i < 24 && contrast(ink, wash) < 4.5; i++ {
+	for i := 0; i < 24 && contrast(ink, wash) < 5.0; i++ {
 		ink = ink.Mix(toward, 0.08)
 	}
 	return ink

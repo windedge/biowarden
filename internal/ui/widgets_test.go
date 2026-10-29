@@ -57,12 +57,14 @@ func levelName(level buttonLevel) string {
 	}
 }
 
-// A status badge is a label on a wash, so it owes the same 4.5:1 the button
-// inks owe: the tone's own color on its own wash is not it (the day palette's
-// accent on accentSoft is 4.48:1), which is what made "installed" unreadable
-// in the day appearance. The neutral pill is measured too, because it is the
-// one a browser that is registered nowhere wears.
-func TestBadgeInkClearsFourAndAHalfToOne(t *testing.T) {
+// A status badge is a label on a wash, so it owes the 4.5:1 a label needs -
+// with headroom: the mix stops at 5.0:1 because a ratio that only grazes the
+// line (the day success ink landed on 4.53:1) reads thin on real screens.
+// The tone's own color on its own wash is under even the bare line (the day
+// palette's accent on accentSoft is 4.48:1), which is what made "installed"
+// unreadable in the day appearance. The neutral pill is measured too, because
+// it is the one a browser that is registered nowhere wears.
+func TestBadgeInkClearsFiveToOne(t *testing.T) {
 	for _, dark := range []bool{false, true} {
 		p := lightPalette()
 		if dark {
@@ -84,8 +86,8 @@ func TestBadgeInkClearsFourAndAHalfToOne(t *testing.T) {
 			ink, wash := badgeColors(pattern, p, tone)
 			got := contrast(ink, wash)
 			t.Logf("%s badge %s: ink %v on %v = %.2f:1", appearanceName(dark), name, ink, wash, got)
-			if got < 4.5 {
-				t.Errorf("%s %s badge: contrast %.2f:1, want >= 4.5:1", appearanceName(dark), name, got)
+			if got < 5.0 {
+				t.Errorf("%s %s badge: contrast %.2f:1, want >= 5.0:1", appearanceName(dark), name, got)
 			}
 		}
 	}
