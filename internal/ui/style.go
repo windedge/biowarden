@@ -72,7 +72,11 @@ func lightPalette() palette {
 		bg: ui.Hex("#f4f4f6"), surface: ui.Hex("#ffffff"),
 		surfaceHover: ui.Hex("#f1f1f4"), surfacePress: ui.Hex("#e9e9ee"),
 		border: ui.Hex("#e3e3e8"),
-		text:   ui.Hex("#1c1c21"), textMuted: ui.Hex("#71717a"),
+		// The muted gray is a caption's ink, so it has to clear 4.5:1 on the page's
+		// own gray and not only on a white card: #71717a was 4.40:1 on #f4f4f6,
+		// which made every path and timestamp look washed out. #61616b is 5.57:1
+		// there and 6.1:1 on a card, still a clear step below the body ink.
+		text: ui.Hex("#1c1c21"), textMuted: ui.Hex("#61616b"),
 		accent: ui.Hex("#2563eb"), accentSoft: ui.Hex("#e8effd"),
 		danger: ui.Hex("#dc2626"), dangerSoft: ui.Hex("#fbe9e9"),
 		warning: ui.Hex("#b45309"), warningSoft: ui.Hex("#fdf3e2"),
@@ -168,6 +172,59 @@ func inkOn(fill ui.Color) ui.Color {
 		return inkDark
 	}
 	return inkLight
+}
+
+// contrast is a WCAG 2.1 contrast ratio: each sRGB channel is linearized
+// (((c/255+0.055)/1.055)^2.4, or c/255/12.92 below 0.03928), the relative
+// luminance is 0.2126r+0.7152g+0.0722b, and the ratio is the lighter plus
+// 0.05 over the darker plus 0.05. A label on a fill needs 4.5:1, which is the
+// number the widgets measure their inks against.
+func contrast(a, b ui.Color) float64 {
+	la, lb := relativeLuminance(a), relativeLuminance(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+func relativeLuminance(c ui.Color) float64 {
+	lin := func(v uint8) float64 {
+		f := float64(v) / 255
+		if f <= 0.03928 {
+			return f / 12.92
+		}
+		return powf((f+0.055)/1.055, 2.4)
+	}
+	return 0.2126*lin(c.R) + 0.7152*lin(c.G) + 0.0722*lin(c.B)
+}
+
+// powf is a small pow, enough precision for a contrast ratio and free of math
+// so the measurement stays in one place.
+func powf(x, y float64) float64 {
+	// exp(y*ln(x)) by series, enough precision for a contrast ratio.
+	ln := 0.0
+	for x > 2 {
+		x /= 2
+		ln += 0.6931471805599453
+	}
+	for x < 1 {
+		x *= 2
+		ln -= 0.6931471805599453
+	}
+	t := (x - 1) / (x + 1)
+	s, term := 0.0, t
+	for i := 1; i < 60; i += 2 {
+		s += term / float64(i)
+		term *= t * t
+	}
+	ln += 2 * s
+	e := y * ln
+	sum, fact := 1.0, 1.0
+	for i := 1; i < 30; i++ {
+		fact *= e / float64(i)
+		sum += fact
+	}
+	return sum
 }
 
 // luminance is a color's perceived brightness, 0 for black and 1 for white, by

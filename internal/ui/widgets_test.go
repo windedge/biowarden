@@ -6,57 +6,8 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// contrast is a WCAG 2.1 contrast ratio: each sRGB channel is linearized
-// (((c/255+0.055)/1.055)^2.4, or c/255/12.92 below 0.03928), the relative
-// luminance is 0.2126r+0.7152g+0.0722b, and the ratio is the lighter plus
-// 0.05 over the darker plus 0.05.
-func contrast(a, b ui.Color) float64 {
-	la, lb := relativeLuminance(a), relativeLuminance(b)
-	if la < lb {
-		la, lb = lb, la
-	}
-	return (la + 0.05) / (lb + 0.05)
-}
-
-func relativeLuminance(c ui.Color) float64 {
-	lin := func(v uint8) float64 {
-		f := float64(v) / 255
-		if f <= 0.03928 {
-			return f / 12.92
-		}
-		return powf((f+0.055)/1.055, 2.4)
-	}
-	return 0.2126*lin(c.R) + 0.7152*lin(c.G) + 0.0722*lin(c.B)
-}
-
-// powf is a small pow for the test, which cannot use math.Pow on a float32
-// free path: it keeps the measurement in one place.
-func powf(x, y float64) float64 {
-	// exp(y*ln(x)) by series, enough precision for a contrast ratio.
-	ln := 0.0
-	for x > 2 {
-		x /= 2
-		ln += 0.6931471805599453
-	}
-	for x < 1 {
-		x *= 2
-		ln -= 0.6931471805599453
-	}
-	t := (x - 1) / (x + 1)
-	s, term := 0.0, t
-	for i := 1; i < 60; i += 2 {
-		s += term / float64(i)
-		term *= t * t
-	}
-	ln += 2 * s
-	e := y * ln
-	sum, fact := 1.0, 1.0
-	for i := 1; i < 30; i++ {
-		fact *= e / float64(i)
-		sum += fact
-	}
-	return sum
-}
+// contrast, relativeLuminance and powf live in style.go: the widgets measure
+// their inks with them at paint time, and the tests measure the same numbers.
 
 // A label on a fill needs 4.5:1. The danger level is the one that gets this
 // wrong by default: a light ink on a bright red is 3.76:1, so the level fills
@@ -103,6 +54,59 @@ func levelName(level buttonLevel) string {
 		return "link"
 	default:
 		return "plain"
+	}
+}
+
+// A status badge is a label on a wash, so it owes the same 4.5:1 the button
+// inks owe: the tone's own color on its own wash is not it (the day palette's
+// accent on accentSoft is 4.48:1), which is what made "installed" unreadable
+// in the day appearance. The neutral pill is measured too, because it is the
+// one a browser that is registered nowhere wears.
+func TestBadgeInkClearsFourAndAHalfToOne(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		p := lightPalette()
+		if dark {
+			p = darkPalette()
+		}
+		tones := map[string]badgeTone{
+			"neutral": badgeNeutral,
+			"info":    badgeInfo,
+			"success": badgeSuccess,
+			"warning": badgeWarning,
+			"danger":  badgeDanger,
+		}
+		for name, tone := range tones {
+			pattern := ui.LightTheme()
+			if dark {
+				pattern = ui.DarkTheme()
+			}
+			pattern.Text = p.text
+			ink, wash := badgeColors(pattern, p, tone)
+			got := contrast(ink, wash)
+			t.Logf("%s badge %s: ink %v on %v = %.2f:1", appearanceName(dark), name, ink, wash, got)
+			if got < 4.5 {
+				t.Errorf("%s %s badge: contrast %.2f:1, want >= 4.5:1", appearanceName(dark), name, got)
+			}
+		}
+	}
+}
+
+// Captions are the muted ink, and the browsers page draws a manifest path in
+// it on the page's own gray rather than on a card, so the muted ink is
+// measured against both surfaces.
+func TestMutedCaptionClearsFourAndAHalfToOne(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		p := lightPalette()
+		if dark {
+			p = darkPalette()
+		}
+		for name, bg := range map[string]ui.Color{"page": p.bg, "card": p.surface} {
+			got := contrast(p.textMuted, bg)
+			t.Logf("%s muted on %s: %v on %v = %.2f:1", appearanceName(dark), name, p.textMuted, bg, got)
+			if got < 4.5 {
+				t.Errorf("%s muted ink on the %s: contrast %.2f:1, want >= 4.5:1", appearanceName(dark), name, got)
+			}
+		}
 	}
 }
 

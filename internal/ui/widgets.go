@@ -156,26 +156,55 @@ type badgeTone int
 const (
 	badgeNeutral badgeTone = iota
 	badgeInfo
+	// badgeSuccess is a state that is working as intended - a manifest this
+	// app wrote - so it reads green and cannot be mistaken for the accent blue
+	// that means "the action here".
+	badgeSuccess
 	badgeWarning
 	badgeDanger
 )
 
-// badge is a status pill: a text in the tone's ink over the tone's wash. It
-// takes the same colors notice.go gives a banner, so a state said in a row
-// and the same state reported in a banner are one color language.
+// badgeInk is the ink a tone's label reads in on the tone's own wash. The
+// palette's severity colors were picked for text on a surface, and on their
+// own pale wash they land under the 4.5:1 a label needs: in the day palette
+// the accent on accentSoft is 4.48:1 and the red on dangerSoft 4.13:1. Mixing
+// the color toward the palette's text color darkens it in the day palette and
+// lightens it in the night one, so one rule serves both appearances; the step
+// count is bounded so a palette that cannot get there still returns a color.
+func badgeInk(ink, wash, toward ui.Color) ui.Color {
+	for i := 0; i < 24 && contrast(ink, wash) < 4.5; i++ {
+		ink = ink.Mix(toward, 0.08)
+	}
+	return ink
+}
+
+// badgeColors is the whole color decision a pill makes, split out from the
+// drawing so a test can measure exactly the pair badge() paints.
+func badgeColors(pattern *ui.Theme, p palette, tone badgeTone) (ink, wash ui.Color) {
+	// A neutral pill is a fact, not a problem: the body ink on the palette's
+	// own control gray, which reads in both appearances without a mix.
+	ink, wash = pattern.Text, p.surfacePress
+	switch tone {
+	case badgeSuccess:
+		ink, wash = badgeInk(p.success, p.successSoft, p.text), p.successSoft
+	case badgeInfo:
+		ink, wash = badgeInk(p.accent, p.accentSoft, p.text), p.accentSoft
+	case badgeWarning:
+		ink, wash = badgeInk(p.warning, p.warningSoft, p.text), p.warningSoft
+	case badgeDanger:
+		ink, wash = badgeInk(p.danger, p.dangerSoft, p.text), p.dangerSoft
+	}
+	return ink, wash
+}
+
+// badge is a status pill: a text in the tone's ink over the tone's wash. The
+// severity tones take the washes notice.go gives a banner, so a state said in
+// a row and the same state reported in a banner are one color language; the
+// ink is the readable version of that tone, not the tone itself.
 func badge(c *ui.Context, label string, tone badgeTone) ui.Element {
 	t := c.Theme()
-	p := paletteFor(c)
-	ink, wash := t.TextMuted, p.text.Alpha(0.07)
-	switch tone {
-	case badgeInfo:
-		ink, wash = p.accent, p.accentSoft
-	case badgeWarning:
-		ink, wash = p.warning, p.warningSoft
-	case badgeDanger:
-		ink, wash = p.danger, p.dangerSoft
-	}
-	return ui.Row(c).Shrink(0).AlignItems(ui.Center).Radius(radiusControl + 2).
+	ink, wash := badgeColors(t, paletteFor(c), tone)
+	return ui.Row(c).Shrink(0).AlignItems(ui.Center).Radius(radiusControl+2).
 		Padding(spaceHair, spaceSnug).Background(wash).Children(func() {
 		ui.Text(c, label).FontSize(t.Rem(fontCaption)).TextColor(ink).SingleLine()
 	})

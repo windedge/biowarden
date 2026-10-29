@@ -156,13 +156,14 @@ func browserStatusLabel(state int) string {
 	}
 }
 
-// browserStatusTone is the pill's color language for a row's state: green for
-// ours is info, the two states that need a human are the warning and danger
+// browserStatusTone is the pill's color language for a row's state: ours is
+// the success tone so a working registration reads green rather than the
+// accent blue, the two states that need a human are the warning and danger
 // tones, and a browser registered nowhere is a fact, not a problem.
 func browserStatusTone(state int) badgeTone {
 	switch state {
 	case browserOurs:
-		return badgeInfo
+		return badgeSuccess
 	case browserHijacked:
 		return badgeDanger
 	case browserForeign:

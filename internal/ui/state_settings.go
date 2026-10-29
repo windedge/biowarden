@@ -164,7 +164,11 @@ func (s *settingsState) appearanceSegmented(c *ui.Context) (appearance, bool) {
 		labels[i] = a.label()
 	}
 	selected := int(s.appearance)
-	ui.Segmented(c, &selected, labels...)
+	// The segment is content-wide, not form-wide: inside a form's value column a
+	// child stretches across the column, which drew a track as wide as the page
+	// with three small pills in its corner. Aligning it to the start leaves it
+	// at its own width, the way the language dropdown above it sits.
+	ui.Segmented(c, &selected, labels...).Label(locales.SettingsAppearance()).AlignSelf(ui.Start)
 	if selected == int(s.appearance) {
 		return s.appearance, false
 	}
