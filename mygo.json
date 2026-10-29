@@ -1,7 +1,7 @@
 {
   "name": "biowarden",
   "identifier": "dev.windedge.biowarden",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "main": "./cmd/biowarden",
   "out": "build",
   "icon": "resources/icon.png",

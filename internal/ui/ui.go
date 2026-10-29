@@ -22,7 +22,7 @@ const appName = "Biowarden"
 
 // appVersion is shown on the Settings page and substitutes into fakeLog.
 // Keep it in sync with mygo.json's version.
-const appVersion = "0.1.4"
+const appVersion = "0.1.5"
 
 // Run blocks until the app quits.
 func Run() error {

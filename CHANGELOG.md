@@ -7,30 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-29
+
 ### Added
 
+- A dark appearance. The pages and the two dialogs take their sizes and colors
+  from one set of design tokens instead of repeating them inline, and the
+  tokens carry two palettes: the app follows the desktop's light or dark mode
+  and repaints as it changes. The layout and screenshot tests now run in both
+  appearances, so text that no longer fits in the dark palette is caught in
+  the tests.
+- An Appearance row on the Settings page: follow the system, light, or dark.
+  The choice is remembered per user and reaches the theme before the first
+  window, so a forced appearance never shows a frame of the system's own first.
+- The status line above the pages and in the login window now carries a
+  severity (info, warning, danger) taken from the kind behind it rather than
+  from its words, and draws it as a soft wash under the row, a mark at the
+  leading edge, and the severity's ink on the text.
+- Buttons come in five levels instead of two: primary (the one accent-filled
+  action per page or dialog), secondary, plain, danger (the only red fill the
+  app draws) and link. Destructive actions such as removing a key or
+  unregistering a browser are red now instead of looking like any other
+  button.
 - The session check now says which of the three ways it can fail applies:
   network trouble, a rate-limited server, or a server that did not answer
   properly, each with its own wording in all seven languages, plus a
   **Check again** button and a bounded silent retry (30 s / 2 min / 5 min) so
   a flaky start no longer sticks until the next relaunch.
 
-### Fixed
-
-- The session check no longer starves under its own timeout: it allows 12 s
-  instead of 5 s and retries the transient failures, so a slow first hop
-  (server config plus token exchange through a CDN) no longer reads as
-  "cannot verify". A 403 page from a gateway no longer deletes the stored
-  login session, and 429 is told apart from a dead server. Failures are
-  logged (attempts, classification, elapsed) instead of vanishing.
-
 ### Changed
 
 - Upgraded mygo to v0.7.1 (no public API removed or renamed; the module now
   requires Go 1.27.3, and the generated catalog imports mygo's own Japanese
   strings). The installer asset changed with it: it is now
-  `biowarden-setup-0.1.4-amd64.exe` instead of `biowarden Setup 0.1.4 amd64.exe`,
-  so the name no longer needs rewriting on upload.
+  `biowarden-setup-<version>-amd64.exe` instead of the old
+  `biowarden Setup <version> amd64.exe`, so the name no longer needs rewriting
+  on upload.
 - Releases now publish the installer and a `SHA256SUMS.txt` only. The portable
   `biowarden.exe` is no longer uploaded; it stays a local build artifact for
   development and testing.
@@ -42,6 +54,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   version and dependency facts are fixed; AGENTS.md stops pointing at files
   that do not exist; CHANGELOG gains compare links; CI runs the acceptance
   command on windows-latest and the bug template asks for the log up front.
+
+### Fixed
+
+- The session check no longer starves under its own timeout: it allows 12 s
+  instead of 5 s and retries the transient failures, so a slow first hop
+  (server config plus token exchange through a CDN) no longer reads as
+  "cannot verify". A 403 page from a gateway no longer deletes the stored
+  login session, and 429 is told apart from a dead server. Failures are
+  logged (attempts, classification, elapsed) instead of vanishing.
+- The status badges on the Browsers page drew a tone's own color on the tone's
+  own wash, which sat under the 4.5:1 a label needs, so "installed" read as a
+  barely visible blue. A registered manifest is green now (the accent blue
+  means "the action here") and the ink is derived from the wash until the pair
+  clears 4.5:1 in both appearances.
+- The Appearance row on the Settings page spread its three-option segment
+  across the whole page with the options squeezed into a corner; it now takes
+  its content width, the way the language list above it already did.
 
 ## [0.1.4] - 2026-10-22
 
@@ -182,7 +211,8 @@ Credential Manager behind a biometrics check.
 - Deleting an account key also clears the stored login session.
 - Registry tests never touch the real user hive (private app hive instead).
 
-[unreleased]: https://github.com/windedge/biowarden/compare/v0.1.4...HEAD
+[unreleased]: https://github.com/windedge/biowarden/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/windedge/biowarden/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/windedge/biowarden/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/windedge/biowarden/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/windedge/biowarden/compare/v0.1.1...v0.1.2

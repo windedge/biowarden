@@ -53,7 +53,7 @@ machine's own target, `windows/amd64`:
 | File | |
 |---|---|
 | `biowarden.exe` | the app: tray and native messaging host in one binary |
-| `biowarden-setup-0.1.4-amd64.exe` | the per-user installer |
+| `biowarden-setup-0.1.5-amd64.exe` | the per-user installer |
 | `icon.png` | the icon copied from `resources/` into the app's files |
 
 `build/` is in `.gitignore`; nothing there is committed.
@@ -89,12 +89,12 @@ portable `biowarden.exe` stays a local build artifact - it is what the tests
 and the on-device acceptance runs use - and is not uploaded.
 
 Upload the installer under the name the build gives it
-(`biowarden-setup-0.1.4-amd64.exe`; the name is already a slug, GitHub does not
+(`biowarden-setup-0.1.5-amd64.exe`; the name is already a slug, GitHub does not
 change it) and write `SHA256SUMS.txt` with one line per published asset, two
 spaces between the digest and the file name, using the **uploaded** names:
 
 ```
-<64 hex digits>  biowarden-setup-0.1.4-amd64.exe
+<64 hex digits>  biowarden-setup-0.1.5-amd64.exe
 ```
 
 Then check the result with `sha256sum -c SHA256SUMS.txt` in a temporary
