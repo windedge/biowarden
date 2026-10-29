@@ -200,7 +200,7 @@
   "browserStatusHijacked": "Sobrescrito por otro programa (posiblemente el cliente de escritorio oficial de Bitwarden)",
   "browserStatusForeign": "Presente (posiblemente la configuración del cliente de escritorio oficial de Bitwarden)",
   "browserStatusMissing": "No instalado",
-  "browserConnectionNever": "La extensión nunca se conectó",
+  "browserConnectionNever": "Extensión aún sin conectar",
   "browserConnectionConnected": "Conectado · {when}",
   "browserRelativeJustNow": "hace un momento",
   "browserRelativeMinutes": "hace {count} minutos",

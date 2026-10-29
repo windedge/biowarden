@@ -200,7 +200,7 @@
   "browserStatusHijacked": "已被其他程式覆寫（可能是官方 Bitwarden 桌面用戶端）",
   "browserStatusForeign": "已存在（可能是官方 Bitwarden 桌面用戶端的設定）",
   "browserStatusMissing": "未安裝",
-  "browserConnectionNever": "擴充功能從未連線",
+  "browserConnectionNever": "擴充功能尚未連線過",
   "browserConnectionConnected": "已連線 · {when}",
   "browserRelativeJustNow": "剛剛",
   "browserRelativeMinutes": "{count} 分鐘前",

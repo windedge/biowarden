@@ -2957,16 +2957,20 @@ func (msgs Messages) BrowserStatusMissing() string {
 	return Catalog.Format(msgs.locale, "browserStatusMissing", nil)
 }
 
-// BrowserConnectionNever says "Extension never connected"
+// BrowserConnectionNever says "Extension not seen yet"
 // in the language the app shows.
 //
-// The row indicator while no host process has recorded this browser.
+// The row indicator while no host process has ever recorded this browser:
+// the extension has not connected yet on this machine, not that it is
+// currently disconnected.
 func BrowserConnectionNever() string { return In(i18n.Locale()).BrowserConnectionNever() }
 
-// BrowserConnectionNever says "Extension never connected"
+// BrowserConnectionNever says "Extension not seen yet"
 // in the language of msgs.
 //
-// The row indicator while no host process has recorded this browser.
+// The row indicator while no host process has ever recorded this browser:
+// the extension has not connected yet on this machine, not that it is
+// currently disconnected.
 func (msgs Messages) BrowserConnectionNever() string {
 	return Catalog.Format(msgs.locale, "browserConnectionNever", nil)
 }

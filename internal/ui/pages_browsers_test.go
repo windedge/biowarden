@@ -39,7 +39,7 @@ func TestRelativeTime(t *testing.T) {
 func TestConnectionLabel(t *testing.T) {
 	appLanguage(t, "zh-Hans")
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
-	if got := connectionLabel(now, time.Time{}); got != "扩展未连接" {
+	if got := connectionLabel(now, time.Time{}); got != "扩展尚未连接过" {
 		t.Fatalf("connectionLabel(zero) = %q, want the placeholder", got)
 	}
 	if got := connectionLabel(now, now.Add(-3*time.Hour)); got != "已连接过 · 3 小时前" {

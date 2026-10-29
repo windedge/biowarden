@@ -200,7 +200,7 @@
   "browserStatusHijacked": "Von einem anderen Programm überschrieben (möglicherweise der offizielle Bitwarden-Desktop-Client)",
   "browserStatusForeign": "Vorhanden (möglicherweise die Konfiguration des offiziellen Bitwarden-Desktop-Clients)",
   "browserStatusMissing": "Nicht installiert",
-  "browserConnectionNever": "Erweiterung nie verbunden",
+  "browserConnectionNever": "Erweiterung noch nie verbunden",
   "browserConnectionConnected": "Verbunden · {when}",
   "browserRelativeJustNow": "gerade eben",
   "browserRelativeMinutes": "vor {count} Minuten",

@@ -200,7 +200,7 @@
   "browserStatusHijacked": "Écrasé par un autre programme (peut-être le client de bureau Bitwarden officiel)",
   "browserStatusForeign": "Présent (peut-être la configuration du client de bureau Bitwarden officiel)",
   "browserStatusMissing": "Non installé",
-  "browserConnectionNever": "L'extension ne s'est jamais connectée",
+  "browserConnectionNever": "Extension jamais connectée",
   "browserConnectionConnected": "Connecté · {when}",
   "browserRelativeJustNow": "à l'instant",
   "browserRelativeMinutes": "il y a {count} minutes",

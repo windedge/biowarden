@@ -201,7 +201,7 @@
   "browserStatusHijacked": "已被其他程序覆盖（可能是官方 Bitwarden 桌面客户端）",
   "browserStatusForeign": "已存在（可能是官方 Bitwarden 桌面客户端的配置）",
   "browserStatusMissing": "未安装",
-  "browserConnectionNever": "扩展未连接",
+  "browserConnectionNever": "扩展尚未连接过",
   "browserConnectionConnected": "已连接过 · {when}",
   "browserRelativeJustNow": "刚刚",
   "browserRelativeMinutes": "{count} 分钟前",

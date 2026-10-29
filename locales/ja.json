@@ -200,7 +200,7 @@
   "browserStatusHijacked": "別のプログラムに上書きされました (Bitwarden 公式デスクトップクライアントの可能性)",
   "browserStatusForeign": "存在します (Bitwarden 公式デスクトップクライアントの構成の可能性)",
   "browserStatusMissing": "インストールされていません",
-  "browserConnectionNever": "拡張機能は一度も接続していません",
+  "browserConnectionNever": "拡張機能はまだ接続していません",
   "browserConnectionConnected": "接続済み · {when}",
   "browserRelativeJustNow": "たった今",
   "browserRelativeMinutes": "{count} 分前",

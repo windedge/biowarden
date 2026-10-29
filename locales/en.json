@@ -1062,9 +1062,9 @@
   "@browserStatusMissing": {
     "description": "The row state when no registration exists."
   },
-  "browserConnectionNever": "Extension never connected",
+  "browserConnectionNever": "Extension not seen yet",
   "@browserConnectionNever": {
-    "description": "The row indicator while no host process has recorded this browser."
+    "description": "The row indicator while no host process has ever recorded this browser: the extension has not connected yet on this machine, not that it is currently disconnected."
   },
   "browserConnectionConnected": "Connected · {when}",
   "@browserConnectionConnected": {
