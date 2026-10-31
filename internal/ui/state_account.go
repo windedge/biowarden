@@ -89,13 +89,6 @@ type accountRow struct {
 	serverURL string
 }
 
-// newAccountState wires the page onto the real credential store and the real
-// account backend; newRealAccountState builds both on one shared store so the
-// account card and the login path agree.
-func newAccountState() accountState {
-	return newRealAccountState()
-}
-
 // newAccountStateWith injects both seams so tests can drive login and key
 // outcomes without a network or a Windows Hello prompt.
 func newAccountStateWith(keys keysBackend, account accountBackend) accountState {

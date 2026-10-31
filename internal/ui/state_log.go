@@ -12,8 +12,10 @@ type logState struct {
 	notice  pageNotice
 }
 
-func newLogState() logState {
-	s := logState{backend: realSettingsInstance()}
+// newLogState takes the shared settings backend; newAppState passes the same
+// realSettings the Settings page uses, so both pages read one store instance.
+func newLogState(backend settingsBackend) logState {
+	s := logState{backend: backend}
 	s.load()
 	return s
 }

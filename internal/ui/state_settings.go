@@ -78,14 +78,16 @@ type settingsState struct {
 	notice pageNotice
 }
 
-func newSettingsState() settingsState {
-	backend := realSettingsInstance()
+// newSettingsState takes the assembled dependencies: the settings backend
+// (the Log page receives the same instance), the verifier the Hello row
+// checks with, and the appearance preference.
+func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearancePref appearancePref) settingsState {
 	s := settingsState{
 		backend:        backend,
-		hello:          backend.Verifier,
+		hello:          verifier,
 		locale:         mygoLocale{},
 		marker:         registryLocaleMarker{},
-		appearancePref: newAppearancePref(),
+		appearancePref: appearancePref,
 		setSource:      mygo.Theme.SetSource,
 		helloResult:    make(chan helloOutcome, 1),
 		showTray:       true,

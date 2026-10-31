@@ -68,8 +68,10 @@ type browserRow struct {
 	lastConnectedAt time.Time
 }
 
-func newBrowsersState() browsersState {
-	return newBrowsersStateWith(newRealBrowsers(nil))
+// newBrowsersState takes the process's shared registrar; the injectable form
+// below it is what tests use.
+func newBrowsersState(reg registry.Registrar) browsersState {
+	return newBrowsersStateWith(newRealBrowsers(reg))
 }
 
 // newBrowsersStateWith is the injectable form; tests pass an in-memory

@@ -7,6 +7,10 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+
+	"github.com/windedge/biowarden/internal/hello"
+	"github.com/windedge/biowarden/internal/registry"
+	"github.com/windedge/biowarden/internal/secrets"
 )
 
 func itoa(n int) string { return strconv.Itoa(n) }
@@ -57,19 +61,28 @@ type appState struct {
 	mainWindow *mygo.Window
 }
 
-// newAppState wires the pages onto their backend. The prototype's fake
-// backends stay until the page tickets replace them; see backend.go.
+// newAppState wires the pages onto their backends and is the GUI process's
+// one assembly point: the credential store, the Hello verifier and the
+// registry seams are built here, once, and handed down to every constructor.
+// hello.New owns an OS thread and a hidden window per instance, so one
+// verifier per process is a hard requirement; passing it in is what
+// guarantees the single instance, with no sync.Once left to enforce it.
 func newAppState() *appState {
+	store := secrets.New()
+	verifier := hello.New()
+	reg := registry.New()
+	prefs := newServerPref()
+	settings := newRealSettings(verifier)
 	app := &appState{
-		browsers: newBrowsersState(),
-		settings: newSettingsState(),
-		log:      newLogState(),
+		browsers: newBrowsersState(reg),
+		settings: newSettingsState(settings, verifier, newAppearancePref()),
+		log:      newLogState(settings),
 	}
-	app.account = newAccountState()
+	app.account = newRealAccountState(store, verifier, newWincredSessionStore(secrets.SessionPrefix), prefs)
 	app.login = newLoginWindow(&app.account)
 	app.browsers.openConfirmWindow = app.showBrowsersConfirmWindow
 	app.browsers.closeConfirmWindow = app.hideBrowsersConfirmWindow
-	app.firstRun = newFirstRunState(newRealFirstRun())
+	app.firstRun = newFirstRunState(newRealFirstRun(store, reg, registry.NewMarker()))
 	app.login.openWindow = app.showLoginWindow
 	app.login.closeWindow = app.hideLoginWindow
 	app.login.resizeWindow = app.resizeLoginWindow

@@ -247,15 +247,13 @@ func newRealAccountWith(store secrets.Store, verifier hello.Verifier, factory ac
 	return a
 }
 
-// newRealAccountState wires the account page onto the real store, verifier and
-// auth flow; newAccountState in state_account.go calls it. The account card and
-// the login path share one store instance so their views cannot diverge.
-func newRealAccountState() accountState {
-	store := secrets.New()
-	verifier := hello.New()
-	sessions := newWincredSessionStore(secrets.SessionPrefix)
-	prefs := newServerPref()
-	account := newRealAccountWith(store, verifier, newAuthFlowFactory(), sessions, newSessionRefresher())
+// newRealAccountState wires the account page onto the store, verifier,
+// session store and server pref that newAppState assembled; nothing here
+// builds its own seams, so the account card, the login path, the Log page
+// and the first run all agree on one store box.
+func newRealAccountState(store secrets.Store, verifier hello.Verifier, sessions sessionStore, prefs serverPref) accountState {
+	factory := newAuthFlowFactory()
+	account := newRealAccountWith(store, verifier, factory, sessions, newSessionRefresher())
 	account.prefs = prefs
 	// The startup verify runs in a goroutine off the UI thread; hostlog is
 	// mutex-guarded per write, so sharing the file with the host is safe.

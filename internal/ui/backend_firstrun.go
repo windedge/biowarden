@@ -15,13 +15,13 @@ type realFirstRun struct {
 	detect func() []registry.Browser
 }
 
-// newRealFirstRun wires the real seams. detect is injected so the probe can be
-// replaced in a test.
-func newRealFirstRun() *realFirstRun {
+// newRealFirstRun takes the seams newAppState assembled; detect stays
+// injected so the probe can be replaced in a test.
+func newRealFirstRun(store secrets.Store, reg registry.Registrar, marker registry.Marker) *realFirstRun {
 	return &realFirstRun{
-		reg:    registry.New(),
-		marker: registry.NewMarker(),
-		store:  secrets.New(),
+		reg:    reg,
+		marker: marker,
+		store:  store,
 		detect: registry.Detect,
 	}
 }

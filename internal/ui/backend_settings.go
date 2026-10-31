@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/egoist/mygo"
 
@@ -29,22 +28,12 @@ type realSettings struct {
 	logFile   string
 }
 
-// settingsBackendOnce keeps one realSettings per process. The Hello verifier
-// owns an OS thread and a hidden window, so building it once per page would
-// leave a second one behind; the GUI has a single window, so one is right.
-var (
-	settingsBackendOnce sync.Once
-	settingsBackendReal *realSettings
-)
-
-func realSettingsInstance() *realSettings {
-	settingsBackendOnce.Do(func() { settingsBackendReal = newRealSettings() })
-	return settingsBackendReal
-}
-
-func newRealSettings() *realSettings {
+// newRealSettings takes the process's shared verifier; realSettingsInstance
+// and its sync.Once are gone because newAppState builds the single instance
+// itself and hands it to every page that needs it.
+func newRealSettings(verifier hello.Verifier) *realSettings {
 	return &realSettings{
-		Verifier:       hello.New(),
+		Verifier:       verifier,
 		openAtLogin:    autostart.OpenAtLogin,
 		setOpenAtLogin: autostart.SetOpenAtLogin,
 		runOnMain:      mygo.RunOnMain,
