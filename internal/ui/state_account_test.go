@@ -29,7 +29,7 @@ func TestNavPageRoundTrip(t *testing.T) {
 // drained by waitRestore instead.
 func drain(t *testing.T, s *accountState) {
 	t.Helper()
-	apply := <-s.results
+	apply := <-s.results.Ch()
 	s.busy = false
 	apply(s)
 }
@@ -39,7 +39,7 @@ func drain(t *testing.T, s *accountState) {
 func waitRestore(t *testing.T, s *accountState) {
 	t.Helper()
 	select {
-	case apply := <-s.restoreResult:
+	case apply := <-s.restore.Ch():
 		apply(s)
 	case <-time.After(2 * time.Second):
 		t.Fatal("the startup restore did not settle")

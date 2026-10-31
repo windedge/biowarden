@@ -70,7 +70,7 @@ type settingsState struct {
 
 	helloChecking bool
 	helloOK       bool
-	helloResult   chan helloOutcome
+	helloResult   asyncRunner[helloOutcome]
 
 	logLevel logLevel
 	logPath  string
@@ -89,7 +89,7 @@ func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearan
 		marker:         registryLocaleMarker{},
 		appearancePref: appearancePref,
 		setSource:      mygo.Theme.SetSource,
-		helloResult:    make(chan helloOutcome, 1),
+		helloResult:    startAsync[helloOutcome](1),
 		showTray:       true,
 		logLevel:       logLevelInfo,
 		logPath:        backend.logPath(),
@@ -106,15 +106,14 @@ func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearan
 	return s
 }
 
-// tick settles the background Hello check. The goroutine's result arrives on
-// a channel; until then it keeps a frame scheduled so the page stops showing
-// "checking" as soon as the answer lands.
+// tick settles the background Hello check. The goroutine's result arrives
+// through the runner; until then it keeps a frame scheduled so the page stops
+// showing "checking" as soon as the answer lands.
 func (s *settingsState) tick(c *ui.Context) {
 	if !s.helloChecking {
 		return
 	}
-	select {
-	case r := <-s.helloResult:
+	received := s.helloResult.tick(func(r helloOutcome) {
 		s.helloChecking = false
 		s.helloOK = r.err == nil && r.ok
 		switch {
@@ -125,7 +124,8 @@ func (s *settingsState) tick(c *ui.Context) {
 		default:
 			s.notice = pageNotice{kind: noticeSettingsHelloUnavailable}
 		}
-	default:
+	})
+	if !received {
 		c.After(100 * time.Millisecond)
 	}
 }
@@ -135,11 +135,11 @@ func (s *settingsState) startHelloCheck() {
 		return
 	}
 	s.helloChecking = true
-	verifier, done := s.hello, s.helloResult
-	go func() {
+	verifier := s.hello
+	s.helloResult.run(func() helloOutcome {
 		ok, err := verifier.Available()
-		done <- helloOutcome{ok: ok, err: err}
-	}()
+		return helloOutcome{ok: ok, err: err}
+	})
 }
 
 // setAutostart writes the login item and puts the switch back when the write

@@ -39,7 +39,7 @@ func newLoginFixture(t *testing.T, acct *stubAccount) *loginFixture {
 // can drive the window without a ui.Context.
 func drainLogin(t *testing.T, s *loginWindow) {
 	t.Helper()
-	apply := <-s.results
+	apply := <-s.results.Ch()
 	s.busy = false
 	apply(s)
 }

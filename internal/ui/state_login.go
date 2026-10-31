@@ -50,7 +50,7 @@ type loginWindow struct {
 	busy   bool
 	notice loginNotice
 
-	results chan func(*loginWindow)
+	results asyncRunner[func(*loginWindow)]
 
 	// openWindow, closeWindow and resizeWindow are the GUI seams. They are nil
 	// in tests, which drive the same state machine without a window server.
@@ -67,7 +67,7 @@ func newLoginWindow(page *accountState) loginWindow {
 	return loginWindow{
 		page:      page,
 		serverURL: defaultServerURL,
-		results:   make(chan func(*loginWindow), 4),
+		results:   startAsync[func(*loginWindow)](4),
 	}
 }
 
@@ -79,12 +79,10 @@ func (s *loginWindow) backend() accountBackend { return s.page.account }
 // calls it too, so a cancel that lands while the login window closes still
 // reaches the account page.
 func (s *loginWindow) tick(c *ui.Context) {
-	select {
-	case apply := <-s.results:
+	s.results.tick(func(apply func(*loginWindow)) {
 		s.busy = false
 		apply(s)
-	default:
-	}
+	})
 	if s.busy {
 		c.After(60 * time.Millisecond)
 	}
@@ -100,7 +98,7 @@ func (s *loginWindow) async(work func() func(*loginWindow)) {
 	s.busy = true
 	s.notice = loginNotice{}
 	s.serverErr = nil
-	go func() { s.results <- work() }()
+	s.results.run(work)
 }
 
 // begin opens the login window from the account page. It is a UI state change

@@ -59,12 +59,12 @@ type accountState struct {
 	// stale - a logout happened meanwhile - and lands as nothing, so it cannot
 	// resurrect the session the logout cleared nor re-arm the retry schedule.
 	restoreGen int
-	// restoreResult carries the finished startup restore on its own lane, so a
+	// restore carries the finished startup restore on its own lane, so a
 	// slow server cannot hold results, which the Hello and key calls share.
-	restoreResult chan func(*accountState)
+	restore asyncRunner[func(*accountState)]
 
 	busy    bool
-	results chan func(*accountState)
+	results asyncRunner[func(*accountState)]
 
 	notice pageNotice
 
@@ -93,13 +93,13 @@ type accountRow struct {
 // outcomes without a network or a Windows Hello prompt.
 func newAccountStateWith(keys keysBackend, account accountBackend) accountState {
 	s := accountState{
-		keys:          keys,
-		account:       account,
-		prefs:         nopServerPref{},
-		scriptBody:    extractSnippet,
-		session:       accountSession{state: loginLoggedOut, serverURL: defaultServerURL},
-		results:       make(chan func(*accountState), 8),
-		restoreResult: make(chan func(*accountState), 1),
+		keys:       keys,
+		account:    account,
+		prefs:      nopServerPref{},
+		scriptBody: extractSnippet,
+		session:    accountSession{state: loginLoggedOut, serverURL: defaultServerURL},
+		results:    startAsync[func(*accountState)](8),
+		restore:    startAsync[func(*accountState)](1),
 	}
 	// The first list and session must come from the backends, not a seed, so
 	// the page shows the real accounts from the first frame.
@@ -117,19 +117,13 @@ var sessionRetryDelays = []time.Duration{30 * time.Second, 2 * time.Minute, 5 * 
 var sessionVerifiedLinger = 5 * time.Second
 
 func (s *accountState) tick(c *ui.Context) {
-	select {
-	case apply := <-s.results:
+	s.results.tick(func(apply func(*accountState)) {
 		s.busy = false
 		apply(s)
-	default:
-	}
-	// The startup restore lands on its own channel, so a slow server cannot
+	})
+	// The startup restore lands on its own lane, so a slow server cannot
 	// hold the results lane the Hello and key calls share.
-	select {
-	case apply := <-s.restoreResult:
-		apply(s)
-	default:
-	}
+	s.restore.tick(func(apply func(*accountState)) { apply(s) })
 	if s.busy || s.verifying {
 		// A backend call - or the startup restore - is still running; poll
 		// again so its result lands even though the goroutine cannot touch
@@ -195,7 +189,7 @@ func (s *accountState) async(work func() func(*accountState)) {
 	}
 	s.busy = true
 	s.notice = pageNotice{}
-	go func() { s.results <- work() }()
+	s.results.run(work)
 }
 
 // primary is the account the card's detail line describes: the one the human
@@ -302,16 +296,16 @@ func (s *accountState) beginRestore() {
 	s.restoreGen++
 	gen := s.restoreGen
 	account := s.account
-	go func() {
+	s.restore.run(func() func(*accountState) {
 		sess, sessErr := account.restoreSession()
-		s.restoreResult <- func(st *accountState) {
+		return func(st *accountState) {
 			st.verifying = false
 			if gen != st.restoreGen {
 				return
 			}
 			st.applyRestore(sess, sessErr)
 		}
-	}()
+	})
 }
 
 // recheck reruns the persisted-login check on demand. It swaps the failure
