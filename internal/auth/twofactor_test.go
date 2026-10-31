@@ -464,6 +464,143 @@ func TestChallengeMethodsOnNilChallenge(t *testing.T) {
 	}
 }
 
+// SendEmail is the pull-model send beside the solver flow. The send happens
+// in NeedTwoFactor only, marks the challenge so a resend is a no-op, and a
+// failed send stays retryable.
+func TestSendEmailSendsOnceInNeedTwoFactor(t *testing.T) {
+	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`)
+	flow := h.enterTwoFactor(t, nil)
+
+	result, err := flow.SendEmail(context.Background())
+	if err != nil {
+		t.Fatalf("SendEmail: %v", err)
+	}
+	if result.State != LoginNeedTwoFactor {
+		t.Errorf("state = %s, want need-two-factor", result.State)
+	}
+	if result.Challenge != flow.challenge || result.Challenge == nil {
+		t.Errorf("Challenge = %+v, want the flow's live challenge", result.Challenge)
+	}
+	if !result.Challenge.EmailSent {
+		t.Error("Challenge.EmailSent = false, want true after the send")
+	}
+	if h.emailCalls != 1 {
+		t.Errorf("send-email-login calls = %d, want 1", h.emailCalls)
+	}
+
+	// Second call: the challenge is already marked, so no network request.
+	again, err := flow.SendEmail(context.Background())
+	if err != nil {
+		t.Fatalf("SendEmail(resend): %v", err)
+	}
+	if again.State != LoginNeedTwoFactor {
+		t.Errorf("resend state = %s, want need-two-factor", again.State)
+	}
+	if h.emailCalls != 1 {
+		t.Errorf("send-email-login calls after resend = %d, want 1 (single-send guarantee)", h.emailCalls)
+	}
+	if !again.Challenge.EmailSent {
+		t.Error("resend Challenge.EmailSent = false, want still true")
+	}
+}
+
+// A failed send must not mark the challenge: the user can just retry.
+func TestSendEmailKeepsRetryableAfterNetworkFailure(t *testing.T) {
+	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`)
+	emailAttempts := 0
+	h.client = newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/identity/accounts/prelogin/password":
+			_, _ = w.Write([]byte(`{"KdfSettings":{"KdfType":0,"Iterations":5000},"Salt":"user@example.com"}`))
+		case "/identity/connect/token":
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`))
+		case "/api/two-factor/send-email-login":
+			emailAttempts++
+			if emailAttempts == 1 {
+				w.WriteHeader(http.StatusTooManyRequests)
+				_, _ = w.Write([]byte(`{"error":"Rate limit exceeded."}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{}`))
+		default:
+			t.Errorf("unexpected path %s", r.URL.Path)
+		}
+	})
+	flow := NewLoginFlow(h.client, nil, nil, nil)
+	ctx := context.Background()
+	if _, err := flow.Start(ctx, "user@example.com"); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	need, err := flow.Continue(ctx, LoginInput{Password: "password"})
+	if err != nil {
+		t.Fatalf("Continue(password): %v", err)
+	}
+	if need.State != LoginNeedTwoFactor {
+		t.Fatalf("state = %s, want need-two-factor", need.State)
+	}
+
+	first, err := flow.SendEmail(ctx)
+	if err == nil {
+		t.Fatal("SendEmail() with a failed send = nil error, want the server error")
+	}
+	if !errors.Is(err, ErrRateLimited) {
+		t.Errorf("SendEmail error = %v, want ErrRateLimited in the chain", err)
+	}
+	if first.State != LoginNeedTwoFactor {
+		t.Errorf("state = %s, want need-two-factor (retryable)", first.State)
+	}
+	if first.Challenge.EmailSent {
+		t.Error("Challenge.EmailSent = true after a failed send, want false for a retry")
+	}
+
+	second, err := flow.SendEmail(ctx)
+	if err != nil {
+		t.Fatalf("SendEmail(retry): %v", err)
+	}
+	if !second.Challenge.EmailSent {
+		t.Error("Challenge.EmailSent = false after the retry, want true")
+	}
+	if emailAttempts != 2 {
+		t.Errorf("send-email-login calls = %d, want 2 (failed send + retry)", emailAttempts)
+	}
+}
+
+// SendEmail is a NeedTwoFactor action: before the password grant and after
+// login it is a state error, with no network request.
+func TestSendEmailRejectsWrongState(t *testing.T) {
+	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[0],"TwoFactorProviders2":{"0":{}}}`)
+	flow := NewLoginFlow(h.client, nil, nil, nil)
+	ctx := context.Background()
+
+	if _, err := flow.SendEmail(ctx); err == nil {
+		t.Fatal("SendEmail() before Start = nil error, want a state error")
+	}
+	if _, err := flow.Start(ctx, "user@example.com"); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if _, err := flow.SendEmail(ctx); err == nil {
+		t.Fatal("SendEmail() in need-password = nil error, want a state error")
+	}
+	if h.emailCalls != 0 {
+		t.Errorf("send-email-login calls = %d, want 0 (guarded before the grant)", h.emailCalls)
+	}
+
+	// Drive to LoginDone and confirm Done is rejected too.
+	if _, err := flow.Continue(ctx, LoginInput{Password: "password"}); err != nil {
+		t.Fatalf("Continue(password): %v", err)
+	}
+	if _, err := flow.Continue(ctx, LoginInput{TwoFactor: &TwoFactorSubmission{Provider: TwoFactorAuthenticator, Token: "123456"}}); err != nil {
+		t.Fatalf("Continue(2FA): %v", err)
+	}
+	if _, err := flow.SendEmail(ctx); err == nil {
+		t.Fatal("SendEmail() in done = nil error, want a state error")
+	}
+	if h.emailCalls != 0 {
+		t.Errorf("send-email-login calls = %d, want 0 (no request outside NeedTwoFactor)", h.emailCalls)
+	}
+}
+
 func TestChallengeInteractionString(t *testing.T) {
 	cases := map[ChallengeInteraction]string{
 		InteractionCode:         "code",

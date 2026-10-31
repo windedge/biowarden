@@ -195,6 +195,28 @@ func (f *LoginFlow) SolveTwoFactor(ctx context.Context, provider TwoFactorProvid
 	return result, nil
 }
 
+// SendEmail requests the provider-1 email code without a solver: it posts
+// the send-email-login request and marks the challenge. It is the pull-model
+// alternative to the solver's EmailCode callback and coexists with
+// SolveTwoFactor while the GUI still drives the solver flow.
+//
+// Only LoginNeedTwoFactor may send: the request carries the masterPasswordHash
+// derived in continuePassword, which no other state has. A challenge that
+// already recorded a send returns the same NeedTwoFactor result with no
+// network request (one email per flow, the same rule the solver callback
+// follows). A failed send leaves EmailSent unset and the flow in
+// LoginNeedTwoFactor, so the call can simply be retried.
+func (f *LoginFlow) SendEmail(ctx context.Context) (LoginResult, error) {
+	if f.state != LoginNeedTwoFactor || f.challenge == nil {
+		return LoginResult{State: LoginFailed}, fmt.Errorf("auth: login: cannot send the email code from state %s", f.state)
+	}
+	result := LoginResult{State: LoginNeedTwoFactor, Challenge: f.challenge}
+	if err := f.sendEmailCode(ctx); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 // retryTwoFactor rewinds to NeedTwoFactor after a failed solve or a rejected
 // resubmission, keeping the current challenge so the user can try again. A
 // new challenge the server sent is already stored on the flow.
@@ -253,8 +275,8 @@ func (f *LoginFlow) solveCode(ctx context.Context, method TwoFactorMethod) (stri
 }
 
 // sendEmailCode posts the send-email-login request for the email method. The
-// challenge records that it ran, so a solver that calls send again does not
-// produce a second email.
+// challenge records that it ran, so neither the solver callback nor SendEmail
+// produces a second email.
 func (f *LoginFlow) sendEmailCode(ctx context.Context) error {
 	if f.challenge != nil && f.challenge.EmailSent {
 		return nil
