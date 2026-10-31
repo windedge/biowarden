@@ -43,7 +43,7 @@ func loginServer(t *testing.T, twoFactorFirst bool) *Client {
 }
 
 func TestLoginFlowHappyPath(t *testing.T) {
-	flow := NewLoginFlow(loginServer(t, false), nil, nil, nil)
+	flow := NewLoginFlow(loginServer(t, false))
 	ctx := context.Background()
 
 	start, err := flow.Start(ctx, "  user@example.com ")
@@ -80,7 +80,7 @@ func TestLoginFlowHappyPath(t *testing.T) {
 }
 
 func TestLoginFlowTwoFactor(t *testing.T) {
-	flow := NewLoginFlow(loginServer(t, true), nil, nil, nil)
+	flow := NewLoginFlow(loginServer(t, true))
 	ctx := context.Background()
 
 	if _, err := flow.Start(ctx, "user@example.com"); err != nil {
@@ -126,7 +126,7 @@ func TestLoginFlowTwoFactorWithoutProvidersFails(t *testing.T) {
 			t.Errorf("unexpected path %s", r.URL.Path)
 		}
 	})
-	flow := NewLoginFlow(client, nil, nil, nil)
+	flow := NewLoginFlow(client)
 	if _, err := flow.Start(context.Background(), "user@example.com"); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -146,21 +146,21 @@ func TestLoginFlowTwoFactorWithoutProvidersFails(t *testing.T) {
 }
 
 func TestLoginFlowRejectsEmptyEmail(t *testing.T) {
-	flow := NewLoginFlow(loginServer(t, false), nil, nil, nil)
+	flow := NewLoginFlow(loginServer(t, false))
 	if _, err := flow.Start(context.Background(), "   "); err == nil {
 		t.Fatal("Start() with an empty email = nil error, want failure")
 	}
 }
 
 func TestLoginFlowRejectsContinueFromWrongState(t *testing.T) {
-	flow := NewLoginFlow(loginServer(t, false), nil, nil, nil)
+	flow := NewLoginFlow(loginServer(t, false))
 	if _, err := flow.Continue(context.Background(), LoginInput{Password: "password"}); err == nil {
 		t.Fatal("Continue() before Start = nil error, want failure")
 	}
 }
 
 func TestLoginFlowRejectsEmptyPassword(t *testing.T) {
-	flow := NewLoginFlow(loginServer(t, false), nil, nil, nil)
+	flow := NewLoginFlow(loginServer(t, false))
 	if _, err := flow.Start(context.Background(), "user@example.com"); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -180,15 +180,11 @@ func TestLoginFlowRejectsMissingWrappedKey(t *testing.T) {
 			t.Errorf("unexpected path %s", r.URL.Path)
 		}
 	})
-	flow := NewLoginFlow(client, nil, nil, nil)
+	flow := NewLoginFlow(client)
 	if _, err := flow.Start(context.Background(), "user@example.com"); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
-	_, err := flow.Continue(context.Background(), LoginInput{Password: "password"})
-	if err == nil {
+	if _, err := flow.Continue(context.Background(), LoginInput{Password: "password"}); err == nil {
 		t.Fatal("Continue() without a wrapped key = nil error, want failure")
-	}
-	if errors.Is(err, ErrNotImplemented) {
-		t.Fatalf("Continue() = ErrNotImplemented, want a real key-migration error")
 	}
 }

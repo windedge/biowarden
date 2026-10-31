@@ -280,7 +280,7 @@ type authFlowAdapter struct {
 }
 
 func newAuthFlowAdapter(client *auth.Client) *authFlowAdapter {
-	return &authFlowAdapter{flow: auth.NewLoginFlow(client, nil, nil, nil)}
+	return &authFlowAdapter{flow: auth.NewLoginFlow(client)}
 }
 
 func (a *authFlowAdapter) start(ctx context.Context, email string) error {

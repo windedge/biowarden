@@ -52,9 +52,6 @@ const authEmailHeader = "Auth-Email"
 // Sentinel errors. Every failure the login flow cares about is one of these,
 // so callers can branch without parsing strings.
 var (
-	// ErrNotImplemented is returned only by UnsupportedSolver, the
-	// placeholder 2FA solver installed before the UI wires a real one.
-	ErrNotImplemented = errors.New("auth: not implemented yet")
 	// ErrUnauthorized is a rejected credential: HTTP 401, or a prelogin /
 	// token request the server refused. A wrong password arrives as HTTP 400
 	// invalid_grant and is mapped here too.
@@ -70,8 +67,8 @@ var (
 	// the response carries the offered providers.
 	ErrTwoFactorRequired = errors.New("auth: two-factor required")
 	// ErrTwoFactorUnsupported means the chosen second-factor method has no
-	// solver path: it was not offered, its interaction is not implemented, or
-	// its solver is missing. The caller may pick another offered method.
+	// implementation: it was not offered, or its interaction is not built. The
+	// caller may pick another offered method.
 	ErrTwoFactorUnsupported = errors.New("auth: two-factor method is not supported")
 	// ErrCaptchaRequired means the server demands a CAPTCHA, which cannot be
 	// solved headless.

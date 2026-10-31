@@ -204,48 +204,6 @@ func (c *TwoFactorChallenge) method(p TwoFactorProvider) TwoFactorMethod {
 	return m
 }
 
-// TwoFactorSolver collects the second factor from the user. The GUI and the
-// native-messaging host each implement it; the login flow never assumes a
-// particular UI. Implementations must never log the token they return.
-type TwoFactorSolver interface {
-	// TOTP returns a 6-digit authenticator code (provider 0).
-	TOTP(ctx context.Context) (string, error)
-	// EmailCode requests an email code (provider 1) and returns the code the
-	// user received. send performs the actual send-email-login request, so the
-	// solver must call it exactly once before collecting the code; the flow
-	// makes a repeated call a no-op.
-	EmailCode(ctx context.Context, send func(ctx context.Context) error) (string, error)
-	// OpenBrowser opens a Duo AuthURL or a WebAuthn connector page in the
-	// system browser and returns the token the browser path yields: "code|state"
-	// for Duo (providers 2 and 6) or the assertion JSON for WebAuthn (provider
-	// 7).
-	OpenBrowser(ctx context.Context, url string) (string, error)
-	// YubiKey returns the YubiKey one-time password the user typed
-	// (provider 3).
-	YubiKey(ctx context.Context) (string, error)
-}
-
-// UnsupportedSolver is a TwoFactorSolver that pretends the user cancelled
-// every method. It keeps the skeleton usable before the UI wires a real
-// solver.
-type UnsupportedSolver struct{}
-
-// TOTP implements TwoFactorSolver.
-func (UnsupportedSolver) TOTP(context.Context) (string, error) { return "", ErrNotImplemented }
-
-// EmailCode implements TwoFactorSolver.
-func (UnsupportedSolver) EmailCode(context.Context, func(context.Context) error) (string, error) {
-	return "", ErrNotImplemented
-}
-
-// OpenBrowser implements TwoFactorSolver.
-func (UnsupportedSolver) OpenBrowser(context.Context, string) (string, error) {
-	return "", ErrNotImplemented
-}
-
-// YubiKey implements TwoFactorSolver.
-func (UnsupportedSolver) YubiKey(context.Context) (string, error) { return "", ErrNotImplemented }
-
 // providerPayload is the per-provider data map of TwoFactorProviders2. Only
 // the fields the challenge surfaces are decoded here.
 type providerPayload struct {

@@ -13,49 +13,6 @@ import (
 // "user@example.com".
 const successTokenBody = `{"access_token":"access-1","token_type":"Bearer","Key":"2.EBAQEBAQEBAQEBAQEBAQEA==|lpnnGSmUGNu7ZCJ5Uolx7d9CVUBvEbcJaGOmPYHCx+il7Q6R8TAI/afRlpqIGZtpqu/pArTL27HDSsLvaof54O6vbgQ0GJV4LLaTRQwxr1M=|ap0f2828naJvmZGRUCidFoReX3tUbRxcPCn1bNmi1O4="}`
 
-// fakeSolver is a scripted TwoFactorSolver. code and err are keyed by provider
-// so one solver can stand in for several methods.
-type fakeSolver struct {
-	code           map[TwoFactorProvider]string
-	err            map[TwoFactorProvider]error
-	sends          int
-	emailSendTwice bool
-	browserURL     string
-}
-
-func (f *fakeSolver) value(p TwoFactorProvider) (string, error) {
-	if err := f.err[p]; err != nil {
-		return "", err
-	}
-	return f.code[p], nil
-}
-
-func (f *fakeSolver) TOTP(context.Context) (string, error) { return f.value(TwoFactorAuthenticator) }
-
-func (f *fakeSolver) YubiKey(context.Context) (string, error) { return f.value(TwoFactorYubiKey) }
-
-func (f *fakeSolver) EmailCode(ctx context.Context, send func(context.Context) error) (string, error) {
-	f.sends++
-	if err := f.err[TwoFactorEmail]; err != nil {
-		return "", err
-	}
-	once := 1
-	if f.emailSendTwice {
-		once = 2
-	}
-	for i := 0; i < once; i++ {
-		if err := send(ctx); err != nil {
-			return "", err
-		}
-	}
-	return f.value(TwoFactorEmail)
-}
-
-func (f *fakeSolver) OpenBrowser(_ context.Context, url string) (string, error) {
-	f.browserURL = url
-	return f.value(TwoFactorDuo)
-}
-
 // twoFactorHarness serves the login endpoints for a flow that is answered with
 // one challenge and then resubmitted. submit, when non-nil, decides the
 // response to every retry after the first: a zero status means the standard
@@ -112,9 +69,9 @@ func newTwoFactorHarness(t *testing.T, challenge string) *twoFactorHarness {
 
 // enterTwoFactor drives Start and the password grant, and returns the flow in
 // LoginNeedTwoFactor.
-func (h *twoFactorHarness) enterTwoFactor(t *testing.T, solver TwoFactorSolver) *LoginFlow {
+func (h *twoFactorHarness) enterTwoFactor(t *testing.T) *LoginFlow {
 	t.Helper()
-	flow := NewLoginFlow(h.client, solver, nil, nil)
+	flow := NewLoginFlow(h.client)
 	if _, err := flow.Start(context.Background(), "user@example.com"); err != nil {
 		t.Fatalf("Start: %v", err)
 	}
@@ -128,7 +85,20 @@ func (h *twoFactorHarness) enterTwoFactor(t *testing.T, solver TwoFactorSolver) 
 	return flow
 }
 
-func TestSolveTwoFactorSubmitsProviderAndToken(t *testing.T) {
+// submitTwoFactor answers the pending challenge through the flow's Continue,
+// the way the GUI does.
+func submitTwoFactor(t *testing.T, flow *LoginFlow, provider TwoFactorProvider, code string) (LoginResult, error) {
+	t.Helper()
+	return flow.Continue(context.Background(), LoginInput{TwoFactor: &TwoFactorSubmission{
+		Provider: provider,
+		Token:    code,
+	}})
+}
+
+// The offered code methods are answered through Continue's TwoFactor step: the
+// provider number and token travel to the server as twoFactorProvider and
+// twoFactorToken, and a successful answer lands in LoginDone.
+func TestContinueTwoFactorSubmitsProviderAndToken(t *testing.T) {
 	cases := []struct {
 		name      string
 		provider  TwoFactorProvider
@@ -155,22 +125,20 @@ func TestSolveTwoFactorSubmitsProviderAndToken(t *testing.T) {
 			code:      "654321",
 			wantSend:  1,
 		},
-		{
-			name:      "duo",
-			provider:  TwoFactorDuo,
-			challenge: `{"TwoFactorProviders":[2],"TwoFactorProviders2":{"2":{"AuthUrl":"https://api-abc.duosecurity.com/oauth/v1/authorize?x=1"}}}`,
-			code:      "duo-code|duo-state",
-		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newTwoFactorHarness(t, tc.challenge)
-			solver := &fakeSolver{code: map[TwoFactorProvider]string{tc.provider: tc.code}}
-			flow := h.enterTwoFactor(t, solver)
+			flow := h.enterTwoFactor(t)
+			if tc.wantSend > 0 {
+				if _, err := flow.SendEmail(context.Background()); err != nil {
+					t.Fatalf("SendEmail: %v", err)
+				}
+			}
 
-			result, err := flow.SolveTwoFactor(context.Background(), tc.provider)
+			result, err := submitTwoFactor(t, flow, tc.provider, tc.code)
 			if err != nil {
-				t.Fatalf("SolveTwoFactor: %v", err)
+				t.Fatalf("Continue(2FA): %v", err)
 			}
 			if result.State != LoginDone {
 				t.Fatalf("state = %s, want done", result.State)
@@ -198,60 +166,9 @@ func TestSolveTwoFactorSubmitsProviderAndToken(t *testing.T) {
 	}
 }
 
-func TestSolveTwoFactorDuoOpensTheAuthURL(t *testing.T) {
-	const authURL = "https://api-abc.duosecurity.com/oauth/v1/authorize?x=1"
-	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[2],"TwoFactorProviders2":{"2":{"AuthUrl":"`+authURL+`"}}}`)
-	solver := &fakeSolver{code: map[TwoFactorProvider]string{TwoFactorDuo: "code|state"}}
-	flow := h.enterTwoFactor(t, solver)
-
-	if _, err := flow.SolveTwoFactor(context.Background(), TwoFactorDuo); err != nil {
-		t.Fatalf("SolveTwoFactor: %v", err)
-	}
-	if solver.browserURL != authURL {
-		t.Errorf("OpenBrowser URL = %q, want %q", solver.browserURL, authURL)
-	}
-}
-
-// The email method steps the user: the flow sends the mail once and only then
-// collects the code. A solver that calls send twice must not send twice.
-func TestSolveTwoFactorEmailSendsOnce(t *testing.T) {
-	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`)
-	solver := &fakeSolver{
-		code:           map[TwoFactorProvider]string{TwoFactorEmail: "654321"},
-		emailSendTwice: true,
-	}
-	flow := NewLoginFlow(h.client, solver, nil, nil)
-	if _, err := flow.Start(context.Background(), "user@example.com"); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
-	need, err := flow.Continue(context.Background(), LoginInput{Password: "password"})
-	if err != nil {
-		t.Fatalf("Continue(password): %v", err)
-	}
-	if _, err := flow.SolveTwoFactor(context.Background(), TwoFactorEmail); err != nil {
-		t.Fatalf("SolveTwoFactor: %v", err)
-	}
-	if solver.sends != 1 {
-		t.Errorf("solver send calls = %d, want 1", solver.sends)
-	}
-	if h.emailCalls != 1 {
-		t.Errorf("send-email-login calls = %d, want 1", h.emailCalls)
-	}
-	if !need.Challenge.EmailSent {
-		t.Error("Challenge.EmailSent = false, want true after the send")
-	}
-	// The send request carries the entered login address, not the masked
-	// destination the challenge reports (official TwoFactorEmailLoginRequest
-	// takes loginStrategyService.getEmail()).
-	wantHeader := "dXNlckBleGFtcGxlLmNvbQ" // base64url("user@example.com")
-	if len(h.emailTo) != 1 || h.emailTo[0] != wantHeader {
-		t.Errorf("Auth-Email header = %v, want [%s]", h.emailTo, wantHeader)
-	}
-}
-
-// A rejected code is retryable: the flow keeps the challenge and the user can
-// submit again.
-func TestSolveTwoFactorRetriesAfterRejectedCode(t *testing.T) {
+// A rejected code is retryable: the flow rewinds to NeedTwoFactor with the
+// challenge kept, and a corrected answer finishes the login.
+func TestContinueTwoFactorRetriesAfterRejectedCode(t *testing.T) {
 	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[0],"TwoFactorProviders2":{"0":{}}}`)
 	h.submit = func(call int, _ map[string]string) (int, string) {
 		if call == 2 {
@@ -259,12 +176,11 @@ func TestSolveTwoFactorRetriesAfterRejectedCode(t *testing.T) {
 		}
 		return 0, ""
 	}
-	solver := &fakeSolver{code: map[TwoFactorProvider]string{TwoFactorAuthenticator: "123456"}}
-	flow := h.enterTwoFactor(t, solver)
+	flow := h.enterTwoFactor(t)
 
-	first, err := flow.SolveTwoFactor(context.Background(), TwoFactorAuthenticator)
+	first, err := submitTwoFactor(t, flow, TwoFactorAuthenticator, "123456")
 	if err == nil {
-		t.Fatal("SolveTwoFactor() with a rejected code = nil error, want the server error")
+		t.Fatal("Continue(2FA) with a rejected code = nil error, want the server error")
 	}
 	if first.State != LoginNeedTwoFactor {
 		t.Errorf("state = %s, want need-two-factor for a retry", first.State)
@@ -273,9 +189,9 @@ func TestSolveTwoFactorRetriesAfterRejectedCode(t *testing.T) {
 		t.Errorf("Challenge = %+v, want the original challenge kept", first.Challenge)
 	}
 
-	second, err := flow.SolveTwoFactor(context.Background(), TwoFactorAuthenticator)
+	second, err := submitTwoFactor(t, flow, TwoFactorAuthenticator, "654321")
 	if err != nil {
-		t.Fatalf("SolveTwoFactor(retry): %v", err)
+		t.Fatalf("Continue(2FA retry): %v", err)
 	}
 	if second.State != LoginDone {
 		t.Errorf("state = %s, want done", second.State)
@@ -285,80 +201,9 @@ func TestSolveTwoFactorRetriesAfterRejectedCode(t *testing.T) {
 	}
 }
 
-// A solver that times out or is cancelled is a local failure: the grant is not
-// resubmitted and the challenge stays answerable.
-func TestSolveTwoFactorKeepsChallengeOnSolverFailure(t *testing.T) {
-	cases := []struct {
-		name string
-		err  error
-	}{
-		{"timeout", context.DeadlineExceeded},
-		{"cancelled", context.Canceled},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			h := newTwoFactorHarness(t, `{"TwoFactorProviders":[0],"TwoFactorProviders2":{"0":{}}}`)
-			solver := &fakeSolver{err: map[TwoFactorProvider]error{TwoFactorAuthenticator: tc.err}}
-			flow := h.enterTwoFactor(t, solver)
-
-			result, err := flow.SolveTwoFactor(context.Background(), TwoFactorAuthenticator)
-			if !errors.Is(err, tc.err) {
-				t.Fatalf("SolveTwoFactor error = %v, want %v", err, tc.err)
-			}
-			if result.State != LoginNeedTwoFactor {
-				t.Errorf("state = %s, want need-two-factor", result.State)
-			}
-			if h.tokenCalls != 1 {
-				t.Errorf("token calls = %d, want 1 (no resubmit on a solver failure)", h.tokenCalls)
-			}
-		})
-	}
-}
-
-func TestSolveTwoFactorRejectsUnsupportedMethod(t *testing.T) {
-	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[8],"TwoFactorProviders2":{"8":{}}}`)
-	flow := h.enterTwoFactor(t, &fakeSolver{})
-
-	result, err := flow.SolveTwoFactor(context.Background(), TwoFactorRecoveryCode)
-	if !errors.Is(err, ErrTwoFactorUnsupported) {
-		t.Fatalf("SolveTwoFactor error = %v, want ErrTwoFactorUnsupported", err)
-	}
-	if result.State != LoginNeedTwoFactor {
-		t.Errorf("state = %s, want need-two-factor", result.State)
-	}
-}
-
-func TestSolveTwoFactorRejectsUnOfferedMethod(t *testing.T) {
-	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[0],"TwoFactorProviders2":{"0":{}}}`)
-	flow := h.enterTwoFactor(t, &fakeSolver{})
-
-	if _, err := flow.SolveTwoFactor(context.Background(), TwoFactorYubiKey); !errors.Is(err, ErrTwoFactorUnsupported) {
-		t.Fatalf("SolveTwoFactor error = %v, want ErrTwoFactorUnsupported", err)
-	}
-}
-
-// WebAuthn is a browser method whose connector URL is not built yet, so it
-// must not reach the solver and must stay retryable.
-func TestSolveTwoFactorWebAuthnWithoutConnectorURLIsUnsupported(t *testing.T) {
-	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[7],"TwoFactorProviders2":{"7":{"challenge":"abc"}}}`)
-	solver := &fakeSolver{}
-	flow := h.enterTwoFactor(t, solver)
-
-	result, err := flow.SolveTwoFactor(context.Background(), TwoFactorWebAuthn)
-	if !errors.Is(err, ErrTwoFactorUnsupported) {
-		t.Fatalf("SolveTwoFactor error = %v, want ErrTwoFactorUnsupported", err)
-	}
-	if result.State != LoginNeedTwoFactor {
-		t.Errorf("state = %s, want need-two-factor", result.State)
-	}
-	if solver.browserURL != "" {
-		t.Errorf("OpenBrowser was called with %q, want no call without a URL", solver.browserURL)
-	}
-}
-
 // If the server rejects the first factor and asks for a different one, the new
 // challenge replaces the old and the flow stays in NeedTwoFactor.
-func TestSolveTwoFactorHandlesServerSwitchingMethod(t *testing.T) {
+func TestContinueTwoFactorHandlesServerSwitchingMethod(t *testing.T) {
 	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[0],"TwoFactorProviders2":{"0":{}}}`)
 	const emailChallenge = `{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`
 	h.submit = func(call int, _ map[string]string) (int, string) {
@@ -367,17 +212,11 @@ func TestSolveTwoFactorHandlesServerSwitchingMethod(t *testing.T) {
 		}
 		return 0, ""
 	}
-	solver := &fakeSolver{
-		code: map[TwoFactorProvider]string{
-			TwoFactorAuthenticator: "123456",
-			TwoFactorEmail:         "654321",
-		},
-	}
-	flow := h.enterTwoFactor(t, solver)
+	flow := h.enterTwoFactor(t)
 
-	switched, err := flow.SolveTwoFactor(context.Background(), TwoFactorAuthenticator)
+	switched, err := submitTwoFactor(t, flow, TwoFactorAuthenticator, "123456")
 	if err != nil {
-		t.Fatalf("SolveTwoFactor(authenticator): %v", err)
+		t.Fatalf("Continue(authenticator): %v", err)
 	}
 	if switched.State != LoginNeedTwoFactor {
 		t.Fatalf("state = %s, want need-two-factor after the switch", switched.State)
@@ -389,20 +228,30 @@ func TestSolveTwoFactorHandlesServerSwitchingMethod(t *testing.T) {
 		t.Errorf("Challenge.Email = %q", switched.Challenge.Email)
 	}
 
-	done, err := flow.SolveTwoFactor(context.Background(), TwoFactorEmail)
+	if _, err := flow.SendEmail(context.Background()); err != nil {
+		t.Fatalf("SendEmail: %v", err)
+	}
+	done, err := submitTwoFactor(t, flow, TwoFactorEmail, "654321")
 	if err != nil {
-		t.Fatalf("SolveTwoFactor(email): %v", err)
+		t.Fatalf("Continue(email): %v", err)
 	}
 	if done.State != LoginDone {
 		t.Errorf("state = %s, want done", done.State)
 	}
 }
 
-func TestSolveTwoFactorRequiresAChallenge(t *testing.T) {
+// Continue needs a submission in NeedTwoFactor; from any other state the two
+// factor answer is refused.
+func TestContinueTwoFactorRequiresASubmission(t *testing.T) {
 	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[0],"TwoFactorProviders2":{"0":{}}}`)
-	flow := NewLoginFlow(h.client, &fakeSolver{}, nil, nil)
-	if _, err := flow.SolveTwoFactor(context.Background(), TwoFactorAuthenticator); err == nil {
-		t.Fatal("SolveTwoFactor() before a challenge = nil error, want a state error")
+	flow := h.enterTwoFactor(t)
+	if _, err := flow.Continue(context.Background(), LoginInput{}); err == nil {
+		t.Fatal("Continue() without a submission = nil error, want a state error")
+	}
+
+	flow2 := NewLoginFlow(h.client)
+	if _, err := flow2.Continue(context.Background(), LoginInput{TwoFactor: &TwoFactorSubmission{Provider: TwoFactorAuthenticator, Token: "123456"}}); err == nil {
+		t.Fatal("Continue(2FA) before Start = nil error, want a state error")
 	}
 }
 
@@ -464,12 +313,12 @@ func TestChallengeMethodsOnNilChallenge(t *testing.T) {
 	}
 }
 
-// SendEmail is the pull-model send beside the solver flow. The send happens
-// in NeedTwoFactor only, marks the challenge so a resend is a no-op, and a
-// failed send stays retryable.
+// SendEmail is the pull-model send. The send happens in NeedTwoFactor only,
+// marks the challenge so a resend is a no-op, and a failed send stays
+// retryable.
 func TestSendEmailSendsOnceInNeedTwoFactor(t *testing.T) {
 	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`)
-	flow := h.enterTwoFactor(t, nil)
+	flow := h.enterTwoFactor(t)
 
 	result, err := flow.SendEmail(context.Background())
 	if err != nil {
@@ -504,6 +353,22 @@ func TestSendEmailSendsOnceInNeedTwoFactor(t *testing.T) {
 	}
 }
 
+// The send request carries the entered login address, not the masked
+// destination the challenge reports (official TwoFactorEmailLoginRequest
+// takes loginStrategyService.getEmail()).
+func TestSendEmailUsesTheLoginAddress(t *testing.T) {
+	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`)
+	flow := h.enterTwoFactor(t)
+
+	if _, err := flow.SendEmail(context.Background()); err != nil {
+		t.Fatalf("SendEmail: %v", err)
+	}
+	wantHeader := "dXNlckBleGFtcGxlLmNvbQ" // base64url("user@example.com")
+	if len(h.emailTo) != 1 || h.emailTo[0] != wantHeader {
+		t.Errorf("Auth-Email header = %v, want [%s]", h.emailTo, wantHeader)
+	}
+}
+
 // A failed send must not mark the challenge: the user can just retry.
 func TestSendEmailKeepsRetryableAfterNetworkFailure(t *testing.T) {
 	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[1],"TwoFactorProviders2":{"1":{"Email":"ada@example.com"}},"Email":"ada@example.com"}`)
@@ -527,7 +392,7 @@ func TestSendEmailKeepsRetryableAfterNetworkFailure(t *testing.T) {
 			t.Errorf("unexpected path %s", r.URL.Path)
 		}
 	})
-	flow := NewLoginFlow(h.client, nil, nil, nil)
+	flow := NewLoginFlow(h.client)
 	ctx := context.Background()
 	if _, err := flow.Start(ctx, "user@example.com"); err != nil {
 		t.Fatalf("Start: %v", err)
@@ -570,7 +435,7 @@ func TestSendEmailKeepsRetryableAfterNetworkFailure(t *testing.T) {
 // login it is a state error, with no network request.
 func TestSendEmailRejectsWrongState(t *testing.T) {
 	h := newTwoFactorHarness(t, `{"TwoFactorProviders":[0],"TwoFactorProviders2":{"0":{}}}`)
-	flow := NewLoginFlow(h.client, nil, nil, nil)
+	flow := NewLoginFlow(h.client)
 	ctx := context.Background()
 
 	if _, err := flow.SendEmail(ctx); err == nil {

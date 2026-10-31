@@ -304,23 +304,6 @@ func TestWithTimeoutBoundsOneClientOnly(t *testing.T) {
 	}
 }
 
-func TestUnsupportedSolverReturnsNotImplemented(t *testing.T) {
-	var solver UnsupportedSolver
-	ctx := context.Background()
-	if _, err := solver.TOTP(ctx); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("TOTP() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := solver.EmailCode(ctx, func(context.Context) error { return nil }); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("EmailCode() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := solver.OpenBrowser(ctx, "https://example.com"); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("OpenBrowser() = %v, want ErrNotImplemented", err)
-	}
-	if _, err := solver.YubiKey(ctx); !errors.Is(err, ErrNotImplemented) {
-		t.Errorf("YubiKey() = %v, want ErrNotImplemented", err)
-	}
-}
-
 func TestTwoFactorProvidersMatchContract(t *testing.T) {
 	cases := map[TwoFactorProvider]int{
 		TwoFactorAuthenticator:   0,
