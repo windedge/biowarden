@@ -20,7 +20,7 @@ type scriptedAuth struct {
 	stepErr  error
 	starts   int
 
-	// solveStep and solveErr answer solveTwoFactor, and sendErr answers the
+	// solveStep and solveErr answer solveTwoFactor; sendErr fails the first
 	// email preparation. Both record what they were asked, because the backend
 	// must pass the window's provider and token through unchanged.
 	solveStep  authStep
@@ -29,7 +29,9 @@ type scriptedAuth struct {
 	providers  []int
 	tokens     []string
 	sendErr    error
-	sendCalls  int
+	// sendCalls counts the mails that actually went out, like the real flow's
+	// send-email-login request: repeats are absorbed no-ops.
+	sendCalls int
 }
 
 func (f *scriptedAuth) start(context.Context, string) error {
@@ -48,7 +50,12 @@ func (f *scriptedAuth) solveTwoFactor(_ context.Context, provider int, token str
 	return f.solveStep, f.solveErr
 }
 
+// sendTwoFactorEmail mirrors LoginFlow.SendEmail: exactly one mail goes out,
+// a repeat call is a no-op, and only the first call reports sendErr.
 func (f *scriptedAuth) sendTwoFactorEmail(context.Context) error {
+	if f.sendCalls > 0 {
+		return nil
+	}
 	f.sendCalls++
 	return f.sendErr
 }

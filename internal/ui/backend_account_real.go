@@ -136,12 +136,6 @@ func newLoginError(sentinel error, detail any) error {
 func (e *loginError) Error() string { return e.sentinel.Error() + ": " + e.detail }
 func (e *loginError) Unwrap() error { return e.sentinel }
 
-// errEmailCodePending reports that the send-email-login request went out but
-// no code was submitted with it. It is how the send-code button drives auth's
-// email preparation without a token: the flow keeps the challenge and the
-// answer is nothing to submit yet.
-var errEmailCodePending = errors.New("ui: email code requested")
-
 // accountAuth is the slice of auth.LoginFlow the account backend drives: one
 // start with the email, one password step, then any second factor. It is
 // defined in local terms so tests (and any future transport) can stand in
@@ -217,9 +211,6 @@ type pendingTwoFactor struct {
 	serverURL string
 	email     string
 	challenge *twoFactorPrompt
-	// emailSent records that the code email already went out, so a second
-	// press of the button does not ask for another one.
-	emailSent bool
 }
 
 func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory) *realAccount {
@@ -285,16 +276,11 @@ func newAuthFlowFactory() accountAuthFactory {
 
 // authFlowAdapter turns auth.LoginFlow into the local accountAuth vocabulary.
 type authFlowAdapter struct {
-	flow   *auth.LoginFlow
-	solver *flowSolver
+	flow *auth.LoginFlow
 }
 
 func newAuthFlowAdapter(client *auth.Client) *authFlowAdapter {
-	solver := &flowSolver{}
-	return &authFlowAdapter{
-		flow:   auth.NewLoginFlow(client, solver, nil, nil),
-		solver: solver,
-	}
+	return &authFlowAdapter{flow: auth.NewLoginFlow(client, nil, nil, nil)}
 }
 
 func (a *authFlowAdapter) start(ctx context.Context, email string) error {
@@ -316,70 +302,28 @@ func (a *authFlowAdapter) password(ctx context.Context, password string) (authSt
 	return stepFromResult(res)
 }
 
-// solveTwoFactor hands the flow the token the login window collected.
-// auth's solver interface is written for a caller that blocks on a human; the
-// window already has the answer, so the solver returns it immediately.
+// solveTwoFactor hands the flow the token the login window collected: the
+// submission goes through Continue's two-factor step, and a rejected code
+// comes back as the next step, not as a dead end.
 func (a *authFlowAdapter) solveTwoFactor(ctx context.Context, provider int, token string) (authStep, error) {
-	a.solver.set(token, nil)
-	res, err := a.flow.SolveTwoFactor(ctx, auth.TwoFactorProvider(provider))
+	res, err := a.flow.Continue(ctx, auth.LoginInput{TwoFactor: &auth.TwoFactorSubmission{
+		Provider: auth.TwoFactorProvider(provider),
+		Token:    token,
+	}})
 	if err != nil {
 		return authStep{}, friendlyAuthError(err)
 	}
 	return stepFromResult(res)
 }
 
-// sendTwoFactorEmail runs the email method's preparation with no code to
-// submit: the request goes out, the flow stays on the challenge, and the
-// pending sentinel says so.
+// sendTwoFactorEmail runs the email method's preparation request through the
+// flow's SendEmail. The flow keeps it single-shot, so a repeat call mails
+// nothing and still reports the challenge.
 func (a *authFlowAdapter) sendTwoFactorEmail(ctx context.Context) error {
-	a.solver.set("", errEmailCodePending)
-	if _, err := a.flow.SolveTwoFactor(ctx, auth.TwoFactorEmail); err != nil && !errors.Is(err, errEmailCodePending) {
+	if _, err := a.flow.SendEmail(ctx); err != nil {
 		return friendlyAuthError(err)
 	}
 	return nil
-}
-
-// flowSolver answers one SolveTwoFactor call with a token the caller already
-// collected. It is the seam that turns auth's "ask the user" interface into an
-// event-driven UI: the login window reads the code off the human and hands it
-// over, so the solver never waits for input.
-type flowSolver struct {
-	code     string
-	sentinel error
-}
-
-// set arms the next solve with a token, or with a sentinel that stops after
-// the method's preparation step.
-func (s *flowSolver) set(code string, sentinel error) {
-	s.code, s.sentinel = code, sentinel
-}
-
-func (s *flowSolver) TOTP(context.Context) (string, error) { return s.token() }
-
-func (s *flowSolver) YubiKey(context.Context) (string, error) { return s.token() }
-
-func (s *flowSolver) EmailCode(ctx context.Context, send func(context.Context) error) (string, error) {
-	if err := send(ctx); err != nil {
-		return "", err
-	}
-	if s.sentinel != nil {
-		return "", s.sentinel
-	}
-	return s.token()
-}
-
-// OpenBrowser refuses Duo and WebAuthn. The login window never routes those
-// here, and refusing is better than opening a page whose result cannot come
-// back.
-func (s *flowSolver) OpenBrowser(context.Context, string) (string, error) {
-	return "", errTwoFactorUnsupported
-}
-
-func (s *flowSolver) token() (string, error) {
-	if s.code == "" {
-		return "", errTwoFactorEmptyCode
-	}
-	return s.code, nil
 }
 
 // stepFromResult mirrors one auth.LoginResult in local terms.
@@ -616,8 +560,8 @@ func (a *realAccount) submit2FA(provider int, code string) (accountSession, erro
 }
 
 // sendEmailCode asks the server to mail the code for the pending email
-// challenge. The attempt records that the request ran, so the submission that
-// follows sends the code without mailing a second one.
+// challenge. The flow records the send on its challenge, so the submission
+// that follows sends the code without mailing a second one.
 func (a *realAccount) sendEmailCode() error {
 	a.mu.Lock()
 	p := a.pending
@@ -629,21 +573,7 @@ func (a *realAccount) sendEmailCode() error {
 	if !ok || !m.takesCode() {
 		return errEmailMethodMissing
 	}
-	a.mu.Lock()
-	already := p.emailSent
-	a.mu.Unlock()
-	if already {
-		return nil
-	}
-	if err := p.auth.sendTwoFactorEmail(context.Background()); err != nil {
-		return err
-	}
-	a.mu.Lock()
-	if a.pending == p {
-		p.emailSent = true
-	}
-	a.mu.Unlock()
-	return nil
+	return p.auth.sendTwoFactorEmail(context.Background())
 }
 
 // cancelLogin abandons a pending login attempt: the session falls back to the
