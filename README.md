@@ -221,7 +221,7 @@ biowarden stands on the work of others:
 Dependencies and their licenses:
 
 - [github.com/danieljoos/wincred](https://github.com/danieljoos/wincred) v1.2.3 - MIT
-- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.7.1 - MIT
+- [github.com/egoist/mygo](https://github.com/egoist/mygo) v0.7.4 - MIT
 - [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto) v0.58.0 - BSD-3-Clause
 - [golang.org/x/sys](https://cs.opensource.google/go/x/sys) v0.49.0 - BSD-3-Clause
 - [github.com/ebitengine/purego](https://github.com/ebitengine/purego) v0.11.1 - Apache-2.0

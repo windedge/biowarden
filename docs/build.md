@@ -1,7 +1,7 @@
 # Building biowarden
 
 `go.mod` pins the MyGo CLI as a [tool](https://go.dev/doc/modules/managing-dependencies#tools)
-(v0.7.1, the same version the library is pinned to), so `go tool mygo build` runs
+(v0.7.4, the same version the library is pinned to), so `go tool mygo build` runs
 the version the project is developed against. The module requires Go 1.27.3; an
 older local toolchain is switched out automatically by `GOTOOLCHAIN=auto`. One command builds the app:
 

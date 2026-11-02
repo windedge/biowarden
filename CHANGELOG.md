@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Escape closes the login and the bulk-confirm dialogs through the same path
+  as their cancel buttons, and the login dialog opens with the email field
+  focused (the code field at the two-factor step).
+- A show/hide toggle on the login dialog's master password field.
+- Empty state on the Browsers page when no supported browser is installed, a
+  fixed page header with a scrolling body on the Account and Settings pages,
+  and a divider between stored accounts.
+- The sidebar's chosen item wears the accent's soft wash with a rounded bar at
+  its leading edge, and its icon takes the same readable ink as the label.
+
+### Changed
+
+- mygo v0.7.4: no API removed and no `Theme` or `Tester` field changed from
+  v0.7.1, so the pages keep their shapes.
+- The Settings page's tray and log-level rows say what they actually reach:
+  the tray choice lasts the session, the level affects this page only.
+- The login flow asks for a code instead of calling back: `Start`, `Continue`
+  and `SendEmail` return a result, and the solver callbacks are gone along
+  with the adapter that pre-filled their answers.
+- One assembly point builds the credential store, the Hello verifier and the
+  registry once per process, so the desktop runs a single verifier rather than
+  two, each with its own thread.
+
+### Fixed
+
+- The scrolling pages leave the scrollbar its room, so it no longer sits on
+  the buttons and the text.
+- The registry is no longer re-read on every animation frame; the Browsers
+  page's tick reads at most every two seconds and always on the first frame.
+- Switching to dark no longer left the sidebar's chosen row in the light
+  accent wash.
+
 ## [0.1.5] - 2026-10-29
 
 ### Added

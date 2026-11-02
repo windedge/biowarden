@@ -51,11 +51,11 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 
 ### github.com/egoist/mygo
 
-- Version: v0.7.1
+- Version: v0.7.4
 - License: MIT
 - Upstream: https://github.com/egoist/mygo
 - Copyright: Copyright (c) 2026 MyGo contributors
-- Evidence: `$(go env GOMODCACHE)/github.com/egoist/mygo@v0.7.1/LICENSE`
+- Evidence: `$(go env GOMODCACHE)/github.com/egoist/mygo@v0.7.4/LICENSE`
 
 ### golang.org/x/crypto
 
