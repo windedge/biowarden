@@ -5,9 +5,44 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/windedge/biowarden/internal/registry"
 )
+
+// shotBrowsersBackend is the fake the pictures are drawn from: a browser page
+// with nothing in it reads as a broken product, so the shots show the three
+// states a real machine has - ours and recently connected, ours and never
+// connected, and a browser that is not installed. The layout tests keep the
+// empty state; only the pictures need content.
+func shotBrowsersBackend() *recordingBrowsersBackend {
+	return &recordingBrowsersBackend{rows: []browserRow{
+		{
+			browser:         registry.Chrome,
+			name:            "Chrome",
+			path:            `C:\Users\ada\AppData\Local\biowarden\manifests\chrome.json`,
+			installPath:     `C:\Users\ada\AppData\Local\biowarden\manifests\chrome.json`,
+			state:           browserOurs,
+			installed:       true,
+			lastConnectedAt: time.Now().Add(-5 * time.Minute),
+		},
+		{
+			browser:     registry.Edge,
+			name:        "Microsoft Edge",
+			path:        `C:\Users\ada\AppData\Local\biowarden\manifests\edge.json`,
+			installPath: `C:\Users\ada\AppData\Local\biowarden\manifests\edge.json`,
+			state:       browserOurs,
+			installed:   true,
+		},
+		{
+			browser:     registry.Firefox,
+			name:        "Firefox",
+			installPath: `C:\Users\ada\AppData\Local\biowarden\manifests\firefox.json`,
+			state:       browserMissing,
+		},
+	}}
+}
 
 // The pages of every language are written as pictures, so a text that runs
 // off its area can be seen rather than measured: the shot shows the page as
@@ -34,7 +69,7 @@ func TestPagesAsPictures(t *testing.T) {
 		for _, tag := range []string{"en", "de", "fr", "es", "ja", "zh-Hans", "zh-Hant"} {
 			t.Run(appearanceName(dark)+"/"+tag, func(t *testing.T) {
 				appLanguage(t, tag)
-				app := &appState{browsers: newBrowsersStateWith(&recordingBrowsersBackend{})}
+				app := &appState{browsers: newBrowsersStateWith(shotBrowsersBackend())}
 				app.settings.logLevel = logLevelError
 				app.settings.logPath = `C:\Users\ada\AppData\Local\biowarden\biowarden.log`
 

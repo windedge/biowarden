@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - mygo v0.7.4: no API removed and no `Theme` or `Tester` field changed from
   v0.7.1, so the pages keep their shapes.
+- The README now answers the two questions a reader has before installing -
+  how Hello treats the key, and why the host answers to the official connection
+  name - and then says how to install and use it. The protocol walkthrough,
+  the extraction-script fallback, the known limitations and the uninstall steps
+  moved to `docs/how-it-works.md` and `docs/troubleshooting.md`; the credits
+  line points at `THIRD_PARTY_NOTICES.md`, which already carried them.
 - The Settings page's tray and log-level rows say what they actually reach:
   the tray choice lasts the session, the level affects this page only.
 - The login flow asks for a code instead of calling back: `Start`, `Continue`

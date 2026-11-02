@@ -1,6 +1,6 @@
 # Security Policy
 
-biowarden handles your Bitwarden account key. If you found a way to read that
+Biowarden handles your Bitwarden account key. If you found a way to read that
 key without a Windows Hello consent, or to reach it from another process, that
 is a security problem and we want to hear about it.
 
@@ -13,7 +13,7 @@ Please include:
 
 - what an attacker would gain,
 - the steps or code to reproduce,
-- the biowarden version (`biowarden-setup-<version>-amd64.exe` or the commit).
+- the Biowarden version (`biowarden-setup-<version>-amd64.exe` or the commit).
 
 Please do not open a public issue for anything that exposes key material.
 

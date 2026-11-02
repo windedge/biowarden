@@ -1,4 +1,4 @@
-# Building biowarden
+# Building Biowarden
 
 `go.mod` pins the MyGo CLI as a [tool](https://go.dev/doc/modules/managing-dependencies#tools)
 (v0.7.4, the same version the library is pinned to), so `go tool mygo build` runs
@@ -32,11 +32,11 @@ immediately and a new process takes the lock again.
 running `biowarden` processes (GUI and host), renames the current executable to
 `biowarden.exe.old`, copies the staged files into place, then removes the
 staging directory and the `.old` file. Stopping the GUI closes any open
-biowarden window, and Chromium uses the new build the next time it connects.
+Biowarden window, and Chromium uses the new build the next time it connects.
 On a machine where nothing is running (CI, a fresh checkout) the script skips
 the swap and just copies.
 
-Building by hand still works, but either stop the biowarden GUI and quit the
+Building by hand still works, but either stop the Biowarden GUI and quit the
 browser (or `Stop-Process -Name biowarden -Force`) first, or pass `-o` to write
 somewhere else:
 
@@ -69,12 +69,15 @@ without it the installer step is skipped and only the executable is built.
 `scripts/build.ps1` warns when `makensis` is missing and says which of the
 two applies.
 
-## Single sources
+## Sources that must agree
 
-- `mygo.json` is the only place the name, identifier and version live. The
-  build links them into the binary (read back through `mygo.App.Name`,
-  `mygo.App.Version` and `mygo.App.IsPackaged`), and the executable and
-  installer are named after them.
+- `mygo.json` holds the name, identifier and version. The build links them into
+  the binary (read back through `mygo.App.Name`, `mygo.App.Version` and
+  `mygo.App.IsPackaged`), and the executable and installer are named after them.
+- `internal/ui/ui.go`'s `appVersion` is the version the GUI shows, on the
+  Settings page. It is a second copy on purpose - the pages do not link the
+  build metadata - so **a release must change both**; a version that agrees
+  with `mygo.json` but not with this constant shows the old number in the app.
 - `resources/icon.png` is the only icon: `icon` in `mygo.json` points at it,
   and the build derives the Windows icon resource from it.
 

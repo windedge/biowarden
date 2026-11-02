@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-biowarden is released under the MIT license (see [LICENSE](./LICENSE)). It references, ports and
+Biowarden is released under the MIT license (see [LICENSE](./LICENSE)). It references, ports and
 depends on the third-party work listed below. This file records the origin of that work so the
 required copyright notices can be preserved.
 
@@ -25,7 +25,7 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
   repos/xVanTuring/WardenBio` reports no license) and the local checkout has none either.
 - Upstream: https://github.com/xVanTuring/WardenBio
 - Copyright: not stated
-- Usage: biowarden is a Windows port of WardenBio's behaviour. No source code is copied verbatim:
+- Usage: Biowarden is a Windows port of WardenBio's behaviour. No source code is copied verbatim:
   the protocol shape, the Windows API sequences and the page structure were read from the Swift
   sources and rewritten in Go.
 

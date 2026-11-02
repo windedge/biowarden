@@ -8,7 +8,7 @@ key with Windows Hello, then returns it over native messaging. Not an official B
 
 One executable, two modes. stdin is a pipe (`GetFileType(stdin) == FILE_TYPE_PIPE`) means host
 mode (native messaging host, launched by the browser on demand); anything else means GUI mode
-(MyGo tray + four pages: Browsers / Keys / Settings / Log).
+(MyGo tray + four pages: Account / Browsers / Settings / Log).
 
 ```
 cmd/biowarden/          dual-mode entry (mode detection, dispatch)
