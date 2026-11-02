@@ -207,7 +207,7 @@ func (s *settingsState) logLevelSelect(c *ui.Context) {
 	sel.Popup(func(panel ui.Element) {
 		panel.Margin(spaceTiny, 0, 0, 0).Padding(spaceTiny).Radius(radiusPopup).
 			Background(t.Background).Border(1, t.Border).
-			Shadow(0, 6, 20, 0, ui.RGBA(0, 0, 0, 0.18))
+			Shadow(0, 6, 20, 0, paletteFor(c).popShadow())
 		for _, lv := range logLevels {
 			item := sel.Item(lv).Padding(spaceSnug, spaceRow).Radius(t.Radius)
 			if item.Highlighted() {
@@ -255,7 +255,7 @@ func (s *settingsState) languageSelect(c *ui.Context) (chosen string, changed bo
 	sel.Popup(func(panel ui.Element) {
 		panel.Margin(spaceTiny, 0, 0, 0).Padding(spaceTiny).Radius(radiusPopup).
 			Background(t.Background).Border(1, t.Border).
-			Shadow(0, 6, 20, 0, ui.RGBA(0, 0, 0, 0.18))
+			Shadow(0, 6, 20, 0, paletteFor(c).popShadow())
 		for i, tag := range tags {
 			item := sel.Item(tag).Padding(spaceSnug, spaceRow).Radius(t.Radius)
 			if item.Highlighted() {

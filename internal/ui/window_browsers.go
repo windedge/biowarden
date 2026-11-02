@@ -87,6 +87,12 @@ func (app *appState) unsubscribeBrowsersConfirmLocale() {
 // Scroll so a machine with several rows never clips the buttons.
 func (s *browsersState) confirmView(c *ui.Context) {
 	applyPalette(c)
+	// Esc means what the dialog's X does: cancel the bulk install. The
+	// Cancel button is never disabled, so the shortcut is unguarded too.
+	c.OnShortcut(0, ui.KeyEscape, func() {
+		s.applyBulkCancel()
+		s.closeConfirm()
+	})
 	t := c.Theme()
 	ui.Column(c).Fill().Background(t.Background).Children(func() {
 		ui.Scroll(c).Grow(1).Children(func() {

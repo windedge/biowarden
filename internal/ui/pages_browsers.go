@@ -24,7 +24,7 @@ func (app *appState) browsersPage(c *ui.Context) {
 			hijacked++
 		}
 	}
-	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceRow).Children(func() {
+	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceMedium).Children(func() {
 		ui.Row(c).Gap(spaceMedium).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, locales.BrowsersTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 			ui.Spacer(c)
@@ -45,12 +45,27 @@ func (app *appState) browsersPage(c *ui.Context) {
 		default:
 			noticeOf(c, bs.notice)
 		}
-		ui.Divider(c)
-		ui.List(c, nil, len(app.browsers.rows), func(i int) {
-			app.browserRow(c, i)
-		}).Grow(1)
-		ui.Divider(c)
+		divider(c)
+		if len(app.browsers.rows) == 0 {
+			browsersEmpty(c)
+		} else {
+			ui.List(c, nil, len(app.browsers.rows), func(i int) {
+				app.browserRow(c, i)
+			}).Grow(1)
+		}
+		divider(c)
 		muted(c, locales.BrowsersManifestHint())
+	})
+}
+
+// browsersEmpty fills the page's middle when no browser row exists: the nav
+// icon enlarged and muted over the two lines that say what the page waits for.
+func browsersEmpty(c *ui.Context) {
+	t := c.Theme()
+	ui.Column(c).Grow(1).Justify(ui.Center).AlignItems(ui.Center).Gap(spaceMedium).Children(func() {
+		ui.Icon(c, iconBrowsers).Size(48, 48).TextColor(t.TextMuted)
+		ui.Text(c, locales.BrowsersEmpty()).Bold()
+		muted(c, locales.BrowsersEmptyHint())
 	})
 }
 

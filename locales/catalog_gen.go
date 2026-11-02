@@ -153,6 +153,20 @@ func (msgs Messages) LoginPassword() string {
 	return Catalog.Format(msgs.locale, "loginPassword", nil)
 }
 
+// LoginTogglePassword says "Show or hide the password"
+// in the language the app shows.
+//
+// The password field's visibility toggle.
+func LoginTogglePassword() string { return In(i18n.Locale()).LoginTogglePassword() }
+
+// LoginTogglePassword says "Show or hide the password"
+// in the language of msgs.
+//
+// The password field's visibility toggle.
+func (msgs Messages) LoginTogglePassword() string {
+	return Catalog.Format(msgs.locale, "loginTogglePassword", nil)
+}
+
 // LoginPasswordPlaceholder says "Master password"
 // in the language the app shows.
 //
@@ -2201,6 +2215,20 @@ func (msgs Messages) SettingsShowTray() string {
 	return Catalog.Format(msgs.locale, "settingsShowTray", nil)
 }
 
+// SettingsShowTrayNote says "Session only: the tray icon returns after a restart"
+// in the language the app shows.
+//
+// Caption under the tray switch: the choice is memory-only.
+func SettingsShowTrayNote() string { return In(i18n.Locale()).SettingsShowTrayNote() }
+
+// SettingsShowTrayNote says "Session only: the tray icon returns after a restart"
+// in the language of msgs.
+//
+// Caption under the tray switch: the choice is memory-only.
+func (msgs Messages) SettingsShowTrayNote() string {
+	return Catalog.Format(msgs.locale, "settingsShowTrayNote", nil)
+}
+
 // SettingsHello says "Windows Hello"
 // in the language the app shows.
 //
@@ -2325,6 +2353,22 @@ func SettingsLogLevelLabel() string { return In(i18n.Locale()).SettingsLogLevelL
 // The log level dropdown's control label.
 func (msgs Messages) SettingsLogLevelLabel() string {
 	return Catalog.Format(msgs.locale, "settingsLogLevelLabel", nil)
+}
+
+// SettingsLogLevelNote says "Changes what the Log page shows; the host's log file keeps its own level"
+// in the language the app shows.
+//
+// Caption under the log level dropdown: it feeds the Log page only, not the
+// host's log file.
+func SettingsLogLevelNote() string { return In(i18n.Locale()).SettingsLogLevelNote() }
+
+// SettingsLogLevelNote says "Changes what the Log page shows; the host's log file keeps its own level"
+// in the language of msgs.
+//
+// Caption under the log level dropdown: it feeds the Log page only, not the
+// host's log file.
+func (msgs Messages) SettingsLogLevelNote() string {
+	return Catalog.Format(msgs.locale, "settingsLogLevelNote", nil)
 }
 
 // SettingsLogPath says "Path"
@@ -2797,6 +2841,34 @@ func BrowsersInstallAll() string { return In(i18n.Locale()).BrowsersInstallAll()
 // The browsers page's button that installs every safe row at once.
 func (msgs Messages) BrowsersInstallAll() string {
 	return Catalog.Format(msgs.locale, "browsersInstallAll", nil)
+}
+
+// BrowsersEmpty says "No supported browser found"
+// in the language the app shows.
+//
+// The browsers page's empty state when it has no browser row.
+func BrowsersEmpty() string { return In(i18n.Locale()).BrowsersEmpty() }
+
+// BrowsersEmpty says "No supported browser found"
+// in the language of msgs.
+//
+// The browsers page's empty state when it has no browser row.
+func (msgs Messages) BrowsersEmpty() string {
+	return Catalog.Format(msgs.locale, "browsersEmpty", nil)
+}
+
+// BrowsersEmptyHint says "Install Chrome, Edge or Firefox, then come back to this page."
+// in the language the app shows.
+//
+// The empty state's line about what would fill the page.
+func BrowsersEmptyHint() string { return In(i18n.Locale()).BrowsersEmptyHint() }
+
+// BrowsersEmptyHint says "Install Chrome, Edge or Firefox, then come back to this page."
+// in the language of msgs.
+//
+// The empty state's line about what would fill the page.
+func (msgs Messages) BrowsersEmptyHint() string {
+	return Catalog.Format(msgs.locale, "browsersEmptyHint", nil)
 }
 
 // BrowsersSummary says "Configured {configured} / {total} browsers · {keys} keys stored. A browser with no manifest cannot start biometric u…"

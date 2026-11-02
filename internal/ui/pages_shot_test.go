@@ -56,7 +56,7 @@ func TestPagesAsPictures(t *testing.T) {
 						tester := ui.NewTester(func(c *ui.Context) {
 							applyPalette(c)
 							ui.Row(c).Fill().Children(func() {
-								ui.Column(c).Width(sidebarWidth).FillHeight().Shrink(0)
+								app.sidebar(c)
 								ui.Column(c).Grow(1).FillHeight().Children(func() {
 									tc.view(c)
 								})

@@ -33,6 +33,9 @@ const (
 	// pagePadding is how far a page's content stays off the window's edge. The
 	// layout tests measure the content area by it.
 	pagePadding = spaceLarge
+	// scrollbarGutter clears mygo's overlay scrollbar: its track runs
+	// width+6 DIPs (12 at the default width 6) in from the viewport's edge.
+	scrollbarGutter = 12
 )
 
 // The radii are three steps: a control's corner, a panel's, and a popup's,
@@ -42,6 +45,13 @@ const (
 	radiusControl float32 = 6
 	radiusPanel   float32 = 8
 	radiusPopup   float32 = radiusControl + 2
+)
+
+// The icon sizes are two steps, the ones the views draw icons at: the nav's
+// and a button's small glyph, and the enlarged empty-state mark.
+const (
+	iconSm float32 = 15
+	iconMd float32 = 20
 )
 
 // inkDark and inkLight are the two readable inks on a colored fill.
@@ -58,6 +68,10 @@ type palette struct {
 	dark                                    bool
 	bg, surface, surfaceHover, surfacePress ui.Color
 	border                                  ui.Color
+	// divider is the hairline's ink. The night palette darkens it past the
+	// border, which is tuned to read on a card's surface and washes out on the
+	// page's own darker gray; the day palette shares the border's value.
+	divider                                 ui.Color
 	text, textMuted                         ui.Color
 	accent, accentSoft                      ui.Color
 	danger, dangerSoft                      ui.Color
@@ -71,7 +85,7 @@ func lightPalette() palette {
 	return palette{
 		bg: ui.Hex("#f4f4f6"), surface: ui.Hex("#ffffff"),
 		surfaceHover: ui.Hex("#f1f1f4"), surfacePress: ui.Hex("#e9e9ee"),
-		border: ui.Hex("#e3e3e8"),
+		border: ui.Hex("#e3e3e8"), divider: ui.Hex("#e3e3e8"),
 		// The muted gray is a caption's ink, so it has to clear 4.5:1 on the page's
 		// own gray and not only on a white card: #71717a was 4.40:1 on #f4f4f6,
 		// which made every path and timestamp look washed out. #61616b is 5.57:1
@@ -93,7 +107,7 @@ func darkPalette() palette {
 		bg:           ui.Hex("#1a1a1e"),
 		surface:      ui.Hex("#232327"),
 		surfaceHover: ui.Hex("#2d2d33"), surfacePress: ui.Hex("#36363d"),
-		border: ui.Hex("#333339"),
+		border: ui.Hex("#333339"), divider: ui.Hex("#333339").Mix(ui.RGB(0, 0, 0), 0.22),
 		text:   ui.Hex("#ededf1"), textMuted: ui.Hex("#a1a1aa"),
 		accent: ui.Hex("#60a5fa"), accentSoft: ui.Hex("#1e2a44"),
 		danger: ui.Hex("#f28b82"), dangerSoft: ui.Hex("#45272a"),
@@ -138,6 +152,36 @@ func applyPalette(c *ui.Context) {
 	t.Scrollbar = p.text.Alpha(0.28)
 	t.Radius = radiusControl
 	c.SetTheme(&t)
+}
+
+// sidebarWash is the wash under the nav's chosen item: the accent's own soft
+// color in both appearances, which the night palette already darkens into a
+// deep blue that carries on the dark surface. The bar beside the item and the
+// item's ink take accentInkOnSoft, the readable version of the accent the
+// badges paint with.
+func (p palette) sidebarWash() ui.Color { return p.accentSoft }
+
+// accentInkOnSoft is the accent made readable on its own soft wash, the way
+// badgeInk tunes the badge inks; the bar and the label share it so the
+// chosen nav item reads as one color, not two.
+func (p palette) accentInkOnSoft() ui.Color { return badgeInk(p.accent, p.accentSoft, p.text) }
+
+// popShadow is the shadow a popup wears: a soft drop the day palette draws in
+// black at a low alpha, and the night palette halves, where a full-strength
+// black shadow turns to mud against the near-black window.
+func (p palette) popShadow() ui.Color {
+	a := float32(0.18)
+	if p.dark {
+		a = 0.09
+	}
+	return ui.RGBA(0, 0, 0, a)
+}
+
+// divider draws the page's hairline from the palette's own divider token, so
+// the night pages keep a visible line where the theme's border (tuned for a
+// card's surface) washes out on the darker page gray.
+func divider(c *ui.Context) {
+	ui.Box(c).Height(1).Shrink(0).AlignSelf(ui.Stretch).Background(paletteFor(c).divider)
 }
 
 // paletteFor returns the palette the frame's theme was made from, so a view can

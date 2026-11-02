@@ -11,8 +11,20 @@ import (
 // loginView draws the login window: the credentials form first, then the
 // two-factor prompt the server asked for. It is the only login entry; the
 // account page opens this window instead of drawing a form of its own.
+// iconEye is the password field's reveal toggle, drawn like the nav icons:
+// a 24x24 stroked eye, an almond around a pupil.
+var iconEye = icon(`<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>`)
+
 func (s *loginWindow) loginView(c *ui.Context) {
 	applyPalette(c)
+	// Esc means what the window's X does: a close request. Busy swallows it,
+	// the same way the Cancel button is disabled then.
+	c.OnShortcut(0, ui.KeyEscape, func() {
+		if s.busy {
+			return
+		}
+		s.requestClose()
+	})
 	s.tick(c)
 	// A frame after the Advanced disclosure toggled is where the window learns
 	// its new height; syncHeight keeps a steady form from resizing every frame.
@@ -45,11 +57,25 @@ func (s *loginWindow) credentialsForm(c *ui.Context) {
 	ui.Form(c, func() {
 		ui.Field(c, locales.LoginEmail(), func() {
 			entered = ui.TextInput(c.Key("login-email"), &s.email).
-				Placeholder(locales.LoginEmailPlaceholder()).Disabled(s.busy).Submitted() || entered
+				Placeholder(locales.LoginEmailPlaceholder()).Disabled(s.busy).AutoFocus().Submitted() || entered
 		})
 		ui.Field(c, locales.LoginPassword(), func() {
-			entered = ui.TextInput(c.Key("login-password"), &s.password).
-				Password().Placeholder(locales.LoginPasswordPlaceholder()).Disabled(s.busy).Submitted() || entered
+			ui.Row(c).Gap(spaceHair).AlignItems(ui.Center).Children(func() {
+				// The eye decides whether the field hides its text; only the
+				// frames that hide it are password fields.
+				in := ui.TextInput(c.Key("login-password"), &s.password)
+				if !s.showPassword {
+					in = in.Password()
+				}
+				entered = in.Placeholder(locales.LoginPasswordPlaceholder()).
+					Disabled(s.busy).Grow(1).Submitted() || entered
+				plainButton(c, "", s.busy).Children(func() {
+					ui.Icon(c, iconEye).FontSize(t.Rem(fontBody)).Shrink(0)
+				}).Tooltip(locales.LoginTogglePassword()).OnClick(func() {
+					s.showPassword = !s.showPassword
+					c.Invalidate()
+				})
+			})
 		})
 	})
 	ui.Collapsible(c, locales.LoginAdvanced(), &s.advancedOpen, func() {
@@ -105,7 +131,7 @@ func (s *loginWindow) twoFactorForm(c *ui.Context) {
 	ui.Form(c, func() {
 		ui.Field(c, methodFieldLabel(m), func() {
 			entered = ui.TextInput(c.Key("login-2fa"), &s.code).
-				Placeholder(methodHint(m)).Disabled(s.busy).Submitted() || entered
+				Placeholder(methodHint(m)).Disabled(s.busy).AutoFocus().Submitted() || entered
 		})
 	})
 	if m.provider == twoFactorEmail {

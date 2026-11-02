@@ -38,6 +38,10 @@
   "@loginPassword": {
     "description": "The login form's label for the master password field."
   },
+  "loginTogglePassword": "Show or hide the password",
+  "@loginTogglePassword": {
+    "description": "The password field's visibility toggle."
+  },
   "loginPasswordPlaceholder": "Master password",
   "@loginPasswordPlaceholder": {
     "description": "The login form's placeholder in the master password field."
@@ -772,6 +776,10 @@
   "@settingsShowTray": {
     "description": "The settings switch that toggles the tray icon."
   },
+  "settingsShowTrayNote": "Session only: the tray icon returns after a restart",
+  "@settingsShowTrayNote": {
+    "description": "Caption under the tray switch: the choice is memory-only."
+  },
   "settingsHello": "Windows Hello",
   "@settingsHello": {
     "description": "The settings page's Windows Hello row label."
@@ -807,6 +815,10 @@
   "settingsLogLevelLabel": "Log level",
   "@settingsLogLevelLabel": {
     "description": "The log level dropdown's control label."
+  },
+  "settingsLogLevelNote": "Changes what the Log page shows; the host's log file keeps its own level",
+  "@settingsLogLevelNote": {
+    "description": "Caption under the log level dropdown: it feeds the Log page only, not the host's log file."
   },
   "settingsLogPath": "Path",
   "@settingsLogPath": {
@@ -991,6 +1003,14 @@
   "browsersInstallAll": "Install all",
   "@browsersInstallAll": {
     "description": "The browsers page's button that installs every safe row at once."
+  },
+  "browsersEmpty": "No supported browser found",
+  "@browsersEmpty": {
+    "description": "The browsers page's empty state when it has no browser row."
+  },
+  "browsersEmptyHint": "Install Chrome, Edge or Firefox, then come back to this page.",
+  "@browsersEmptyHint": {
+    "description": "The empty state's line about what would fill the page."
   },
   "browsersSummary": "Configured {configured} / {total} browsers · {keys} keys stored. A browser with no manifest cannot start biometric unlock. \"Install all\" writes the rows that are installed and either have no manifest or are ours; browsers that are not installed are skipped; registrations that may belong to the official client or were overwritten are listed for confirmation first and replaced together once confirmed.",
   "@browsersSummary": {

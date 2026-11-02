@@ -12,7 +12,7 @@ import (
 // Open log file hands the path to the shell's default program.
 func (app *appState) logPage(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceSmall).Children(func() {
+	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceMedium).Children(func() {
 		ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, locales.LogTitle()).FontSize(t.Rem(fontHeadline)).Bold()
 			ui.Spacer(c)

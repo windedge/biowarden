@@ -46,6 +46,8 @@ type loginWindow struct {
 	// emailSent records that the code email went out, so the button does not
 	// ask for a second one.
 	emailSent bool
+	// showPassword reveals the password field's text instead of dots.
+	showPassword bool
 
 	busy   bool
 	notice loginNotice
@@ -113,6 +115,7 @@ func (s *loginWindow) begin() {
 	s.password = ""
 	s.code = ""
 	s.emailSent = false
+	s.showPassword = false
 	// Prefill the address so a re-login to a self-hosted server does not start
 	// from the official cloud and fail on a typo the human has to retype.
 	s.serverURL = s.page.effectiveServerURL()

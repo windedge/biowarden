@@ -16,11 +16,16 @@ import (
 func (app *appState) accountPage(c *ui.Context) {
 	a := &app.account
 	t := c.Theme()
-	ui.Column(c).Grow(1).Children(func() {
+	// The header stays fixed like the settings page's; only the card stack
+	// scrolls beneath it.
+	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceMedium).Children(func() {
+		ui.Text(c, locales.AccountTitle()).FontSize(t.Rem(fontHeadline)).Bold()
+		muted(c, locales.AccountIntro())
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Padding(pagePadding).Gap(spaceMedium).Children(func() {
-				ui.Text(c, locales.AccountTitle()).FontSize(t.Rem(fontHeadline)).Bold()
-				muted(c, locales.AccountIntro())
+			// Right padding keeps the card stack out of the overlay scrollbar's
+			// track, which sits over the content and would cover the sign-out
+			// button's edge.
+			ui.Column(c).Padding(0, scrollbarGutter, 0, 0).Gap(spaceMedium).Children(func() {
 				noticeOf(c, a.notice)
 
 				a.accountCard(c, &app.login)
@@ -114,7 +119,11 @@ func (a *accountState) accountCard(c *ui.Context, login *loginWindow) {
 func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.Theme, corner func()) {
 	ui.Row(c).Gap(spaceMedium).AlignItems(ui.Center).Children(func() {
 		if v.identity {
-			ui.Avatar(c, avatarName(a.session.email), nil)
+			// The avatar wears the badge's pair - accentSoft under the readable
+			// accent ink - instead of the hash color ui.Avatar picks by default.
+			p := paletteFor(c)
+			ui.Avatar(c, avatarName(a.session.email), nil).
+				Background(p.accentSoft).TextColor(p.accentInkOnSoft())
 		}
 		ui.Column(c).Grow(1).Gap(spaceHair).Children(func() {
 			color := t.Text
@@ -143,7 +152,9 @@ func (a *accountState) accountIdentity(c *ui.Context, v accountCardView, t *ui.T
 func (a *accountState) identityRow(c *ui.Context, stateColor ui.Color) {
 	t := c.Theme()
 	ui.Row(c).Gap(spaceMedium).AlignItems(ui.Center).Children(func() {
-		ui.Avatar(c, avatarName(a.session.email), nil)
+		p := paletteFor(c)
+		ui.Avatar(c, avatarName(a.session.email), nil).
+			Background(p.accentSoft).TextColor(p.accentInkOnSoft())
 		ui.Column(c).Grow(1).Gap(spaceHair).Children(func() {
 			ui.Text(c, a.session.email).Bold()
 			muted(c, locales.AccountServerLabel(a.session.serverURL))
@@ -179,7 +190,7 @@ func (a *accountState) advanced(c *ui.Context) {
 				ui.TextArea(c, &a.scriptBody).ReadOnly(true).Lines(6, 14).
 					FontSize(t.Rem(fontCaption)).Placeholder(locales.AccountScriptPreview())
 			})
-			ui.Divider(c)
+			divider(c)
 			a.manualEntry(c)
 		})
 	})
@@ -222,10 +233,15 @@ func (a *accountState) manualEntry(c *ui.Context) {
 		muted(c, locales.AccountNoAccounts())
 		return
 	}
-	ui.Divider(c)
+	divider(c)
 	muted(c, locales.AccountStoredAccounts())
-	for _, acc := range a.accounts {
-		acc := acc
+	for i := range a.accounts {
+		// A divider only reads as one between rows; a single account keeps its
+		// quiet block.
+		if i > 0 {
+			ui.Divider(c)
+		}
+		acc := a.accounts[i]
 		ui.Row(c).Key(acc.userID).Gap(spaceMedium).Padding(spaceSmall, spaceSnug).
 			AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Grow(1).Gap(spaceHair).Children(func() {
@@ -258,8 +274,9 @@ func (a *accountState) manualEntry(c *ui.Context) {
 	}
 }
 
-// avatarName gives ui.Avatar a name to take initials and a color from. An
-// empty email still needs something, or the avatar draws nothing.
+// avatarName gives ui.Avatar the name its initials come from; the block's
+// colors come from the palette. An empty email still needs something, or the
+// avatar draws nothing.
 func avatarName(email string) string {
 	if strings.TrimSpace(email) == "" {
 		return appName

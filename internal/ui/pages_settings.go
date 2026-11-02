@@ -28,14 +28,15 @@ const (
 // log path and level, version. Autostart and Hello are real; see below.
 func (app *appState) settingsPage(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Grow(1).Children(func() {
-		// The padding is CSS order: top, right, bottom and left.
-		ui.Column(c).Padding(pagePadding, pagePadding, pagePadding, pagePadding).Gap(spaceTiny).Children(func() {
-			ui.Text(c, locales.SettingsTitle()).FontSize(t.Rem(fontHeadline)).Bold()
-			muted(c, locales.SettingsIntro())
-		})
+	// The padding wraps the scroll viewport, not the scrolled content: a
+	// text the viewport cuts mid-line must end at the content area's edge,
+	// not at the window's, or it reads as cut in half.
+	ui.Column(c).Grow(1).Padding(pagePadding).Gap(spaceTiny).Children(func() {
+		ui.Text(c, locales.SettingsTitle()).FontSize(t.Rem(fontHeadline)).Bold()
+		muted(c, locales.SettingsIntro())
 		ui.Scroll(c).Grow(1).Children(func() {
-			ui.Column(c).Padding(pagePadding, pagePadding, pagePadding, pagePadding).Gap(spaceMedium).Children(func() {
+			// Right padding keeps the rows out of the overlay scrollbar's track.
+			ui.Column(c).Padding(0, scrollbarGutter, 0, 0).Gap(spaceMedium).Children(func() {
 				notice(c, app.settings.notice.text(), app.settings.notice.ok)
 				ui.Form(c, func() {
 					ui.Fieldset(c, locales.SettingsGroupEntry(), func() {
@@ -66,15 +67,18 @@ func (app *appState) settingsPage(c *ui.Context) {
 							}
 						})
 						ui.Field(c, locales.SettingsShowTray(), func() {
-							if ui.Switch(c, &app.settings.showTray).Changed() {
-								// mygo has no per-tray show/hide and rebuilding it is not
-								// worth it yet, so this switch is memory-only.
-								if app.settings.showTray {
-									app.settings.notice = pageNotice{kind: noticeSettingsTrayShown, ok: true}
-								} else {
-									app.settings.notice = pageNotice{kind: noticeSettingsTrayHidden, ok: true}
+							ui.Column(c).Gap(spaceHair).Children(func() {
+								if ui.Switch(c, &app.settings.showTray).Changed() {
+									// mygo has no per-tray show/hide and rebuilding it is not
+									// worth it yet, so this switch is memory-only.
+									if app.settings.showTray {
+										app.settings.notice = pageNotice{kind: noticeSettingsTrayShown, ok: true}
+									} else {
+										app.settings.notice = pageNotice{kind: noticeSettingsTrayHidden, ok: true}
+									}
 								}
-							}
+								muted(c, locales.SettingsShowTrayNote())
+							})
 						})
 						ui.Field(c, locales.SettingsHello(), func() {
 							ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
@@ -100,7 +104,10 @@ func (app *appState) settingsPage(c *ui.Context) {
 						ui.Field(c, locales.SettingsLogLevel(), func() {
 							// The host reads its level from an environment variable, so the
 							// dropdown cannot reach it; it stays a memory value for now.
-							app.settings.logLevelSelect(c)
+							ui.Column(c).Gap(spaceHair).Children(func() {
+								app.settings.logLevelSelect(c)
+								muted(c, locales.SettingsLogLevelNote())
+							})
 						})
 						ui.Field(c, locales.SettingsLogPath(), func() {
 							ui.TextInput(c, &app.settings.logPath).ReadOnly(true).FontSize(t.Rem(fontCaption)).

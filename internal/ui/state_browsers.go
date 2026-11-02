@@ -23,6 +23,13 @@ type browsersState struct {
 
 	rows []browserRow
 
+	// lastReload is when reload last ran, the tick throttle's timestamp.
+	lastReload time.Time
+	// ticked is whether tick has run at least once; the first tick reloads
+	// whatever the throttle says, so switching to the page always shows a
+	// fresh read.
+	ticked bool
+
 	// confirmCover and confirmUninstall are the row indexes (into rows)
 	// awaiting a second confirming click; -1 when none. Overwriting or
 	// deleting a manifest that may be the official client's needs the same
@@ -86,14 +93,32 @@ func newBrowsersStateWith(backend browsersBackend) browsersState {
 	return s
 }
 
-// tick refreshes on every rebuild, so reopening or switching to the page shows
-// the registry as it is now rather than what it was when the app started.
+// browsersReloadInterval is how far apart the tick's own reloads stay. Hover
+// animations keep the view rebuilding frame by frame (AnimateColor asks for
+// frames until the fill settles), and a registration does not change while a
+// button fill fades, so the background path re-reads at most this often; the
+// actions still reload at once through reload itself.
+const browsersReloadInterval = 2 * time.Second
+
+// tick refreshes on rebuilds, so reopening or switching to the page shows the
+// registry as it is now rather than what it was when the app started. A rebuild
+// comes with every animation frame, so the reload is throttled to
+// browsersReloadInterval; only this background path waits. The first rebuild
+// with the page on screen is exempt, so switching to the page always shows a
+// fresh read no matter how recently the state was built or reloaded.
 func (s *browsersState) tick(c *ui.Context) {
+	first := !s.ticked
+	s.ticked = true
+	if !first && time.Since(s.lastReload) < browsersReloadInterval {
+		return
+	}
 	s.reload()
 }
 
-// reload re-reads every browser's manifest state.
+// reload re-reads every browser's manifest state, and stamps the throttle so a
+// write the human just asked for is not immediately re-read by the tick.
 func (s *browsersState) reload() {
+	s.lastReload = time.Now()
 	rows, err := s.backend.refresh()
 	if err != nil {
 		s.notice = pageNotice{kind: noticeBrowsersReadFailed, err: err}
