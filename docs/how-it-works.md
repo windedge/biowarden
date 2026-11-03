@@ -49,9 +49,12 @@ that entry; nothing about the stored key is derived from your biometrics or PIN.
 running as you can in principle read the same credential; that is the same threat model you
 already accept with the official desktop client.
 
-The master password you type in the login window lives in memory only. It is kept for the length of
-the run so signing in (or signing back in) can re-derive the key after a password or KDF change,
-and it is never written to disk or to a log. The access token is memory-only too.
+The master password you type in the login window is used to derive the key and then dropped: it is
+never written to disk or to a log, and Biowarden does not hold it while it runs, not even while a
+two-factor prompt waits (that prompt keeps the derived master key and the password hash, not the
+password). The access token is memory-only too. The consequence is worth knowing: if a password or
+KDF change leaves the stored key unusable, signing in again is what re-derives it - the Account
+page says so, and **Log out** is the way in.
 
 To keep you signed in across restarts, Biowarden persists the refresh token, your email and your
 server address as a separate `Biowarden/Session/<userId>` entry, encrypted by Windows DPAPI under

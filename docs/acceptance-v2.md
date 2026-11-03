@@ -27,7 +27,8 @@ v1 的验收清单（`docs/acceptance.md`）仍然有效，本文档只归档 v2
 - [x] Windows Hello：登录成功后弹 Hello，通过后把密钥写入凭据管理器 `Biowarden/<userId>`。
 - [x] 扩展解锁：扩展里开启「Unlock with biometrics」并完全重启浏览器后，锁定扩展点解锁 ->
       弹 Hello -> 通过即解锁，能进密码库。
-- [x] 刷新/重登：会话在内存里保留主密码，「刷新密钥」与「重新登录」可重新派生并重写密钥。
+- [x] 重新登录：主密码只在派生密钥时使用，随即丢弃（内存里也不保留）；改过主密码或 KDF 参数后
+      需退出登录再重新登录，才能重派生并重写密钥。账号页的说明与之一致。
 - [x] 退出登录：Hello 确认后删除密钥；清除内存中的会话与 token。
 - [x] 脱敏：`%LOCALAPPDATA%\biowarden\host.log` 里搜不到主密码、token、keyB64 明文。
 
