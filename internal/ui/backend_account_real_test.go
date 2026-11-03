@@ -11,6 +11,7 @@ import (
 	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/secrets"
+	"github.com/windedge/biowarden/internal/session"
 )
 
 // scriptedAuth is an accountAuth whose steps are fixed by the test.
@@ -511,12 +512,12 @@ func TestRealAccountRejectsInvalidServerURL(t *testing.T) {
 func TestRealAccountRestoreRetriesTransientFailure(t *testing.T) {
 	shrinkBackoffs(t)
 	store := seedStore("user-1", "ada@example.com")
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
-	refresh := &scriptedRefresher{
-		tokens:  []auth.TokenResponse{auth.TokenResponse{}, auth.TokenResponse{RefreshToken: "r-2"}},
-		results: []error{fmt.Errorf("%w: dial tcp", auth.ErrNetwork), nil},
+	refresh := &failOnceRefresher{
+		tok: auth.TokenResponse{RefreshToken: "r-2"},
+		err: fmt.Errorf("%w: dial tcp", auth.ErrNetwork),
 	}
 	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh.refresh)
 
@@ -530,8 +531,8 @@ func TestRealAccountRestoreRetriesTransientFailure(t *testing.T) {
 	if refresh.calls != 2 {
 		t.Fatalf("refresh calls = %d, want 2: one failure then the retry", refresh.calls)
 	}
-	if sessions.rec.RefreshToken != "r-2" {
-		t.Fatalf("stored refresh token = %q, want the rotated r-2", sessions.rec.RefreshToken)
+	if sessions.Rec.RefreshToken != "r-2" {
+		t.Fatalf("stored refresh token = %q, want the rotated r-2", sessions.Rec.RefreshToken)
 	}
 }
 
@@ -541,7 +542,7 @@ func TestRealAccountRestoreRetriesTransientFailure(t *testing.T) {
 func TestRealAccountRestoreWrapsUnverifiedErrorDetail(t *testing.T) {
 	shrinkBackoffs(t)
 	store := seedStore("user-1", "ada@example.com")
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
 	refresh := fixedRefresher(auth.TokenResponse{}, fmt.Errorf("%w: dial tcp 1.2.3.4:443", auth.ErrNetwork))
@@ -554,8 +555,8 @@ func TestRealAccountRestoreWrapsUnverifiedErrorDetail(t *testing.T) {
 	if !strings.Contains(err.Error(), "dial tcp 1.2.3.4:443") {
 		t.Fatalf("error = %v, want the underlying failure kept as the detail", err)
 	}
-	if sess.state != loginLoggedOut || !sessions.has {
-		t.Fatalf("session = %+v stored = %v, want the conservative fallback", sess, sessions.has)
+	if sess.state != loginLoggedOut || !sessions.Has {
+		t.Fatalf("session = %+v stored = %v, want the conservative fallback", sess, sessions.Has)
 	}
 }
 
@@ -564,23 +565,25 @@ func TestRealAccountRestoreWrapsUnverifiedErrorDetail(t *testing.T) {
 func TestRealAccountRestoreDoesNotRetryRevocation(t *testing.T) {
 	shrinkBackoffs(t)
 	store := seedStore("user-1", "ada@example.com")
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
-	refresh := &scriptedRefresher{
-		results: []error{fmt.Errorf("%w: invalid_grant", auth.ErrUnauthorized)},
+	calls := 0
+	refresh := func(context.Context, string, string) (auth.TokenResponse, error) {
+		calls++
+		return auth.TokenResponse{}, fmt.Errorf("%w: invalid_grant", auth.ErrUnauthorized)
 	}
-	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh.refresh)
+	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(&scriptedAuth{}), sessions, refresh)
 
 	sess, err := a.restoreSession()
 	if !errors.Is(err, errSessionRevoked) {
 		t.Fatalf("restoreSession error = %v, want errSessionRevoked", err)
 	}
-	if sess.state != loginLoggedOut || sessions.has {
-		t.Fatalf("session = %+v stored = %v, want the session cleared", sess, sessions.has)
+	if sess.state != loginLoggedOut || sessions.Has {
+		t.Fatalf("session = %+v stored = %v, want the session cleared", sess, sessions.Has)
 	}
-	if refresh.calls != 1 {
-		t.Fatalf("refresh calls = %d, want 1: a dead token is not retried", refresh.calls)
+	if calls != 1 {
+		t.Fatalf("refresh calls = %d, want 1: a dead token is not retried", calls)
 	}
 }
 
@@ -738,7 +741,7 @@ func TestRealAccountRestoreKeepsBothUnverifiedSentinels(t *testing.T) {
 		{"other", errors.New("boom"), nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+			sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 				UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 			}}
 			refresh := fixedRefresher(auth.TokenResponse{}, tc.err)

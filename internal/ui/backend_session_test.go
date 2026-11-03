@@ -11,50 +11,9 @@ import (
 	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/secrets"
+	"github.com/windedge/biowarden/internal/session"
 	"github.com/windedge/biowarden/locales"
 )
-
-// fakeSessionStore is an in-memory sessionStore, so these tests never touch
-// the real Credential Manager or the network.
-type fakeSessionStore struct {
-	rec      sessionRecord
-	has      bool
-	saveErr  error
-	clearErr error
-	loadErr  error
-	saves    int
-	clears   []string
-}
-
-func (s *fakeSessionStore) save(rec sessionRecord) error {
-	s.saves++
-	if s.saveErr != nil {
-		return s.saveErr
-	}
-	s.rec, s.has = rec, true
-	return nil
-}
-
-func (s *fakeSessionStore) load() (sessionRecord, error) {
-	if s.loadErr != nil {
-		return sessionRecord{}, s.loadErr
-	}
-	if !s.has {
-		return sessionRecord{}, errNoStoredSession
-	}
-	return s.rec, nil
-}
-
-func (s *fakeSessionStore) clear(userID string) error {
-	s.clears = append(s.clears, userID)
-	if s.clearErr != nil {
-		return s.clearErr
-	}
-	if s.has && s.rec.UserID == userID {
-		s.has = false
-	}
-	return nil
-}
 
 // seedStore puts a key straight into the in-memory store, without counting a
 // Put, so a restore test can assert it wrote nothing.
@@ -65,7 +24,7 @@ func seedStore(userID, email string) *fakeStore {
 	return store
 }
 
-func fixedRefresher(tok auth.TokenResponse, err error) sessionRefresher {
+func fixedRefresher(tok auth.TokenResponse, err error) session.Refresher {
 	return func(context.Context, string, string) (auth.TokenResponse, error) { return tok, err }
 }
 
@@ -77,7 +36,7 @@ func TestLoginPersistsSessionWithoutPasswordOrKey(t *testing.T) {
 	key := []byte("SUPER-SECRET-USER-KEY")
 	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", key)}
 	flow.step.refreshToken = "refresh-1"
-	sessions := &fakeSessionStore{}
+	sessions := &session.MemoryStore{}
 	a := newRealAccountWith(store, verifier, fixedFlow(flow), sessions, nil)
 
 	sess, err := a.login("ada@example.com", "hunter2-password", defaultServerURL)
@@ -87,17 +46,17 @@ func TestLoginPersistsSessionWithoutPasswordOrKey(t *testing.T) {
 	if sess.state != loginLoggedIn {
 		t.Fatalf("state = %v, want logged in", sess.state)
 	}
-	if !sessions.has {
+	if !sessions.Has {
 		t.Fatal("login did not persist a session")
 	}
-	rec := sessions.rec
+	rec := sessions.Rec
 	if rec.UserID != "user-1" || rec.Email != "ada@example.com" ||
 		rec.ServerURL != defaultServerURL || rec.RefreshToken != "refresh-1" {
 		t.Fatalf("persisted record = %+v", rec)
 	}
-	blob, err := encodeSession(rec)
+	blob, err := session.Encode(rec)
 	if err != nil {
-		t.Fatalf("encodeSession: %v", err)
+		t.Fatalf("session.Encode: %v", err)
 	}
 	if bytes.Contains(blob, []byte("hunter2-password")) {
 		t.Fatalf("session blob leaks the master password: %s", blob)
@@ -114,7 +73,7 @@ func TestLoginSessionSaveFailureDoesNotBlockLogin(t *testing.T) {
 	verifier := &fakeVerifier{result: hello.Verified}
 	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("key"))}
 	flow.step.refreshToken = "refresh-1"
-	sessions := &fakeSessionStore{saveErr: errors.New("credential write failed")}
+	sessions := &session.MemoryStore{SaveErr: errors.New("credential write failed")}
 	a := newRealAccountWith(store, verifier, fixedFlow(flow), sessions, nil)
 
 	sess, err := a.login("ada@example.com", "pw", defaultServerURL)
@@ -157,7 +116,7 @@ func TestStepFromResultCarriesRefreshToken(t *testing.T) {
 func TestRestoreSessionValid(t *testing.T) {
 	store := seedStore("user-1", "ada@example.com")
 	verifier := &fakeVerifier{result: hello.Verified}
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
 	var gotServer, gotToken string
@@ -177,8 +136,8 @@ func TestRestoreSessionValid(t *testing.T) {
 	if gotServer != defaultServerURL || gotToken != "r-1" {
 		t.Fatalf("refresh called with (%q, %q), want the stored values", gotServer, gotToken)
 	}
-	if sessions.rec.RefreshToken != "r-2" {
-		t.Fatalf("stored refresh token = %q, want the rotated r-2", sessions.rec.RefreshToken)
+	if sessions.Rec.RefreshToken != "r-2" {
+		t.Fatalf("stored refresh token = %q, want the rotated r-2", sessions.Rec.RefreshToken)
 	}
 	if verifier.calls != 0 || store.putCalls != 0 || store.removeCalls != 0 {
 		t.Fatalf("restore touched Hello(%d) or the key store (put %d, remove %d)",
@@ -194,7 +153,7 @@ func TestRestoreSessionValid(t *testing.T) {
 // stored key: unlocking must keep working.
 func TestRestoreSessionRevokedClearsSessionKeepsKey(t *testing.T) {
 	store := seedStore("user-1", "ada@example.com")
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
 	refresh := fixedRefresher(auth.TokenResponse{}, fmt.Errorf("%w: invalid_grant", auth.ErrUnauthorized))
@@ -207,11 +166,11 @@ func TestRestoreSessionRevokedClearsSessionKeepsKey(t *testing.T) {
 	if sess.state != loginLoggedOut {
 		t.Fatalf("session = %+v, want signed out", sess)
 	}
-	if sessions.has {
+	if sessions.Has {
 		t.Fatal("a revoked session must be cleared")
 	}
-	if len(sessions.clears) != 1 || sessions.clears[0] != "user-1" {
-		t.Fatalf("clears = %v, want user-1", sessions.clears)
+	if len(sessions.Clears) != 1 || sessions.Clears[0] != "user-1" {
+		t.Fatalf("clears = %v, want user-1", sessions.Clears)
 	}
 	if store.removeCalls != 0 {
 		t.Fatalf("Remove calls = %d, want 0: the key must survive a revoked session", store.removeCalls)
@@ -226,7 +185,7 @@ func TestRestoreSessionRevokedClearsSessionKeepsKey(t *testing.T) {
 // not confirm.
 func TestRestoreSessionNetworkErrorKeepsSession(t *testing.T) {
 	store := seedStore("user-1", "ada@example.com")
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
 	refresh := fixedRefresher(auth.TokenResponse{}, fmt.Errorf("%w: dial tcp", auth.ErrNetwork))
@@ -239,11 +198,11 @@ func TestRestoreSessionNetworkErrorKeepsSession(t *testing.T) {
 	if sess.state != loginLoggedOut {
 		t.Fatalf("session = %+v, want the conservative signed-out state", sess)
 	}
-	if !sessions.has {
+	if !sessions.Has {
 		t.Fatal("an unreachable server must not clear the stored session")
 	}
-	if len(sessions.clears) != 0 {
-		t.Fatalf("clears = %v, want none", sessions.clears)
+	if len(sessions.Clears) != 0 {
+		t.Fatalf("clears = %v, want none", sessions.Clears)
 	}
 }
 
@@ -252,7 +211,7 @@ func TestRestoreSessionNetworkErrorKeepsSession(t *testing.T) {
 // state and keeps the stored session for the next launch.
 func TestRestoreSessionTimeoutKeepsSession(t *testing.T) {
 	store := seedStore("user-1", "ada@example.com")
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
 	refresh := func(context.Context, string, string) (auth.TokenResponse, error) {
@@ -268,7 +227,7 @@ func TestRestoreSessionTimeoutKeepsSession(t *testing.T) {
 	if sess.state != loginLoggedOut {
 		t.Fatalf("session = %+v, want the conservative signed-out state", sess)
 	}
-	if !sessions.has {
+	if !sessions.Has {
 		t.Fatal("a timed-out restore must not clear the stored session")
 	}
 }
@@ -282,7 +241,7 @@ func TestRestoreSessionWithoutStoredSession(t *testing.T) {
 		return auth.TokenResponse{}, nil
 	}
 	a := newRealAccountWith(newFakeStore(), &fakeVerifier{result: hello.Verified},
-		fixedFlow(&scriptedAuth{}), &fakeSessionStore{}, refresh)
+		fixedFlow(&scriptedAuth{}), &session.MemoryStore{}, refresh)
 
 	sess, err := a.restoreSession()
 	if err != nil {
@@ -301,7 +260,7 @@ func TestLogoutClearsStoredSession(t *testing.T) {
 	store := newFakeStore()
 	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("key"))}
 	flow.step.refreshToken = "r-1"
-	sessions := &fakeSessionStore{}
+	sessions := &session.MemoryStore{}
 	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(flow), sessions, nil)
 
 	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
@@ -313,11 +272,11 @@ func TestLogoutClearsStoredSession(t *testing.T) {
 	if store.removeCalls != 1 {
 		t.Fatalf("Remove calls = %d, want 1", store.removeCalls)
 	}
-	if sessions.has {
+	if sessions.Has {
 		t.Fatal("logout left the persisted session behind")
 	}
-	if len(sessions.clears) != 1 || sessions.clears[0] != "user-1" {
-		t.Fatalf("clears = %v, want user-1", sessions.clears)
+	if len(sessions.Clears) != 1 || sessions.Clears[0] != "user-1" {
+		t.Fatalf("clears = %v, want user-1", sessions.Clears)
 	}
 }
 
@@ -325,7 +284,7 @@ func TestLogoutClearsStoredSession(t *testing.T) {
 // otherwise a restart would restore the session and show the account as signed
 // in with no key.
 func TestForgetSessionClearsStoredSession(t *testing.T) {
-	sessions := &fakeSessionStore{has: true, rec: sessionRecord{
+	sessions := &session.MemoryStore{Has: true, Rec: session.Record{
 		UserID: "user-1", Email: "ada@example.com", ServerURL: defaultServerURL, RefreshToken: "r-1",
 	}}
 	a := newRealAccountWith(newFakeStore(), &fakeVerifier{result: hello.Verified},
@@ -334,11 +293,11 @@ func TestForgetSessionClearsStoredSession(t *testing.T) {
 	if err := a.forgetSession("user-1"); err != nil {
 		t.Fatalf("forgetSession: %v", err)
 	}
-	if sessions.has {
+	if sessions.Has {
 		t.Fatal("forgetSession left the persisted session behind")
 	}
-	if len(sessions.clears) != 1 || sessions.clears[0] != "user-1" {
-		t.Fatalf("clears = %v, want user-1", sessions.clears)
+	if len(sessions.Clears) != 1 || sessions.Clears[0] != "user-1" {
+		t.Fatalf("clears = %v, want user-1", sessions.Clears)
 	}
 }
 
@@ -349,7 +308,7 @@ func TestForgetSessionResetsTheInMemorySession(t *testing.T) {
 	store := seedStore("user-1", "ada@example.com")
 	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("key"))}
 	flow.step.refreshToken = "r-1"
-	sessions := &fakeSessionStore{}
+	sessions := &session.MemoryStore{}
 	a := newRealAccountWith(store, &fakeVerifier{result: hello.Verified}, fixedFlow(flow), sessions, nil)
 	if _, err := a.login("ada@example.com", "pw", defaultServerURL); err != nil {
 		t.Fatalf("login: %v", err)
@@ -388,7 +347,7 @@ func TestRemoveAccountResetsTheBackendSession(t *testing.T) {
 	store := seedStore("user-1", "ada@example.com")
 	flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("secret"))}
 	flow.step.refreshToken = "r-1"
-	sessions := &fakeSessionStore{}
+	sessions := &session.MemoryStore{}
 	verifier := &fakeVerifier{result: hello.Verified}
 	refresh := fixedRefresher(auth.TokenResponse{RefreshToken: "r-1"}, nil)
 	acct := newRealAccountWith(store, verifier, fixedFlow(flow), sessions, refresh)
@@ -414,7 +373,7 @@ func TestRemoveAccountResetsTheBackendSession(t *testing.T) {
 	if s.session.state != loginLoggedOut {
 		t.Fatalf("page session after removal = %+v, want signed out", s.session)
 	}
-	if sessions.has {
+	if sessions.Has {
 		t.Fatal("removal left the persisted session behind")
 	}
 	if len(s.accounts) != 0 {
@@ -431,7 +390,7 @@ func TestLogoutAndRemoveAccountEndInTheSameState(t *testing.T) {
 			store := seedStore("user-1", "ada@example.com")
 			flow := &scriptedAuth{step: doneStep("user-1", "ada@example.com", []byte("secret"))}
 			flow.step.refreshToken = "r-1"
-			sessions := &fakeSessionStore{}
+			sessions := &session.MemoryStore{}
 			verifier := &fakeVerifier{result: hello.Verified}
 			acct := newRealAccountWith(store, verifier, fixedFlow(flow), sessions,
 				fixedRefresher(auth.TokenResponse{RefreshToken: "r-1"}, nil))
@@ -458,7 +417,7 @@ func TestLogoutAndRemoveAccountEndInTheSameState(t *testing.T) {
 			if s.session.state != loginLoggedOut {
 				t.Fatalf("%s left the page session as %+v", path, s.session)
 			}
-			if sessions.has {
+			if sessions.Has {
 				t.Fatalf("%s left the persisted session behind", path)
 			}
 			if rows, err := store.List(); err != nil || len(rows) != 0 {

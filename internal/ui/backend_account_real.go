@@ -13,6 +13,7 @@ import (
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/hostlog"
 	"github.com/windedge/biowarden/internal/secrets"
+	"github.com/windedge/biowarden/internal/session"
 	"github.com/windedge/biowarden/locales"
 )
 
@@ -58,10 +59,19 @@ var (
 	errClearSession       = errors.New("ui: clearing the login session failed")
 )
 
-// The session check's transient failure classes, in ui terms. The pages never
-// import internal/auth, so restoreSession translates each auth sentinel into
-// one of these next to errSessionUnverified (see sessionUnverifiedError).
+// The session check's outcomes, in ui terms. The pages never import
+// internal/auth, so restoreSession translates each auth sentinel into one of
+// these (see sessionUnverifiedError and sessionUnverifiedClass).
 var (
+	// errSessionRevoked reports a persisted login the server rejected. The
+	// stored session credential is cleared, but the key is left alone so
+	// unlocking keeps working.
+	errSessionRevoked = errors.New("ui: login session revoked")
+	// errSessionUnverified reports a persisted login that could not be checked
+	// because the network or the server failed. The session credential is
+	// kept, and the page conservatively shows the configured state instead of
+	// claiming a login it could not confirm.
+	errSessionUnverified  = errors.New("ui: login session not verified yet")
 	errSessionNetwork     = errors.New("ui: session check failed on the network")
 	errSessionRateLimited = errors.New("ui: session check was rate limited")
 	errSessionServerError = errors.New("ui: session check failed on the server")
@@ -179,8 +189,8 @@ type realAccount struct {
 	// sessions persists the login across restarts; refresh verifies a persisted
 	// refresh token at startup. Both are seams so tests never touch the
 	// credential store or the network.
-	sessions sessionStore
-	refresh  sessionRefresher
+	sessions session.Store
+	refresh  session.Refresher
 	// prefs remembers the address of the last successful login, so a signed-out
 	// self-hosted user gets it back in the form. It is a seam like the two
 	// above: the default forgets, and only the production wiring writes the
@@ -216,8 +226,8 @@ type pendingTwoFactor struct {
 func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory) *realAccount {
 	a := &realAccount{
 		store: store, verifier: verifier, newFlow: factory,
-		sessions: nopSessionStore{},
-		refresh:  newSessionRefresher(),
+		sessions: session.NopStore{},
+		refresh:  session.NewRefresher(deviceID),
 		prefs:    nopServerPref{},
 		log:      hostlog.Nop(),
 	}
@@ -229,7 +239,7 @@ func newRealAccount(store secrets.Store, verifier hello.Verifier, factory accoun
 // newRealAccountWith is newRealAccount with the persisted-login seams wired.
 // The production GUI uses it so a restart can verify and restore the login;
 // the tests that do not exercise persistence keep the no-op defaults.
-func newRealAccountWith(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory, sessions sessionStore, refresh sessionRefresher) *realAccount {
+func newRealAccountWith(store secrets.Store, verifier hello.Verifier, factory accountAuthFactory, sessions session.Store, refresh session.Refresher) *realAccount {
 	a := newRealAccount(store, verifier, factory)
 	a.sessions = sessions
 	if refresh != nil {
@@ -242,9 +252,9 @@ func newRealAccountWith(store secrets.Store, verifier hello.Verifier, factory ac
 // session store and server pref that newAppState assembled; nothing here
 // builds its own seams, so the account card, the login path, the Log page
 // and the first run all agree on one store box.
-func newRealAccountState(store secrets.Store, verifier hello.Verifier, sessions sessionStore, prefs serverPref) accountState {
+func newRealAccountState(store secrets.Store, verifier hello.Verifier, sessions session.Store, prefs serverPref) accountState {
 	factory := newAuthFlowFactory()
-	account := newRealAccountWith(store, verifier, factory, sessions, newSessionRefresher())
+	account := newRealAccountWith(store, verifier, factory, sessions, session.NewRefresher(deviceID))
 	account.prefs = prefs
 	// The startup verify runs in a goroutine off the UI thread; hostlog is
 	// mutex-guarded per write. It writes gui.log, not the host's host.log: the
@@ -477,7 +487,7 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 	// sign-out, so remembering it here is what keeps a self-hosted address in
 	// the next form. Best-effort, and it never holds up the login.
 	a.prefs.save(serverURL)
-	warning := a.persistSession(sessionRecord{
+	warning := a.persistSession(session.Record{
 		UserID:       acc.UserID,
 		Email:        acc.Email,
 		ServerURL:    serverURL,
@@ -502,11 +512,11 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 // restore with, so there is nothing worth saving. A failure is returned as a
 // typed warning and never as an error: the key is already stored and unlocking
 // still works.
-func (a *realAccount) persistSession(rec sessionRecord) error {
+func (a *realAccount) persistSession(rec session.Record) error {
 	if rec.RefreshToken == "" {
 		return nil
 	}
-	if err := a.sessions.save(rec); err != nil {
+	if err := a.sessions.Save(rec); err != nil {
 		return newLoginError(errSessionPersist, err)
 	}
 	return nil
@@ -610,7 +620,7 @@ func (a *realAccount) logout() error {
 		}
 		// The key is gone, so the persisted login for it must go too. A failed
 		// clear is reported but does not keep the session alive in memory.
-		clearErr = a.sessions.clear(sess.userID)
+		clearErr = a.sessions.Clear(sess.userID)
 	}
 	a.mu.Lock()
 	a.sess = accountSession{state: loginLoggedOut, serverURL: defaultServerURL}
@@ -633,9 +643,9 @@ func (a *realAccount) logout() error {
 //   - rejected: the stored session is cleared, the key is kept (configured)
 //   - unreachable: the stored session is kept, the page stays configured
 func (a *realAccount) restoreSession() (accountSession, error) {
-	rec, err := a.sessions.load()
+	rec, err := a.sessions.Load()
 	if err != nil {
-		if errors.Is(err, errNoStoredSession) {
+		if errors.Is(err, session.ErrNoStoredSession) {
 			return a.currentSession(), nil
 		}
 		return a.currentSession(), newLoginError(errSessionRead, err)
@@ -649,8 +659,8 @@ func (a *realAccount) restoreSession() (accountSession, error) {
 	tok, attempts, err := a.verifySession(context.Background(), rec)
 	a.logSessionVerify(attempts, err, time.Since(start))
 	if err != nil {
-		if sessionRevoked(err) {
-			_ = a.sessions.clear(rec.UserID)
+		if session.Revoked(err) {
+			_ = a.sessions.Clear(rec.UserID)
 			a.adoptRestored(fallback)
 			return fallback, errSessionRevoked
 		}
@@ -665,7 +675,7 @@ func (a *realAccount) restoreSession() (accountSession, error) {
 	// restart still verifies.
 	if tok.RefreshToken != "" && tok.RefreshToken != rec.RefreshToken {
 		rec.RefreshToken = tok.RefreshToken
-		_ = a.sessions.save(rec)
+		_ = a.sessions.Save(rec)
 	}
 	sess := accountSession{
 		state:     loginLoggedIn,
@@ -690,13 +700,13 @@ func (a *realAccount) adoptRestored(sess accountSession) {
 
 // verifySession runs the refresh through the shared retry policy and counts
 // the attempts, so the log line can say whether the backoff was ever used.
-func (a *realAccount) verifySession(ctx context.Context, rec sessionRecord) (auth.TokenResponse, int, error) {
+func (a *realAccount) verifySession(ctx context.Context, rec session.Record) (auth.TokenResponse, int, error) {
 	attempts := 0
 	refresher := func(ctx context.Context, serverURL, token string) (auth.TokenResponse, error) {
 		attempts++
 		return a.refresh(ctx, serverURL, token)
 	}
-	tok, err := refreshWithRetry(ctx, refresher, rec.ServerURL, rec.RefreshToken)
+	tok, err := session.RefreshWithRetry(ctx, refresher, rec.ServerURL, rec.RefreshToken)
 	return tok, attempts, err
 }
 
@@ -708,7 +718,7 @@ func (a *realAccount) logSessionVerify(attempts int, err error, elapsed time.Dur
 		return
 	}
 	a.log.Info(fmt.Sprintf("ui: session verify attempts=%d outcome=%s elapsed=%s",
-		attempts, refreshRetryClass(err), elapsed.Round(time.Millisecond)))
+		attempts, session.RefreshClass(err), elapsed.Round(time.Millisecond)))
 }
 
 // forgetSession drops the persisted login for an account whose stored key was
@@ -718,7 +728,7 @@ func (a *realAccount) logSessionVerify(attempts int, err error, elapsed time.Dur
 // a failed clear still resets it, matching logout. It touches no key material
 // and asks for no consent.
 func (a *realAccount) forgetSession(userID string) error {
-	err := a.sessions.clear(userID)
+	err := a.sessions.Clear(userID)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	// lastLoggedIn is checked too: a pending login keeps it as the session a

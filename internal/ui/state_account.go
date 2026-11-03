@@ -109,7 +109,7 @@ func newAccountStateWith(keys keysBackend, account accountBackend) accountState 
 
 // The delays before the silent retries of a failed session check, in order:
 // quick hope first, then a steadier pair. Package vars so the tests can
-// shrink them to milliseconds, like refreshRetryBackoffsMs.
+// shrink them to milliseconds, like the session package's retry waits.
 var sessionRetryDelays = []time.Duration{30 * time.Second, 2 * time.Minute, 5 * time.Minute}
 
 // sessionVerifiedLinger is how long the verified notice stays once the check

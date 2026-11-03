@@ -11,6 +11,7 @@ import (
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/internal/registry"
 	"github.com/windedge/biowarden/internal/secrets"
+	"github.com/windedge/biowarden/internal/session"
 )
 
 func itoa(n int) string { return strconv.Itoa(n) }
@@ -78,7 +79,7 @@ func newAppState() *appState {
 		settings: newSettingsState(settings, verifier, newAppearancePref(), newLocaleMarker()),
 		log:      newLogState(settings),
 	}
-	app.account = newRealAccountState(store, verifier, newWincredSessionStore(secrets.SessionPrefix), prefs)
+	app.account = newRealAccountState(store, verifier, session.NewWincredStore(secrets.SessionPrefix), prefs)
 	app.login = newLoginWindow(&app.account)
 	app.browsers.openConfirmWindow = app.showBrowsersConfirmWindow
 	app.browsers.closeConfirmWindow = app.hideBrowsersConfirmWindow
