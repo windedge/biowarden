@@ -93,7 +93,14 @@ func newAppState() *appState {
 // Every page calls it first, so a pending action still settles if the human
 // switches pages before it ends.
 func (app *appState) tick(c *ui.Context) {
-	app.browsers.tick(c)
+	// The browsers page's tick re-reads the whole registry, which is only
+	// worth paying for while its rows are on screen; the other ticks settle
+	// results the human asked for, so they run unconditionally.
+	if app.page == pageBrowsers {
+		app.browsers.tick(c)
+	} else {
+		app.browsers.offScreen()
+	}
 	app.account.tick(c)
 	app.settings.tick(c)
 	// The login state ticks here as well as in its own window: a cancel that

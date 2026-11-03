@@ -25,9 +25,9 @@ type browsersState struct {
 
 	// lastReload is when reload last ran, the tick throttle's timestamp.
 	lastReload time.Time
-	// ticked is whether tick has run at least once; the first tick reloads
-	// whatever the throttle says, so switching to the page always shows a
-	// fresh read.
+	// ticked is whether tick has run since the page last came on screen; that
+	// first tick reloads whatever the throttle says, so entering the page always
+	// shows a fresh read. offScreen clears it when the page leaves.
 	ticked bool
 
 	// confirmCover and confirmUninstall are the row indexes (into rows)
@@ -105,7 +105,9 @@ const browsersReloadInterval = 2 * time.Second
 // comes with every animation frame, so the reload is throttled to
 // browsersReloadInterval; only this background path waits. The first rebuild
 // with the page on screen is exempt, so switching to the page always shows a
-// fresh read no matter how recently the state was built or reloaded.
+// fresh read no matter how recently the state was built or reloaded. The app
+// calls tick only while the page is drawn, so frames on another page cost no
+// registry read at all.
 func (s *browsersState) tick(c *ui.Context) {
 	first := !s.ticked
 	s.ticked = true
@@ -114,6 +116,12 @@ func (s *browsersState) tick(c *ui.Context) {
 	}
 	s.reload()
 }
+
+// offScreen marks the page as no longer drawn: it drops the reload stamps, so
+// the first tick after coming back reloads whatever the throttle says. Without
+// it, leaving and returning inside browsersReloadInterval would show the rows
+// from before the human left.
+func (s *browsersState) offScreen() { s.ticked = false }
 
 // reload re-reads every browser's manifest state, and stamps the throttle so a
 // write the human just asked for is not immediately re-read by the tick.
