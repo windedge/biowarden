@@ -1,7 +1,9 @@
-// Package hostlog appends the host's diagnostic log to one file under
-// %LOCALAPPDATA%\biowarden and rotates it at 5 MiB. Redaction happens here,
-// before bytes reach the file, so a call site that logs a reply cannot persist
-// key material by mistake.
+// Package hostlog appends a diagnostic log to one file under
+// %LOCALAPPDATA%\biowarden and rotates it at 5 MiB. The host and the GUI keep
+// their own file (host.log, gui.log): Windows allows neither process to rename
+// a file the other holds open, so one shared file would stop rotating for both.
+// Redaction happens here, before bytes reach the file, so a call site that logs
+// a reply cannot persist key material by mistake.
 package hostlog
 
 import (
@@ -14,9 +16,10 @@ import (
 )
 
 const (
-	logFileName   = "host.log"
-	rotatedSuffix = ".1"
-	defaultMax    = 5 << 20
+	logFileName    = "host.log"
+	guiLogFileName = "gui.log"
+	rotatedSuffix  = ".1"
+	defaultMax     = 5 << 20
 )
 
 // Level controls which lines are written. Info is the default; Debug also
@@ -39,7 +42,15 @@ func ParseLevel(value string) Level {
 
 // DefaultPath is %LOCALAPPDATA%\biowarden\host.log, falling back to the user
 // cache dir so the package still works outside Windows.
-func DefaultPath() (string, error) {
+func DefaultPath() (string, error) { return pathFor(logFileName) }
+
+// GUIPath is %LOCALAPPDATA%\biowarden\gui.log, the GUI process's own file. The
+// host and the GUI are separate processes and Windows allows neither to rename
+// a file the other holds open, so one shared file would break rotation for
+// both; two files keep each process independent.
+func GUIPath() (string, error) { return pathFor(guiLogFileName) }
+
+func pathFor(name string) (string, error) {
 	base := os.Getenv("LOCALAPPDATA")
 	if base == "" {
 		cache, err := os.UserCacheDir()
@@ -48,7 +59,7 @@ func DefaultPath() (string, error) {
 		}
 		base = cache
 	}
-	return filepath.Join(base, "biowarden", logFileName), nil
+	return filepath.Join(base, "biowarden", name), nil
 }
 
 // Logger appends timestamped, redacted lines to one file.
@@ -114,7 +125,7 @@ func (l *Logger) write(level Level, tag, message string) {
 }
 
 // rotateLocked keeps one rotated file. The caller holds the lock, so the size
-// check and the rename cannot race a concurrent write.
+// check and the rename cannot race a write from this logger.
 func (l *Logger) rotateLocked() {
 	info, err := l.file.Stat()
 	if err != nil || info.Size() < l.maxSize {
@@ -124,10 +135,31 @@ func (l *Logger) rotateLocked() {
 	l.file = nil
 	_ = os.Remove(l.path + rotatedSuffix)
 	if err := os.Rename(l.path, l.path+rotatedSuffix); err != nil {
-		_ = l.open() // rotation failed: keep appending to the original
-		return
+		// Windows refuses the rename while any other handle has the file open
+		// (os.OpenFile does not ask for FILE_SHARE_DELETE), so a second writer
+		// would leave the log growing without bound. Copy and empty instead.
+		l.copyRotate()
 	}
 	_ = l.open()
+}
+
+// copyRotate is the rotation that still works when another writer holds the
+// file: copy the oversized content to the rotated name, then truncate the
+// original. A line the other writer adds between the copy and the truncate is
+// lost, which is the price of never letting the file grow unbounded.
+func (l *Logger) copyRotate() {
+	data, err := os.ReadFile(l.path)
+	if err != nil {
+		return
+	}
+	if err := os.WriteFile(l.path+rotatedSuffix, data, 0o600); err != nil {
+		return
+	}
+	f, err := os.OpenFile(l.path, os.O_WRONLY|os.O_TRUNC, 0o600)
+	if err != nil {
+		return
+	}
+	_ = f.Close()
 }
 
 // Close flushes and closes the file; a second call is a no-op.

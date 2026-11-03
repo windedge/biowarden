@@ -247,8 +247,10 @@ func newRealAccountState(store secrets.Store, verifier hello.Verifier, sessions 
 	account := newRealAccountWith(store, verifier, factory, sessions, newSessionRefresher())
 	account.prefs = prefs
 	// The startup verify runs in a goroutine off the UI thread; hostlog is
-	// mutex-guarded per write, so sharing the file with the host is safe.
-	if path, err := hostlog.DefaultPath(); err != nil {
+	// mutex-guarded per write. It writes gui.log, not the host's host.log: the
+	// host process holds that file open, and Windows would then refuse our
+	// rotation (and its own), leaving both logs growing without bound.
+	if path, err := hostlog.GUIPath(); err != nil {
 		account.log = hostlog.Nop()
 	} else if l, err := hostlog.New(path, hostlog.ParseLevel(os.Getenv("BIOWARDEN_LOG"))); err != nil {
 		account.log = hostlog.Nop()
