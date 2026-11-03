@@ -75,7 +75,7 @@ func newAppState() *appState {
 	settings := newRealSettings(verifier)
 	app := &appState{
 		browsers: newBrowsersState(reg),
-		settings: newSettingsState(settings, verifier, newAppearancePref()),
+		settings: newSettingsState(settings, verifier, newAppearancePref(), newLocaleMarker()),
 		log:      newLogState(settings),
 	}
 	app.account = newRealAccountState(store, verifier, newWincredSessionStore(secrets.SessionPrefix), prefs)

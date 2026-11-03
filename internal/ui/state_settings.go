@@ -80,13 +80,13 @@ type settingsState struct {
 
 // newSettingsState takes the assembled dependencies: the settings backend
 // (the Log page receives the same instance), the verifier the Hello row
-// checks with, and the appearance preference.
-func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearancePref appearancePref) settingsState {
+// checks with, the appearance preference and the language marker.
+func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearancePref appearancePref, marker localeMarker) settingsState {
 	s := settingsState{
 		backend:        backend,
 		hello:          verifier,
 		locale:         mygoLocale{},
-		marker:         registryLocaleMarker{},
+		marker:         marker,
 		appearancePref: appearancePref,
 		setSource:      mygo.Theme.SetSource,
 		helloResult:    startAsync[helloOutcome](1),

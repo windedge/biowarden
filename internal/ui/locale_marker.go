@@ -1,6 +1,6 @@
 package ui
 
-import "golang.org/x/sys/windows/registry"
+import "github.com/windedge/biowarden/internal/registry"
 
 // localeMarker is the seam over the persisted language choice. The Settings
 // page needs to tell an explicit choice apart from "follow the system": mygo
@@ -17,48 +17,14 @@ type localeMarker interface {
 	clear()
 }
 
-// registryLocaleMarker persists the choice under HKCU\Software\biowarden,
-// beside the registration values. It writes only to the current user's hive,
-// so it never needs elevation.
-type registryLocaleMarker struct{}
+// registryLocaleMarker is the production seam: the HKCU value beside the
+// first-run marker, the appearance and the remembered server.
+type registryLocaleMarker struct{ pref registry.LocalePref }
 
-const (
-	localeMarkerKey   = `Software\biowarden`
-	localeMarkerValue = "LocaleChoice"
-)
+func newLocaleMarker() localeMarker { return registryLocaleMarker{pref: registry.NewLocalePref()} }
 
-// load reads the marker. A missing key, a missing value and an unreadable
-// value all mean "no choice", so a fresh machine falls back to the system.
-func (registryLocaleMarker) load() (string, bool) {
-	k, err := registry.OpenKey(registry.CURRENT_USER, localeMarkerKey, registry.QUERY_VALUE)
-	if err != nil {
-		return "", false
-	}
-	defer k.Close()
-	v, _, err := k.GetStringValue(localeMarkerValue)
-	if err != nil || v == "" {
-		return "", false
-	}
-	return v, true
-}
+func (m registryLocaleMarker) load() (string, bool) { return m.pref.Chosen() }
 
-// save writes the choice. The registry is best-effort: a failure only means
-// the row falls back to the system guess on the next launch, never a crash.
-func (registryLocaleMarker) save(tag string) {
-	k, _, err := registry.CreateKey(registry.CURRENT_USER, localeMarkerKey, registry.SET_VALUE)
-	if err != nil {
-		return
-	}
-	defer k.Close()
-	_ = k.SetStringValue(localeMarkerValue, tag)
-}
+func (m registryLocaleMarker) save(tag string) { m.pref.Remember(tag) }
 
-// clear drops the choice. A missing key or value is already the desired state.
-func (registryLocaleMarker) clear() {
-	k, err := registry.OpenKey(registry.CURRENT_USER, localeMarkerKey, registry.SET_VALUE)
-	if err != nil {
-		return
-	}
-	defer k.Close()
-	_ = k.DeleteValue(localeMarkerValue)
-}
+func (m registryLocaleMarker) clear() { m.pref.Forget() }
