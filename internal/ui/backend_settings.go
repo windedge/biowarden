@@ -10,7 +10,7 @@ import (
 
 	"github.com/windedge/biowarden/internal/autostart"
 	"github.com/windedge/biowarden/internal/hello"
-	"github.com/windedge/biowarden/internal/hostlog"
+	"github.com/windedge/biowarden/internal/paths"
 )
 
 // realSettings is the production settingsBackend: the login item and the
@@ -128,19 +128,8 @@ func tailFile(path string, n int64) (string, error) {
 }
 
 // hostLogPath and guiLogPath match the paths the two processes write through
-// hostlog. logPath has no error return, so a missing LOCALAPPDATA falls back to
-// the temp directory instead of showing an empty field.
-func hostLogPath() string { return resolveLogPath(hostlog.DefaultPath, "host.log") }
+// hostlog. logPath has no error return, so an unresolvable profile directory
+// falls back to the temp directory instead of showing an empty field.
+func hostLogPath() string { return filepath.Join(paths.RootOrTemp(), paths.HostLogName) }
 
-func guiLogPath() string { return resolveLogPath(hostlog.GUIPath, "gui.log") }
-
-func resolveLogPath(resolve func() (string, error), name string) string {
-	if path, err := resolve(); err == nil {
-		return path
-	}
-	base := os.Getenv("LOCALAPPDATA")
-	if base == "" {
-		base = os.TempDir()
-	}
-	return filepath.Join(base, "biowarden", name)
-}
+func guiLogPath() string { return filepath.Join(paths.RootOrTemp(), paths.GUILogName) }

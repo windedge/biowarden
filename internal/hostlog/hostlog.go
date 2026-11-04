@@ -1,5 +1,5 @@
-// Package hostlog appends a diagnostic log to one file under
-// %LOCALAPPDATA%\biowarden and rotates it at 5 MiB. The host and the GUI keep
+// Package hostlog appends a diagnostic log to one file under the biowarden
+// profile directory (internal/paths) and rotates it at 5 MiB. The host and the GUI keep
 // their own file (host.log, gui.log): Windows allows neither process to rename
 // a file the other holds open, so one shared file would stop rotating for both.
 // Redaction happens here, before bytes reach the file, so a call site that logs
@@ -13,13 +13,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/windedge/biowarden/internal/paths"
 )
 
 const (
-	logFileName    = "host.log"
-	guiLogFileName = "gui.log"
-	rotatedSuffix  = ".1"
-	defaultMax     = 5 << 20
+	rotatedSuffix = ".1"
+	defaultMax    = 5 << 20
 )
 
 // Level controls which lines are written. Info is the default; Debug also
@@ -40,27 +40,14 @@ func ParseLevel(value string) Level {
 	return LevelInfo
 }
 
-// DefaultPath is %LOCALAPPDATA%\biowarden\host.log, falling back to the user
-// cache dir so the package still works outside Windows.
-func DefaultPath() (string, error) { return pathFor(logFileName) }
+// DefaultPath is the host's log file, paths.HostLog().
+func DefaultPath() (string, error) { return paths.HostLog() }
 
-// GUIPath is %LOCALAPPDATA%\biowarden\gui.log, the GUI process's own file. The
-// host and the GUI are separate processes and Windows allows neither to rename
-// a file the other holds open, so one shared file would break rotation for
-// both; two files keep each process independent.
-func GUIPath() (string, error) { return pathFor(guiLogFileName) }
-
-func pathFor(name string) (string, error) {
-	base := os.Getenv("LOCALAPPDATA")
-	if base == "" {
-		cache, err := os.UserCacheDir()
-		if err != nil {
-			return "", err
-		}
-		base = cache
-	}
-	return filepath.Join(base, "biowarden", name), nil
-}
+// GUIPath is the GUI process's own log file. The host and the GUI are separate
+// processes and Windows allows neither to rename a file the other holds open,
+// so one shared file would break rotation for both; two files keep each
+// process independent.
+func GUIPath() (string, error) { return paths.GUILog() }
 
 // Logger appends timestamped, redacted lines to one file.
 type Logger struct {

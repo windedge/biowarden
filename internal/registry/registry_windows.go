@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 
 	"golang.org/x/sys/windows/registry"
+
+	"github.com/windedge/biowarden/internal/paths"
 )
 
 const hostName = "com.8bit.bitwarden"
@@ -43,14 +45,15 @@ var browserKeyPaths = map[Browser][]string{
 }
 
 // Options overrides the real machine state. Its zero value targets the current
-// user's HKCU, %LOCALAPPDATA%\biowarden\manifests and this executable.
+// user's HKCU, the biowarden profile directory's manifests folder
+// (internal/paths) and this executable.
 type Options struct {
 	// Root is the key the registration keys live under; the zero Key means
 	// HKCU. Tests pass a private app hive (RegLoadAppKey) so they never read
 	// or write a real browser's registration.
 	Root registry.Key
 	// ManifestDir is where the manifest JSON files are written; empty means
-	// %LOCALAPPDATA%\biowarden\manifests.
+	// paths.Manifests().
 	ManifestDir string
 	// Executable is the host path recorded in the manifests; empty means
 	// os.Executable().
@@ -245,11 +248,7 @@ func (r *registrar) manifestsDir() (string, error) {
 	if r.manifestDir != "" {
 		return r.manifestDir, nil
 	}
-	base := os.Getenv("LOCALAPPDATA")
-	if base == "" {
-		return "", errors.New("registry: LOCALAPPDATA is not set")
-	}
-	return filepath.Join(base, "biowarden", "manifests"), nil
+	return paths.Manifests()
 }
 
 func (r *registrar) executablePath() (string, error) {

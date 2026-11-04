@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/windedge/biowarden/internal/paths"
 )
 
 // Browser ids the host records. They name the engine that launched the host,
@@ -25,8 +27,6 @@ const (
 	BrowserVivaldi  = "vivaldi"
 	BrowserUnknown  = "unknown"
 )
-
-const stateDirName = "connections"
 
 // Identify maps a launcher executable name to a browser id, reporting "" for
 // an engine biowarden does not know. Chrome and Chromium stay distinct here
@@ -55,19 +55,8 @@ func Identify(exe string) string {
 	return ""
 }
 
-// defaultDir is %LOCALAPPDATA%\biowarden\connections, mirroring hostlog's
-// fallback to the user cache dir so the package still works outside Windows.
-func defaultDir() (string, error) {
-	base := os.Getenv("LOCALAPPDATA")
-	if base == "" {
-		cache, err := os.UserCacheDir()
-		if err != nil {
-			return "", err
-		}
-		base = cache
-	}
-	return filepath.Join(base, "biowarden", stateDirName), nil
-}
+// defaultDir is the connection state directory, paths.Connections().
+func defaultDir() (string, error) { return paths.Connections() }
 
 // RecordConnection persists browser's last connection time. An empty or
 // unsupported id is kept as "unknown" so a run still leaves a trace.

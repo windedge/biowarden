@@ -33,7 +33,7 @@ func newRealBrowsers(reg registry.Registrar) *realBrowsers {
 }
 
 // newRealBrowsersWith injects the connection reader and the install probe too,
-// so a test never reads the tester's real %LOCALAPPDATA% or registry. A nil
+// so a test never reads the tester's real profile directory or registry. A nil
 // detect reports nothing, which is the safe default for a backend built
 // without the real one.
 func newRealBrowsersWith(reg registry.Registrar, connections func() (map[string]time.Time, error), detect func() []registry.Browser) *realBrowsers {

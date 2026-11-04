@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/windedge/biowarden/internal/paths"
 )
 
 func TestParseLevel(t *testing.T) {
@@ -132,7 +134,7 @@ func TestGUIPathIsDistinct(t *testing.T) {
 	if hostPath == guiPath {
 		t.Fatalf("DefaultPath and GUIPath are the same file: %s", hostPath)
 	}
-	if filepath.Base(hostPath) != logFileName || filepath.Base(guiPath) != guiLogFileName {
+	if filepath.Base(hostPath) != paths.HostLogName || filepath.Base(guiPath) != paths.GUILogName {
 		t.Fatalf("paths = %s, %s; want host.log and gui.log", hostPath, guiPath)
 	}
 	if filepath.Dir(hostPath) != filepath.Dir(guiPath) {
@@ -187,8 +189,8 @@ func TestSharedPathRotationStaysBounded(t *testing.T) {
 // file independently: neither logger's handle can block the other's rename.
 func TestHostAndGUILoggersRotateIndependently(t *testing.T) {
 	dir := t.TempDir()
-	hostPath := filepath.Join(dir, logFileName)
-	guiPath := filepath.Join(dir, guiLogFileName)
+	hostPath := filepath.Join(dir, paths.HostLogName)
+	guiPath := filepath.Join(dir, paths.GUILogName)
 	const maxSize = 400
 	host, err := newWithMaxSize(hostPath, LevelInfo, maxSize)
 	if err != nil {

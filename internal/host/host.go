@@ -44,7 +44,7 @@ type Options struct {
 	// hoststate's parent-process detection.
 	DetectBrowser func() string
 	// RecordConnection persists a browser's last connection time; nil means
-	// hoststate's file-backed record under %LOCALAPPDATA%.
+	// hoststate's file-backed record under the profile directory.
 	RecordConnection func(browser string, at time.Time) error
 }
 
