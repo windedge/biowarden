@@ -170,7 +170,7 @@ type authStep struct {
 	needs2FA     bool
 	challenge    *twoFactorPrompt
 	userKey      []byte
-	account      secrets.Account
+	account      auth.Account
 	refreshToken string
 }
 
@@ -480,7 +480,7 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 	// Remember the address next to the key, so a later re-login can prefill it
 	// even when the persisted session is gone.
 	acc.ServerURL = serverURL
-	if err := a.store.Put(acc, secrets.Key(step.userKey)); err != nil {
+	if err := a.store.Put(storedAccount(acc), secrets.Key(step.userKey)); err != nil {
 		return a.stay(serverURL), newLoginError(errSaveKey, err)
 	}
 	// The address outlives this login: the key and the session record go on
@@ -505,6 +505,19 @@ func (a *realAccount) completeLogin(step authStep, serverURL, email, helloReason
 	a.lastLoggedIn = a.sess
 	a.pending = nil
 	return a.sess, nil
+}
+
+// storedAccount maps the login result onto the store's schema. auth's Account
+// describes the login; CreatedAt is the store's own field (when the key was
+// written) and has no counterpart there.
+func storedAccount(acc auth.Account) secrets.Account {
+	return secrets.Account{
+		UserID:    acc.UserID,
+		Email:     acc.Email,
+		Name:      acc.Name,
+		ServerURL: acc.ServerURL,
+		CreatedAt: time.Now(),
+	}
 }
 
 // persistSession writes the login's refresh token and identity to the

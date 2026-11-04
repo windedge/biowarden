@@ -69,7 +69,7 @@ func fixedFlow(f *scriptedAuth) accountAuthFactory {
 func doneStep(userID, email string, key []byte) authStep {
 	return authStep{
 		userKey: key,
-		account: secrets.Account{UserID: userID, Email: email},
+		account: auth.Account{UserID: userID, Email: email},
 	}
 }
 

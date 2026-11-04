@@ -100,7 +100,7 @@ func TestStepFromResultCarriesRefreshToken(t *testing.T) {
 	res := auth.LoginResult{
 		State:   auth.LoginDone,
 		Token:   auth.TokenResponse{RefreshToken: "r-1"},
-		Account: secrets.Account{UserID: "user-1"},
+		Account: auth.Account{UserID: "user-1"},
 	}
 	step, err := stepFromResult(res)
 	if err != nil {

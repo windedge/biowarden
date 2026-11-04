@@ -5,12 +5,11 @@
 //
 // Domain boundary. auth knows only about HTTP, the Bitwarden protocol and key
 // derivation. It must not import internal/ui or any other presentation code;
-// the GUI drives it through the LoginFlow interface. It may depend on the
-// internal/hello and internal/secrets seams, but only through their
-// interfaces: auth produces a userKey and never stores it, never asks for a
-// biometric consent itself. The caller wires the result of an unlock into
-// hello.Verifier (Windows Hello consent) and then secrets.Store.Put (the
-// Windows Credential Manager).
+// the GUI drives it through the LoginFlow interface. It depends on no seam of
+// its own and knows nothing about where a key is kept: auth produces a userKey
+// and never stores it, never asks for a biometric consent itself. The caller
+// asks for the Windows Hello consent and then writes the key, mapping auth's
+// Account onto whatever schema its store uses.
 //
 // This package deliberately keeps the whole secret in memory. It emits no
 // logs of its own and every type that carries key material redacts itself

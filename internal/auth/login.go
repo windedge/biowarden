@@ -5,9 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
-
-	"github.com/windedge/biowarden/internal/secrets"
 )
 
 // LoginState is the position in the password -> 2FA -> userKey sequence.
@@ -73,6 +70,19 @@ type UserKey []byte
 // String redacts the key so it cannot reach a log through %v.
 func (UserKey) String() string { return "auth.UserKey(<redacted>)" }
 
+// Account is the account metadata a finished login produced, read from the
+// profile once the token is valid. It describes the login, not a stored entry:
+// auth decides nothing about where or how the key is kept, so the storage
+// schema (and the write timestamp) stays outside this package. ServerURL is
+// left for the caller to fill, because only the caller knows which address the
+// attempt was made against.
+type Account struct {
+	UserID    string
+	Email     string
+	Name      string
+	ServerURL string
+}
+
 // LoginResult is the outcome of one step.
 type LoginResult struct {
 	// State is the next state to act on.
@@ -82,11 +92,12 @@ type LoginResult struct {
 	// Token is the successful grant when State is LoginDone.
 	Token TokenResponse
 	// UserKey is the 64-byte account key when State is LoginDone. It is
-	// secret: never log it, and never persist it outside secrets.Store.
+	// secret: never log it, and never persist it outside the OS credential
+	// store.
 	UserKey UserKey
-	// Account is the account metadata for the stored key, taken from the
-	// profile once the token is valid.
-	Account secrets.Account
+	// Account is the account metadata for the key, taken from the profile
+	// once the token is valid.
+	Account Account
 }
 
 // LoginFlow drives one account login. It is the only entry point the GUI
@@ -96,14 +107,14 @@ type LoginResult struct {
 // Wiring the result into the OS. On LoginDone the caller passes
 // Result.UserKey through the two existing seams, in this order:
 //
-//  1. hello.Verifier.Verify(reason) - the Windows Hello consent prompt. If it
-//     does not return hello.Verified, the key is discarded.
-//  2. secrets.Store.Put(Result.Account, secrets.Key(Result.UserKey)) - stores
-//     the key in the Windows Credential Manager, where it waits for later
-//     unlocks.
+//  1. the Windows Hello consent prompt. If it is not accepted, the key is
+//     discarded.
+//  2. the credential store write, where the key waits for later unlocks. That
+//     write takes its own account schema; Result.Account is auth's view of the
+//     login and the caller maps it across.
 //
-// auth does not call either seam itself: the GUI stays in charge of when
-// consent is asked and when the key is written.
+// auth does neither itself: the GUI stays in charge of when consent is asked
+// and when the key is written.
 type LoginFlow struct {
 	client *Client
 
@@ -291,11 +302,10 @@ func (f *LoginFlow) finish(ctx context.Context, resp TokenResponse) (LoginResult
 		State:   LoginDone,
 		Token:   resp,
 		UserKey: UserKey(userKey),
-		Account: secrets.Account{
-			UserID:    profile.ID,
-			Email:     profile.Email,
-			Name:      profile.Name,
-			CreatedAt: time.Now(),
+		Account: Account{
+			UserID: profile.ID,
+			Email:  profile.Email,
+			Name:   profile.Name,
 		},
 	}, nil
 }

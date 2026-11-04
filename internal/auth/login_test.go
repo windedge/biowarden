@@ -71,8 +71,8 @@ func TestLoginFlowHappyPath(t *testing.T) {
 	if result.Account.UserID != "user-1" || result.Account.Email != "user@example.com" || result.Account.Name != "Test User" {
 		t.Errorf("Account = %+v", result.Account)
 	}
-	if result.Account.CreatedAt.IsZero() {
-		t.Error("Account.CreatedAt is zero")
+	if result.Account.ServerURL != "" {
+		t.Errorf("Account.ServerURL = %q, want it left to the caller", result.Account.ServerURL)
 	}
 	if result.Token.AccessToken != "access-1" {
 		t.Errorf("Token.AccessToken = %q", result.Token.AccessToken)
