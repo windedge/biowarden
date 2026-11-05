@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.6] - 2026-11-05
 
 ### Added
 
@@ -37,15 +37,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - One assembly point builds the credential store, the Hello verifier and the
   registry once per process, so the desktop runs a single verifier rather than
   two, each with its own thread.
+- The stored login session, its refresh retry and the language marker moved out
+  of the UI package into `internal/session` and the registry seam, leaving the
+  GUI with no direct call into a platform API.
 
 ### Fixed
 
+- The desktop and the host no longer fight over one log file: the GUI appends
+  to `gui.log`, the Log page shows both, and a rotation that cannot rename
+  falls back to copying, so neither file can grow without bound.
 - The scrolling pages leave the scrollbar its room, so it no longer sits on
   the buttons and the text.
 - The registry is no longer re-read on every animation frame; the Browsers
-  page's tick reads at most every two seconds and always on the first frame.
+  page's tick reads at most every two seconds, always on the first frame, and
+  not at all while another page is on screen.
 - Switching to dark no longer left the sidebar's chosen row in the light
   accent wash.
+
+## [Unreleased]
 
 ## [0.1.5] - 2026-10-29
 
@@ -251,7 +260,8 @@ Credential Manager behind a biometrics check.
 - Deleting an account key also clears the stored login session.
 - Registry tests never touch the real user hive (private app hive instead).
 
-[unreleased]: https://github.com/windedge/biowarden/compare/v0.1.5...HEAD
+[unreleased]: https://github.com/windedge/biowarden/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/windedge/biowarden/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/windedge/biowarden/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/windedge/biowarden/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/windedge/biowarden/compare/v0.1.2...v0.1.3
