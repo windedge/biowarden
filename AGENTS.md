@@ -63,11 +63,11 @@ its child issues. Do not commit unless asked.
 
 ### Issue tracker
 
-GitHub Issues of windedge/biowarden via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Open work lives in GitHub Issues of windedge/biowarden, driven with the `gh` CLI. No triage
+configuration of its own is kept in this repository.
 
 ### Domain docs
 
 `CONTEXT.md` and `docs/adr/` do not exist yet; protocol invariants currently live in
-`docs/how-it-works.md`. When a decision is worth keeping, record it
-as an ADR under `docs/adr/` (create the directory when the first one lands). See
-`docs/agents/domain.md` for the workflow.
+`docs/how-it-works.md`. When a decision is worth keeping, record it as an ADR under `docs/adr/`
+(create the directory when the first one lands).
