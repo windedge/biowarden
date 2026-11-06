@@ -41,9 +41,10 @@ the zero-configuration first-run setup to one automatic registration. v1 impleme
 - Logs redact long secrets.
 - Biometrics gate *access* to a key stored in the OS credential store; they encrypt nothing. Never
   word the model stronger than that.
-- Read the WardenBio `AGENTS.md` before touching protocol code: the four pitfalls (64-byte transport
-  key, `encryptedString` alongside `iv`/`data`/`mac`, `appId`/`messageId` echo,
-  `forwarded-bitwarden-ipc-message` envelope) are unforgiving.
+- Read "Four things the protocol will not forgive" in `docs/how-it-works.md` before touching
+  protocol code: the four pitfalls (64-byte transport key, `encryptedString` alongside
+  `iv`/`data`/`mac`, `appId`/`messageId` echo, `forwarded-bitwarden-ipc-message` envelope) are
+  unforgiving, and each one shows up as a spinner rather than an error.
 
 ## Verify
 
@@ -55,8 +56,8 @@ Acceptance is a real browser with the official Bitwarden extension, not a harnes
 
 ## Tracking
 
-Locked decisions and open work live on the Wayfinder map issue and its child issues.
-Do not commit unless asked.
+Locked decisions and open work live on the GitHub issue tracker: a map issue holding the notes and
+its child issues. Do not commit unless asked.
 
 ## Agent skills
 
@@ -67,6 +68,6 @@ GitHub Issues of windedge/biowarden via the `gh` CLI. See `docs/agents/issue-tra
 ### Domain docs
 
 `CONTEXT.md` and `docs/adr/` do not exist yet; protocol invariants currently live in
-`docs/research/*.md` and the WardenBio `AGENTS.md`. When a decision is worth keeping, record it
+`docs/how-it-works.md`. When a decision is worth keeping, record it
 as an ADR under `docs/adr/` (create the directory when the first one lands). See
 `docs/agents/domain.md` for the workflow.

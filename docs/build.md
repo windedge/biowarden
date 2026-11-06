@@ -80,6 +80,8 @@ two applies.
   with `mygo.json` but not with this constant shows the old number in the app.
 - `resources/icon.png` is the only icon: `icon` in `mygo.json` points at it,
   and the build derives the Windows icon resource from it.
+  `internal/ui/resources/icon.png` is a copy of the same image embedded in the
+  UI; `resources/icon.png` remains the only source.
 
 `resources/icon.png` is generated, not hand-drawn. `go run ./scripts/icongen`
 draws the blue ring the tray icon uses, with the standard library alone;

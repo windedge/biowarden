@@ -1,6 +1,7 @@
+> Research notes, kept for reference. Not user documentation; details may have moved since.
+
 # Windows Hello 纯 Go（no cgo）实现调研
 
-调研工单: #2（wayfinder:research）· 笔记路径 `docs/research/windows-hello-go.md`
 结论先行：**自写 ~300 行纯 syscall 实现是正确路径**，没有可直接复用的现成 Go 库；所有 API 序列、IID、等待模式都已从一手来源核实，风险从「未知」降为「照清单施工」。
 
 ## 1. 现成 Go 库盘点
@@ -29,7 +30,7 @@ kernel32.dll: CreateEventW / SetEvent / WaitForSingleObject / CloseHandle       
 
 1. 在调用线程 `RoInitialize(RO_INIT_MULTITHREADED)`（keyguard windows.rs:91 同款；S_FALSE/RPC_E_CHANGED_MODE 皆算成功，keyguard 用 Rc 守卫配对释放）
 2. `RoGetActivationFactory(L"Windows.Security.Credentials.UI.UserConsentVerifier", &IID_IUserConsentVerifierInterop, &interop)`
-   - **IID_IUserConsentVerifierInterop = `39E050C3-4E74-441A-8DC0-B81104DF949C`**（本机 Windows SDK 10.0.26100 `um/UserConsentVerifierInterop.h`；vtable 槽位：QI=0, AddRef=1, Release=2, GetIids=3, GetRuntimeClassName=4, GetTrustLevel=5, **RequestVerificationForWindowAsync=6**；NTDDI >= WIN10_RS3，即 Win10 1709+）
+   - **IID_IUserConsentVerifierInterop = `39E050C3-4E74-441A-8DC0-B81104DF949C`**（Windows SDK 10.0.26100 `um/UserConsentVerifierInterop.h`；vtable 槽位：QI=0, AddRef=1, Release=2, GetIids=3, GetRuntimeClassName=4, GetTrustLevel=5, **RequestVerificationForWindowAsync=6**；NTDDI >= WIN10_RS3，即 Win10 1709+）
    - 签名：`(HWND appWindow, HSTRING message, REFIID riid, void** asyncOperation)`
 3. `interop->RequestVerificationForWindowAsync(hwnd, msg, IID_IAsyncOperation<UserConsentVerificationResult>, &op)`
    - **泛型实例 IID = `FD596FFD-2318-558F-9DBE-D21DF43764A5`**（SDK `winrt/windows.security.credentials.ui.h:269` `IAsyncOperation<UserConsentVerificationResult>` 特化 uuid）
@@ -44,8 +45,8 @@ kernel32.dll: CreateEventW / SetEvent / WaitForSingleObject / CloseHandle       
      return GetResults()
      ```
    - Completed 回调在 WinRT 线程池线程触发，**不需要**窗口消息泵，也不阻塞 host 的 stdin 读循环（goroutine 里等待即可）
-   - **put_Completed 会对传入的 handler 做 QI，要求它实现该操作专属的 completed-handler IID**：验证路径 `0CFFC6C9-4C2B-5CD4-B38C-7B8DF3FF5AFB`，可用性路径 `28988174-ACE2-5C15-A0DF-580A26D94294`（本机 SDK 头文件核对）。handler 的 QueryInterface 不认它就会拿到 `E_NOINTERFACE (0x80004002)`，表现为 `put_Completed failed`。实现期实测踩过。
-5. 结果映射（`UserConsentVerificationResult`，数值以本机 SDK `winrt/windows.security.credentials.ui.h` 为准；本笔记初版曾串位，已按实测纠正）：
+   - **put_Completed 会对传入的 handler 做 QI，要求它实现该操作专属的 completed-handler IID**：验证路径 `0CFFC6C9-4C2B-5CD4-B38C-7B8DF3FF5AFB`，可用性路径 `28988174-ACE2-5C15-A0DF-580A26D94294`（SDK 头文件核对）。handler 的 QueryInterface 不认它就会拿到 `E_NOINTERFACE (0x80004002)`，表现为 `put_Completed failed`。实现期实测踩过。
+5. 结果映射（`UserConsentVerificationResult`，数值以 SDK `winrt/windows.security.credentials.ui.h` 为准；本笔记初版曾串位，已按实测纠正）：
    - 0 Verified → 成功
    - 1 DeviceNotPresent / 2 NotConfiguredForUser / 3 DisabledByPolicy → Unavailable（Hello 未配置）
    - 4 DeviceBusy → Busy（设备忙，可重试）
@@ -77,9 +78,9 @@ internal/hello/hello_windows.go  // syscall 实现
 - 隐患清单（PoC 时验证）：a) host 模式无窗口线程，隐藏窗口 + Hello 弹窗的宿主关系（keyguard 传 JVM 窗口 HWND；winhello 传隐藏窗口）；b) RO_INIT_MULTITHREADED 在 GUI 进程里可能与 mygo WebView2 的 STA 冲突，host 进程无此问题；GUI 进程验证密钥时若冲突可退 RO_INIT_SINGLETHREADED 或专用线程
 - **每线程 RoInitialize 一次**：Verify 若从多个 goroutine 调用，需固定到专用 OS 线程（runtime.LockOSThread）或用 sync.Once 确保只初始化一次
 
-## 5. 对地图的影响
+## 5. 对后续实现的影响
 
-- #7（Hello syscall 实现与 PoC）按此清单施工，预估 ~300 行（原估 200 行偏乐观，含 HSTRING/事件/守卫）
-- 无需引入第三方依赖，纯标准库 syscall（本机实测通过，未用到 golang.org/x/sys）
+- Hello syscall 实现与 PoC 按此清单施工，预估 ~300 行（原估 200 行偏乐观，含 HSTRING/事件/守卫）
+- 无需引入第三方依赖，纯标准库 syscall（实测通过，未用到 golang.org/x/sys）
 - 调研发现的 hiddenwindow 消息泵问题不存在：Completed 回调在线程池触发，host 主循环无阻塞风险
 - **实现已落地**：`internal/hello/`（合并提交 43996dd 前的 11a6ccd），实测 `Available() = true`、`Verify() = verified`（Windows Security 提示由隐藏窗口 owner 拉起），并在启用 `put_Completed` 之前暴露了上面那条 handler IID 的坑

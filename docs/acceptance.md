@@ -1,6 +1,6 @@
-# v1 验收清单（工单 #14）
+# v1 验收清单
 
-对着地图终点的验收：三浏览器 × 两通道 × 全流程，真实扩展、真实 Windows Hello。
+验收范围：三浏览器 × 两通道 × 全流程，真实扩展、真实 Windows Hello。
 逐项打勾并记现象；任何一步失败，记下 host.log 尾部与扩展后台 console 的报错。
 
 前置：`go tool mygo build` 产出的 `build/windows-amd64/biowarden.exe`（或安装 NSIS 安装器后用安装版）。
@@ -38,7 +38,7 @@
 ## 2. 浏览器注册（每浏览器一遍）
 
 - [ ] 浏览器页：Chrome/Edge/Firefox 三行状态与真实注册表一致
-  - 本机预期：Chrome=已安装（biowarden）【若之前装过官方则可能为 foreign】、Edge=已存在（可能官方配置，指向 scoop 的 Bitwarden）、Firefox=未安装
+  - 预期：Chrome=已安装（biowarden）【若之前装过官方则可能为 foreign】、Edge=已存在（可能为官方配置，指向其它 Bitwarden 安装）、Firefox=未安装
 - [ ] Edge 行点「覆盖安装」→ 出现二次确认 → 「确认覆盖」→ 状态变已安装（biowarden）
   - [ ] 确认 `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.8bit.bitwarden` 指向 `%LOCALAPPDATA%\biowarden\manifests\edge.json`
 - [ ] Firefox 行「安装」→ 状态变已安装
@@ -75,5 +75,5 @@
 
 ## 退出标准
 
-全部勾项通过 → 结单 #14，开始 #15（README 定稿）。
-任何「转圈」/「解锁失败但 Hello 已通过」→ 记录浏览器+扩展版本+host.log，回协议工单排查。
+全部勾项通过 → v1 验收结束，进入 README 定稿。
+任何「转圈」/「解锁失败但 Hello 已通过」→ 记录浏览器+扩展版本+host.log，回协议层排查。

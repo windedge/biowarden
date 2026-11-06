@@ -1,6 +1,8 @@
+> Research notes, kept for reference. Not user documentation; details may have moved since.
+
 # goldwarden 登录链路移植调研（bitwarden 账号登录 → 解出 userKey）
 
-调研工单: wayfinder research · 参照代码：`goldwarden`（HEAD 7727d3a）、`bitwarden-clients`（HEAD 9d29a0d）
+参照代码：`goldwarden`（HEAD 7727d3a）、`bitwarden-clients`（HEAD 9d29a0d）
 
 ## 结论摘要
 
@@ -209,15 +211,15 @@ internal/secrets/   // 复用：存 userKey + AccountKeys，并加一条可选 t
 | 伪装 desktop 被拒 | 官方可能校验 `Bitwarden-Client-Name`/版本或 device 一致性；goldwarden 用 `web`/`firefox` 是已知可用的假身份 | 先按官方桌面端身份（`desktop`/`6`/`windows`）实现，若被拒回落 goldwarden 的 `web`/`firefox`；失败信号是 token 端点返回 400/invalid_client |
 | WebAuthn 2FA 无浏览器 | 官方桌面端依赖 web vault 的 connector 页面，纯 Go 无 WebView 无法直接跑 | 先用系统浏览器 + 回填 token 兜底；原生 `webauthn.dll`（`go-ctap/winhello`）列为实验项，**需实测** |
 | Argon2id 参数差异 | MiB vs KiB 单位、salt=sha256(email) 还是服务端 salt | 已确认 goldwarden `Memory*1024` 正确；新 prelogin 的 `Salt` 须优先使用、勿再 hash |
-| 自托管兼容 | Vaultwarden 的 `/api/config`、prelogin variant、identity/api 同源/分源 | 支持「单地址 + /api/config 推导」+ 手动覆盖四个 URL；真机测 Vaultwarden |
+| 自托管兼容 | Vaultwarden 的 `/api/config`、prelogin variant、identity/api 同源/分源 | 支持「单地址 + /api/config 推导」+ 手动覆盖四个 URL；需真实实例测 Vaultwarden |
 | 新 prelogin variant 迁移 | 官方正迁移到 `/accounts/prelogin/password`（带 Salt） | 同时实现两个 endpoint，优先新 variant，失败回落旧 variant |
 | 加密密钥迁移账号 | `response.key` 为空表示老账号需 key migration，官方已不支持 | 检测 `Key` 为空时报错并提示用户（goldwarden `encryptionKeyMigrationRequired` 对应） |
 
 ### 需实测验证清单（最多 3 处之外的集中列表）
 
-1. Windows 原生 WebAuthn（webauthn.dll / go-ctap winhello）能否完成 2FA 断言 —— **需实测验证**
-2. Vaultwarden 的 `/api/config` 与 prelogin variant 兼容性 —— **需实测验证**
-3. 服务端是否调用 `/connect/revocation` 吊销 —— **未查到，需实测验证**
+1. Windows 原生 WebAuthn（webauthn.dll / go-ctap winhello）能否完成 2FA 断言 - **需实测验证**
+2. Vaultwarden 的 `/api/config` 与 prelogin variant 兼容性 - **需实测验证**
+3. 服务端是否调用 `/connect/revocation` 吊销 - **未查到，需实测验证**
 
 ---
 

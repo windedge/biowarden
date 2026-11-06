@@ -1,7 +1,9 @@
+> Research notes, kept for reference. Not user documentation; details may have moved since.
+
 # 2FA 浏览器路径调研：Duo 与 WebAuthn
 
 状态：调研笔记，**本次不实现**。所有结论尽量给出 `文件:行号` 证据；无法从源码确定的一律标注
-「需真机验证」。代码标识符、字段名、路径保留英文。
+「需实测验证」。代码标识符、字段名、路径保留英文。
 
 ## 0. 结论速览
 
@@ -257,15 +259,15 @@ Duo 完成后回跳到 connector，带 `client`、`code`、`state`
 结论：**推荐路线** = WebAuthn 走原生 `webauthn.dll`（无浏览器回调问题）；
 Duo 走自建 localhost 回跳页或自建 WebView。官方 connector 原样复用不可行。
 
-## 7. 需真机验证清单
+## 7. 需实测验证清单
 
 1. 服务端是否接受我们自建的 Duo `redirect_uri` / 是否允许 `deeplinkScheme` 影响回跳；
-   官方 connector 写死的 `bitwarden://duo-callback` 是否可被自建页面替换。**需真机验证**
+   官方 connector 写死的 `bitwarden://duo-callback` 是否可被自建页面替换。**需实测验证**
 2. 自托管 / Vaultwarden 是否部署 `webauthn-connector.html` / `duo-redirect-connector.html`，
-   以及 `{webVaultUrl}` 的具体取值。**需真机验证**
+   以及 `{webVaultUrl}` 的具体取值。**需实测验证**
 3. 原生 `webauthn.dll` 断言 JSON 能否被身份服务的 WebAuthn 2FA 校验接受
-   （字段大小写、`clientDataJSON` 的 origin/challenge 拼装）。**需真机验证**
-4. 抢注 `bitwarden://` 与官方桌面端共存时的行为（仅作风险评估，不建议采用）。**需真机验证**
+   （字段大小写、`clientDataJSON` 的 origin/challenge 拼装）。**需实测验证**
+4. 抢注 `bitwarden://` 与官方桌面端共存时的行为（仅作风险评估，不建议采用）。**需实测验证**
 
 ## 8. 证据清单
 

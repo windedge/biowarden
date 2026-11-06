@@ -1,4 +1,4 @@
-# v2 验收归档：安装即用（工单 #16 地图终点）
+# v2 验收归档：安装即用
 
 v2 的目标是「安装即用」：新用户装上 biowarden -> 首启自动注册已安装浏览器 -> 直接弹登录窗 ->
 邮箱+主密码+TOTP -> Windows Hello 确认存钥 -> 扩展里开启生物识别 -> 锁定后解锁，全程零控制台脚本。
@@ -9,14 +9,14 @@ v1 的验收清单（`docs/acceptance.md`）仍然有效，本文档只归档 v2
 
 ## 1. 验收目标
 
-- 新账号（本机凭据管理器里没有该账号密钥）从登录到扩展解锁，全程不碰控制台脚本。
+- 新账号（凭据管理器里没有该账号密钥）从登录到扩展解锁，全程不碰控制台脚本。
 - 首启只在满足「零配置」条件时自动动作，且每次安装只跑一次。
 - 密钥写入前必须经过 Windows Hello；拒绝弹窗不落任何数据。
 - 2FA 的 TOTP / 邮箱 / YubiKey 三条路径可交互；WebAuthn / Duo 明确拒绝并指路脚本后备。
 
-## 2. 已验收的路径（真机）
+## 2. 已验收的路径
 
-以下路径在一台装有官方 Bitwarden 扩展的真机上走通（本机为 Chrome/Chromium 系）：
+以下路径在装有官方 Bitwarden 扩展的 Chrome 系浏览器上走通：
 
 - [x] 首启自动注册：零配置时探测 App Paths，为已安装且未注册的浏览器写入 manifest；已有 foreign
       注册的行被跳过并在浏览器页摘要里点名，未覆盖。
@@ -34,7 +34,7 @@ v1 的验收清单（`docs/acceptance.md`）仍然有效，本文档只归档 v2
 
 ## 3. 验收中修掉的真实 bug
 
-这两个 bug 都是真机走查时暴露、并已修复的（提交见 git 记录）：
+这两个 bug 都是实际走查时暴露、并已修复的（提交见 git 记录）：
 
 1. **2FA 挑战解析失败（`fix(auth): parse the two-factor challenge from the real identity response`）。**
    身份服务器把 `TwoFactorProviders` 序列化成 **JSON 字符串数组**（`["0","1"]`），而早期代码按 `[]int`
@@ -47,21 +47,21 @@ v1 的验收清单（`docs/acceptance.md`）仍然有效，本文档只归档 v2
    `SetForegroundWindow`，而从未被激活的窗口又无法把提示提到最前，于是任何时候有普通窗口盖在 owner 上，
    提示就可能被挡住。修复：owner 窗口加 `WS_EX_TOPMOST`，并在请求前短暂借用前台
    （`GetForegroundWindow`、`AttachThreadInput`、`SetForegroundWindow`、解绑）让提示拿到键盘焦点，
-   请求后再归还原前台；`WS_EX_TOOLWINDOW` 让零尺寸 owner 不进 Alt+Tab。用户真机矩阵确认通过。
+   请求后再归还原前台；`WS_EX_TOOLWINDOW` 让零尺寸 owner 不进 Alt+Tab。实测矩阵确认通过。
 
 ## 4. 暂缓 / 不支持项
 
 - **WebAuthn 与 Duo 2FA：明确不支持。** 官方 connector 的回调依赖内嵌 web vault 页面（`postMessage`）
   或写死的 `bitwarden://` 深链；biowarden 是独立进程、没有内嵌页面、也不抢注该协议。决策见
-  `docs/research/2fa-browser-path.md`（工单 #29）。UI 会点名这两种方式并指向「高级」里的提取脚本。
-- **首启干净环境验证：暂缓。** 开发机不是全新机器，首启自动注册是在已有 Chrome/Chromium 注册的环境里
+  `docs/research/2fa-browser-path.md`。UI 会点名这两种方式并指向「高级」里的提取脚本。
+- **首启干净环境验证：暂缓。** 已验证的环境不是全新机器，首启自动注册是在已有 Chrome/Chromium 注册的环境里
   验证的；「一台从没装过 biowarden、也没装过官方桌面端的机器」的全新首启还需要单独走一遍。
 - **Vaultwarden / 自托管实测：暂缓。** 登录端点的旧 prelogin variant 是按兼容 Vaultwarden 设计的，但还没
   在真实 Vaultwarden 实例上验证过（`docs/research/goldwarden-auth.md` A1、D11）。
 - **SDK IPC 通道实测：暂缓。** 新版桌面 IPC（Noise/CBOR/JSON RPC）代码在位，但扩展的
-  `BiometricsSDKIPC` 远端开关未放量，尚未在真机上观察走该通道的解锁。旧命令协议通道已验收。
-- **Edge 与 Firefox：暂缓。** v2 有四个注册点，真机只走了 Chrome/Chromium 系；Edge 与 Firefox 的真机
-  验收还没做。Brave、Vivaldi、Safari 等不在支持范围。
+  `BiometricsSDKIPC` 远端开关未放量，尚未在真实浏览器里观察到走该通道的解锁。旧命令协议通道已验收。
+- **Edge 与 Firefox：暂缓。** v2 有四个注册点，只在 Chrome/Chromium 系上验过；Edge 与 Firefox 的验收
+  还没做。Brave、Vivaldi、Safari 等不在支持范围。
 
 ## 5. 怎么重跑验收
 
@@ -69,7 +69,7 @@ v1 的验收清单（`docs/acceptance.md`）仍然有效，本文档只归档 v2
 2. 若机器上跑着官方 Bitwarden 桌面客户端，先退出，避免它重写 `NativeMessagingHosts` 注册表键。
 3. 清掉首启标记以便重验自动注册：删除注册表值
    `HKCU\Software\biowarden\FirstRunCompleted`（或用一台没有该值的机器）。
-4. 双击 `biowarden.exe`：确认托盘出现图标、窗口打开、浏览器页摘要显示自动注册结果；若本机凭据管理器里
+4. 双击 `biowarden.exe`：确认托盘出现图标、窗口打开、浏览器页摘要显示自动注册结果；若凭据管理器里
    没有该账号密钥，登录窗应自动打开。
 5. 登录窗里输入邮箱 + 主密码；若账号开了 2FA，输入 TOTP / 邮箱码 / 触碰 YubiKey 提交。
 6. Hello 通过后到账号页确认密钥状态为「已保存」；用 `reg query` 或凭据管理器确认
@@ -84,5 +84,5 @@ v1 的验收清单（`docs/acceptance.md`）仍然有效，本文档只归档 v2
 
 ## 退出标准
 
-上述「已验收路径」全部通过，且第 4 节列出的暂缓项各有明确工单后续处理。任何「转圈」或
-「解锁失败但 Hello 已通过」都要记录浏览器 + 扩展版本 + `host.log`，回到协议工单排查。
+上述「已验收路径」全部通过，且第 4 节列出的暂缓项各留有明确的后续处理。任何「转圈」或
+「解锁失败但 Hello 已通过」都要记录浏览器 + 扩展版本 + `host.log`，回到协议层排查。

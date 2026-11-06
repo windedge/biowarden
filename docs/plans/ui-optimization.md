@@ -1,3 +1,5 @@
+> Design note written at the time, kept for reference. Not user documentation; details may have moved since.
+
 # UI 优化方案（v0.1.5 之后的缺口清单）
 
 现状水平：令牌纪律、语义色、notice/badge/button 体系已经达到成熟桌面工具水准，i18n 布局防线完整。最大缺口不在视觉，而在 (1) 键盘与逃生路线（模态无 Esc、登录无初始焦点）、(2) 反馈诚实性（假开关/假下拉说"已生效"）、(3) 空态与节奏细节。以下按 用户价值 x 成本 排序，均为增量修改，不动 style.go 的调色板与四页结构。
@@ -12,7 +14,7 @@
    - 方案：email 输入 `.AutoFocus()`（`mygo/ui/api_gen.go:2869`）；2FA 阶段对 code 字段同理。
 3. **假开关与假下拉的欺骗性反馈**（S，价值高）
    - 问题：`pages_settings.go:55` showTray 是 memory-only 却报"已显示托盘"；`state_settings.go:237` logLevel 同样写不进后端，用户以为生效。
-   - 方案：短期把两行改为 disabled + caption 说明"即将支持"（诚实优先），或干脆隐藏；若要实现走独立工单（托盘重建、host 环境变量）。
+   - 方案：短期把两行改为 disabled + caption 说明"即将支持"（诚实优先），或干脆隐藏；若要实现需另开一项改动（托盘重建、host 环境变量）。
 4. **密码可见性切换**（S，价值中高）
    - 问题：`pages_login.go:57` 密码框无 reveal；输错排查困难。mygo 的 `Password()` 是按帧开关（`textinput.go:256` 注释即为此设计）。
    - 方案：字段尾部 plainButton 画眼睛图标，`s.showPassword` 为 false 才链 `.Password()`。

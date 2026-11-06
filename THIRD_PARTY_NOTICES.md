@@ -22,7 +22,7 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 
 - Version: not pinned (macOS/Swift reference implementation)
 - License: none declared. The upstream repository carries no license file (`gh api
-  repos/xVanTuring/WardenBio` reports no license) and the local checkout has none either.
+  repos/xVanTuring/WardenBio` reports no license), so no license terms are attached to that work.
 - Upstream: https://github.com/xVanTuring/WardenBio
 - Copyright: not stated
 - Usage: Biowarden is a Windows port of WardenBio's behaviour. No source code is copied verbatim:
@@ -35,8 +35,8 @@ the module cache (`$(go env GOMODCACHE)/<module>@<version>/LICENSE`), not transc
 - License: MIT
 - Upstream: https://github.com/quexten/bw-bio-handler
 - Copyright: Copyright 2023 Bernd Schoolmann
-- Evidence: `LICENSE` in the checkout (first line is the copyright above), and `gh api
-  repos/quexten/bw-bio-handler` reporting `MIT`
+- Evidence: the `LICENSE` file in the upstream repository (first line is the copyright above), and
+  `gh api repos/quexten/bw-bio-handler` reporting `MIT`
 - Usage: reference for the legacy command protocol; no source code is copied verbatim.
 
 ## Direct dependencies (from go.mod)

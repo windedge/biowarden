@@ -35,6 +35,35 @@ that write, so a refused prompt leaves the store untouched.
   the `forwarded-bitwarden-ipc-message` envelope.
 - The extension opens both connections, so two host processes per browser is normal.
 
+## Four things the protocol will not forgive
+
+The extension asks for an exact answer shape and silently discards anything else: none of the four
+mistakes below produces an error message, they produce a spinner. They are worth knowing by heart
+before touching the protocol packages.
+
+1. **The transport key is 64 bytes, not 32.** `setupEncryption` returns one RSA-OAEP-wrapped secret
+   and the host splits it in half: 32 bytes for AES-256-CBC, 32 for HMAC-SHA256
+   (`internal/protocol/legacy.go`, `TransportKeyLength`). A 32-byte key still decrypts, so the
+   host's own log looks healthy while the extension rejects every reply: it splits the same secret
+   for its own keys and has nothing to check the MAC with.
+2. **`encryptedString` travels next to `iv`/`data`/`mac`.** Bitwarden's `EncString` carries all
+   four: the extension reads `iv`/`data`/`mac` for its own checks and then hands the composite
+   `<type>.<iv>|<data>|<mac>` string to its SDK decryptor. A reply with only the three fields parses
+   fine and still cannot be decrypted, which looks exactly like a reply that never arrived. Hence
+   `EncString.MarshalJSON` always writes all four.
+3. **`appId` and `messageId` are echoed, never invented.** Every reply repeats the request's
+   `appId`, and the decrypted payload repeats the request's `messageId`; the `setupEncryption`
+   reply uses `-1`, the official client's marker for a new session. That id is the only thing the
+   extension matches a reply against, so a reply that omits it or renumbers it resolves no promise:
+   the pending unlock stays pending and nothing appears to happen.
+4. **The newer channel answers inside a `forwarded-bitwarden-ipc-message` envelope.** The SDK IPC
+   reply is `{type: "forwarded-bitwarden-ipc-message", message: {destination: "DesktopMain",
+   payload: [ints], topic}, originalSource: <the endpoint the request came from>}`. The extension
+   stamps a bare `bitwarden-ipc-message` as coming from `DesktopMain` and drops a response whose
+   `originalSource` is not the endpoint it addressed, so a missing or wrong source (or a payload
+   sent as a base64 string instead of an integer array) is discarded before it is parsed. It
+   surfaces as a send timeout, not as an error.
+
 ## Where the key lives
 
 The key is held in the Windows Credential Manager as `Biowarden/<userId>`, one entry per account,
