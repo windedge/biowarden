@@ -24,6 +24,17 @@ jobs:
       - name: i18n check
         run: go tool mygo i18n check
 
-      # Safety net: fail if any generated file (e.g. locales) was not committed.
-      - name: Verify clean worktree
-        run: git diff --exit-code
+      # Regenerate the catalogs, then fail if that changed anything: a stale
+      # catalog_gen.go otherwise passes every other step.
+      - name: Verify generated files are current
+        run: go tool mygo generate && git diff --exit-code
+
+      # The project writes ASCII hyphens only: no em dash (U+2014), no en dash (U+2013).
+      # (*UTF) puts PCRE into UTF-8 mode, so the \x{} escapes match code points, not bytes.
+      - name: Verify typography
+        run: |
+          if git grep -nP '(*UTF)[\x{2013}\x{2014}]' -- '*.md' '*.go' '*.json' '*.yml'; then
+            echo "::error::Replace the dash with an ASCII hyphen."
+            exit 1
+          fi
+          echo "No em or en dashes."

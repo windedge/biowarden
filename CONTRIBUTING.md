@@ -31,6 +31,7 @@ CGO_ENABLED=0 go build ./... && CGO_ENABLED=0 go vet ./... && go test ./...
 | `go test ./...` | including the layout tests: every page, in all seven languages, in both appearances |
 | `go tool mygo generate` then `git diff --exit-code` | generated catalogs stay in step with the JSON |
 | `go tool mygo i18n check` | every locale carries the same keys |
+| `git grep -nP '(*UTF)[\x{2013}\x{2014}]' -- '*.md' '*.go' '*.json' '*.yml'` | no em or en dashes; CI rejects them (the `(*UTF)` prefix makes PCRE match code points, not bytes) |
 
 The interface has seven languages, so a new string is not done until it exists in all seven files
 under `locales/`. `en.json` carries the `@` descriptions translators read. Please do not let
