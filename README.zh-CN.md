@@ -57,6 +57,7 @@ Windows Hello。
 | [安全策略](./SECURITY.md) | 如何报告漏洞、哪些在范围内 |
 | [第三方来源](./THIRD_PARTY_NOTICES.md) | 许可证与移植来源 |
 | [参与贡献](./CONTRIBUTING.md) | 如何报告、构建与提交改动 |
+| [仓库地图](./docs/agents-brief.md) | 各部分在哪、改动必须保持哪些检查通过 |
 
 ## 关于连接名
 

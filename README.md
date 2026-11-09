@@ -63,6 +63,7 @@ an unlock prompt never appears, before it gets to the extraction-script fallback
 | [Security policy](./SECURITY.md) | how to report a vulnerability, what is in scope |
 | [Third-party notices](./THIRD_PARTY_NOTICES.md) | licenses and the origin of ported work |
 | [Contributing](./CONTRIBUTING.md) | how to report, build and send a change |
+| [Working on this repository](./docs/agents-brief.md) | where each concern lives, and the checks a change must keep green |
 
 ## The connection name
 

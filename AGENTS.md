@@ -50,9 +50,14 @@ the zero-configuration first-run setup to one automatic registration. v1 impleme
 
 ```bash
 CGO_ENABLED=0 go build ./... && CGO_ENABLED=0 go vet ./... && go test ./...
+go tool mygo generate && git diff --exit-code
+go tool mygo i18n check
 ```
 
 Acceptance is a real browser with the official Bitwarden extension, not a harness alone.
+
+Before exploring, read [`docs/agents-brief.md`](docs/agents-brief.md): where each concern lives, the
+MyGo calls worth not rediscovering, and the tests a change must keep green.
 
 ## Tracking
 
