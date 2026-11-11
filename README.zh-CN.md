@@ -27,11 +27,16 @@ Windows 上的 Bitwarden 浏览器扩展「生物识别解锁」独立工具 - �
    (Get-FileHash .\biowarden-setup-<版本>-amd64.exe).Hash   # 与 SHA256SUMS.txt 里的值对照
    ```
 
+   在带有 coreutils 的 shell 里，`sha256sum -c SHA256SUMS.txt` 效果相同。
+
 3. 启动 Biowarden。在干净的机器上它会自行注册浏览器并弹出登录窗。
 
 程序未做代码签名，首次运行会出现 SmartScreen 的「Windows 已保护你的电脑」：点**更多信息** ->
 **仍要运行**。上面的哈希校验就是你防篡改的手段。需要 Windows 10 1709 或更高版本，并已配置
 Windows Hello。
+
+受支持的扩展浏览器为 Chrome、Edge 与 Firefox；Brave、Vivaldi 尚未支持 - 详见
+[已知限制](./docs/troubleshooting.md#known-limitations)。
 
 ## 使用
 
@@ -69,7 +74,8 @@ Biowarden 是密码管理器的「钥匙链」：用主密码派生 userKey，�
 
 ### 怎么确认安装器没被篡改？
 
-每个 Release 都附 `SHA256SUMS.txt`；用 PowerShell 的 `Get-FileHash -Algorithm SHA256` 校验下载文件（或 `sha256sum -c`）。源码可复现构建，CI 在 windows-latest 上跑 `go build`、`go vet`、`go test` 与 `mygo generate`。程序未签名，SmartScreen 会警告 - 哈希校验就是你的防护。
+每个 Release 都附 `SHA256SUMS.txt`；用 PowerShell 的 `Get-FileHash -Algorithm SHA256` 校验下载文件（或 `sha256sum -c`）。完整源码在 GitHub 上，CI 每次推送都会构建，在 windows-latest 上跑
+`go build`、`go vet`、`go test` 与 `mygo generate`。程序未签名，SmartScreen 会警告 - 哈希校验就是你的防护。
 
 ## 文档
 

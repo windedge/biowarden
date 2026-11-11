@@ -37,6 +37,9 @@ Nothing is code-signed, so first run shows SmartScreen's "Windows protected your
 **More info** -> **Run anyway**. The hash check above is your guard against a tampered download.
 Requires Windows 10 1709 or later with Windows Hello set up.
 
+The supported extension browsers are Chrome, Edge and Firefox; Brave and Vivaldi are not
+supported yet - see [Known limitations](./docs/troubleshooting.md#known-limitations).
+
 ## Use
 
 1. **Sign in** - email and master password in the login window. The server address is under
@@ -91,7 +94,7 @@ needed). It suits people who use only the browser extension.
 ### How do I verify the installer was not tampered with?
 
 Every release ships a `SHA256SUMS.txt`; check the download with `Get-FileHash -Algorithm SHA256`
-in PowerShell (or `sha256sum -c`). The build is reproducible from source, with CI running
+in PowerShell (or `sha256sum -c`). The full source is on GitHub and CI builds it on every push, running
 `go build`, `go vet`, `go test` and `mygo generate` on windows-latest. Nothing is code-signed, so
 SmartScreen will warn - the hash check is your guard.
 
