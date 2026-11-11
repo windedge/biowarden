@@ -53,6 +53,48 @@ and the session.
 Something not working? [Troubleshooting](./docs/troubleshooting.md) starts with the three reasons
 an unlock prompt never appears, before it gets to the extraction-script fallback.
 
+## FAQ
+
+### Is Biowarden an official Bitwarden product?
+
+No. Biowarden is an independent project with no affiliation to Bitwarden Inc. The name
+`com.8bit.bitwarden` is the appId hard-coded in the official extension, and Biowarden only takes
+over that registry entry so the extension can find its host - see [The connection name](#the-connection-name).
+
+### Does it upload my passwords?
+
+No. Network requests go only to your own Bitwarden server (or Vaultwarden); `internal/auth` is the
+only package that makes HTTP calls. There is no telemetry or analytics, and the source is open to
+audit.
+
+### Why do I have to type my master password?
+
+Biowarden is the keychain for your password manager: it derives the userKey from your master
+password and stores that key in the Windows Credential Manager. The master password itself is never
+written to disk (derived, then dropped); the access token is memory-only too. Only the refresh
+token is persisted, as the DPAPI-encrypted `Biowarden/Session/<userId>` entry. See
+[Security model](./docs/how-it-works.md#security-model).
+
+### Does Windows Hello encrypt my key?
+
+No. Hello only gates access to reading the `Biowarden/<userId>` credential entry; the key is
+stored as raw bytes (wrapped by Credential Manager's own DPAPI, readable by your OS user). Hello
+is a gatekeeper, not a vault. See [Security model](./docs/how-it-works.md#security-model).
+
+### Why not use the official desktop client?
+
+The official client is a full Electron app - hundreds of MB, a resident background process,
+auto-updates. Biowarden is a native messaging host started on demand: tens of MB of memory,
+millisecond startup, no resident UI process (the GUI is a separate process opened only when
+needed). It suits people who use only the browser extension.
+
+### How do I verify the installer was not tampered with?
+
+Every release ships a `SHA256SUMS.txt`; check the download with `Get-FileHash -Algorithm SHA256`
+in PowerShell (or `sha256sum -c`). The build is reproducible from source, with CI running
+`go build`, `go vet`, `go test` and `mygo generate` on windows-latest. Nothing is code-signed, so
+SmartScreen will warn - the hash check is your guard.
+
 ## Docs
 
 | | |

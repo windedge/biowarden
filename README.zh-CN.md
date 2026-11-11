@@ -45,6 +45,32 @@ Windows Hello。
 
 解锁时弹窗不出现？[故障排查](./docs/troubleshooting.md) 开头就是三种常见原因，之后才是提取脚本兜底。
 
+## 常见问题
+
+### Biowarden 是 Bitwarden 官方产品吗？
+
+不是。Biowarden 是独立项目，与 Bitwarden Inc. 无任何官方关联。`com.8bit.bitwarden` 这个名字是官方扩展写死的 appId，Biowarden 只是接管该注册表项，让扩展能找到 host - 详见[关于连接名](#关于连接名)。
+
+### 它会上传我的密码吗？
+
+不会。网络请求只发往你自己的 Bitwarden 服务器（或 Vaultwarden）；`internal/auth` 是唯一发起 HTTP 的包。没有遥测、没有分析，源码开放可审计。
+
+### 为什么必须输入主密码？
+
+Biowarden 是密码管理器的「钥匙链」：用主密码派生 userKey，再把 userKey 存进 Windows 凭据管理器。主密码本身**不落盘**（派生后即丢弃）；access token 也不落盘。只有 refresh token 会被持久化，作为 DPAPI 加密的 `Biowarden/Session/<userId>` 条目。详见[安全模型](./docs/how-it-works.md#security-model)。
+
+### Windows Hello 加密了我的密钥吗？
+
+没有。Hello 只放行读取 `Biowarden/<userId>` 凭据条目的权限；密钥以原始字节存在（由凭据管理器自身的 DPAPI 封装，对 OS 用户可读）。Hello 是「门卫」，不是「保险箱」。详见[安全模型](./docs/how-it-works.md#security-model)。
+
+### 为什么不直接用官方桌面客户端？
+
+官方客户端是完整的 Electron 应用 - 数百 MB、常驻后台进程、自动更新。Biowarden 是按需启动的 native messaging host：内存占用几十 MB、启动毫秒级、不带常驻 UI 进程（GUI 是独立进程，只在需要时打开）。适合「只用浏览器扩展」的人。
+
+### 怎么确认安装器没被篡改？
+
+每个 Release 都附 `SHA256SUMS.txt`；用 PowerShell 的 `Get-FileHash -Algorithm SHA256` 校验下载文件（或 `sha256sum -c`）。源码可复现构建，CI 在 windows-latest 上跑 `go build`、`go vet`、`go test` 与 `mygo generate`。程序未签名，SmartScreen 会警告 - 哈希校验就是你的防护。
+
 ## 文档
 
 详细文档为英文：
