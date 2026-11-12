@@ -14,9 +14,7 @@ Not an official Bitwarden project; please don't report unlock problems to the Bi
 Credential Manager as raw bytes; passing the prompt only means Biowarden may read it. That is the
 same model you already accept with the official desktop client.
 
-| Light | Dark |
-|---|---|
-| ![The Browsers page in the light appearance](./docs/images/screenshot-light.png) | ![The same page in the dark appearance](./docs/images/screenshot-dark.png) |
+![The Biowarden account page](./docs/images/screenshot-light.png)
 
 ## Install
 

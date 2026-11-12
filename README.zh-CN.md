@@ -12,9 +12,7 @@ Windows 上的 Bitwarden 浏览器扩展「生物识别解锁」独立工具 - �
 **Windows Hello 只放行「读取」密钥，它不加密密钥。** 密钥以原始字节存在 Windows 凭据管理器里；
 通过验证只表示 Biowarden 可以去读它。这与官方桌面客户端的威胁模型一致。
 
-| 浅色 | 深色 |
-|---|---|
-| ![浅色外观下的浏览器页](./docs/images/screenshot-light.png) | ![同一页面的深色外观](./docs/images/screenshot-dark.png) |
+![实际运行中的账号页](./docs/images/screenshot-light.png)
 
 ## 安装
 
