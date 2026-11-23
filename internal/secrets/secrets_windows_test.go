@@ -59,6 +59,8 @@ func TestIsKeyTargetSkipsSessionCredentials(t *testing.T) {
 	}{
 		{s.indexTarget(), false},
 		{s.prefix + "/" + SessionSubtree + "/user-1", false},
+		{s.prefix + "/" + ProxySubtree, false},
+		{s.prefix + "/" + ProxySubtree + "/child", false},
 		{s.prefix + "/user-1", true},
 	}
 	for _, tc := range cases {

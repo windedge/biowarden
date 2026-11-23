@@ -910,6 +910,107 @@
   "@settingsNoticeTrayHidden": {
     "description": "The settings page's status line after hiding the tray icon."
   },
+
+  "settingsGroupNetwork": "Network",
+  "@settingsGroupNetwork": {
+    "description": "The settings page's Network section title."
+  },
+  "settingsProxyMode": "Proxy mode",
+  "@settingsProxyMode": {
+    "description": "The Network section's field label for the proxy mode."
+  },
+  "settingsProxyModeSystem": "System",
+  "@settingsProxyModeSystem": {
+    "description": "The proxy mode that reads the operating system's setting."
+  },
+  "settingsProxyModeManual": "Manual",
+  "@settingsProxyModeManual": {
+    "description": "The proxy mode with an address and credentials entered in Settings."
+  },
+  "settingsProxyModeOff": "Off",
+  "@settingsProxyModeOff": {
+    "description": "The proxy mode that connects directly."
+  },
+  "settingsProxyAddress": "Address",
+  "@settingsProxyAddress": {
+    "description": "The Manual proxy form's field label for the proxy address."
+  },
+  "settingsProxyCredentials": "Proxy requires credentials",
+  "@settingsProxyCredentials": {
+    "description": "The Manual proxy form's checkbox: checked shows the username and password rows; unchecking only hides them, without clearing stored credentials."
+  },
+  "settingsProxyAddressPlaceholder": "socks5://127.0.0.1:1080 or http://proxy:8080",
+  "@settingsProxyAddressPlaceholder": {
+    "description": "The Manual proxy address field's example values."
+  },
+  "settingsProxyUser": "Username",
+  "@settingsProxyUser": {
+    "description": "The Manual proxy form's field label for the username."
+  },
+  "settingsProxyPassword": "Password",
+  "@settingsProxyPassword": {
+    "description": "The Manual proxy form's field label for the password."
+  },
+  "settingsProxyTogglePassword": "Show or hide the proxy password",
+  "@settingsProxyTogglePassword": {
+    "description": "The proxy password field's visibility toggle."
+  },
+  "settingsProxyTest": "Test connection",
+  "@settingsProxyTest": {
+    "description": "The field label and button that send one request through the current proxy."
+  },
+  "settingsProxyTestLabel": "Test",
+  "@settingsProxyTestLabel": {
+    "description": "The short label of the Network section row holding the proxy connection test."
+  },
+  "settingsProxyTestIdle": "Checks that {server} is reachable through the proxy. Sign-in is not tested.",
+  "@settingsProxyTestIdle": {
+    "description": "The Test connection status before the first test; the host is the account's server.",
+    "placeholders": {
+      "server": {
+        "type": "String",
+        "example": "api.bitwarden.com"
+      }
+    }
+  },
+  "settingsProxyTestTesting": "Checking {server} through the proxy...",
+  "@settingsProxyTestTesting": {
+    "description": "The Test connection status while the request is on the wire.",
+    "placeholders": {
+      "server": {
+        "type": "String",
+        "example": "api.bitwarden.com"
+      }
+    }
+  },
+  "settingsProxyTestOK": "{server} answered through the proxy. Sign-in is not tested.",
+  "@settingsProxyTestOK": {
+    "description": "The status after a server answered through the proxy; it does not claim a login would succeed.",
+    "placeholders": {
+      "server": {
+        "type": "String",
+        "example": "api.bitwarden.com"
+      }
+    }
+  },
+  "settingsProxyTestRefused": "The proxy refused the connection or needs credentials.",
+  "@settingsProxyTestRefused": {
+    "description": "The status when the proxy answered 407 or refused the CONNECT tunnel."
+  },
+  "settingsProxyTestUnreachable": "{server} did not answer through the proxy.",
+  "@settingsProxyTestUnreachable": {
+    "description": "The status when the server could not be reached through the proxy.",
+    "placeholders": {
+      "server": {
+        "type": "String",
+        "example": "api.bitwarden.com"
+      }
+    }
+  },
+  "settingsNoticeProxySaved": "Proxy settings saved.",
+  "@settingsNoticeProxySaved": {
+    "description": "The settings page's status line after proxy settings were written."
+  },
   "logTitle": "Log",
   "@logTitle": {
     "description": "The log page's heading."

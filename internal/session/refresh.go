@@ -117,7 +117,8 @@ func RefreshWithRetry(ctx context.Context, refresher Refresher, serverURL, refre
 
 // NewRefresher builds the real refresher through internal/auth. The refresh
 // grant returns no account key, so a restored session can prove the login but
-// still needs the master password to re-derive the key. The client gets the
+// still needs the master password to re-derive the key. The client comes from
+// auth.NewClient and inherits its shared proxy-aware transport. It gets the
 // short startup timeout instead of the login path's 30 seconds; transport
 // failures are retried by RefreshWithRetry, not here, so the real path and the
 // tests share one policy.

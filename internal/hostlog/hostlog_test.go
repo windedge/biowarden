@@ -46,6 +46,47 @@ func TestRedactMasksSecretFields(t *testing.T) {
 	}
 }
 
+// Proxy passwords are short, so the length fallback cannot hide them; the
+// field pass has to catch them before any line reaches a log file.
+func TestRedactMasksProxyPassword(t *testing.T) {
+	const password = "short"
+	for _, name := range []string{"proxyPassword", "proxy_password", "ProxyPassword"} {
+		in := `{"` + name + `":"` + password + `"}`
+		got := Redact(in)
+		if strings.Contains(got, password) {
+			t.Errorf("Redact(%q) leaked the proxy password: %q", in, got)
+		}
+		if !strings.Contains(got, "<redacted>") {
+			t.Errorf("Redact(%q) = %q, want a redaction marker", in, got)
+		}
+	}
+}
+
+func TestLoggerRedactsProxyPassword(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "gui.log")
+	logger, err := New(path, LevelInfo)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	const password = "hunter2"
+	logger.Info(`{"proxyPassword":"` + password + `","host":"proxy.example"}`)
+	if err := logger.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	text := string(content)
+	if strings.Contains(text, password) {
+		t.Fatalf("log contains the proxy password:\n%s", text)
+	}
+	if !strings.Contains(text, "<redacted>") || !strings.Contains(text, "proxy.example") {
+		t.Fatalf("log lost the marker or the host:\n%s", text)
+	}
+}
+
 // A bare base64 key has no field name; the length fallback still has to hide it.
 func TestRedactMasksBareBlob(t *testing.T) {
 	blob := strings.Repeat("Zm9v", 12) // 48 base64 characters

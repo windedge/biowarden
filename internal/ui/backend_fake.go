@@ -1,6 +1,10 @@
 package ui
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/windedge/biowarden/internal/auth"
+)
 
 // errFakeBackend marks every prototype backend: the pages stay clickable,
 // nothing touches the registry, the credential store, or Windows Hello.
@@ -45,6 +49,61 @@ func (fakeSettings) autostart() (bool, error)      { return true, nil }
 func (fakeSettings) setAutostart(bool) error       { return errFakeBackend }
 func (fakeSettings) logPath() string               { return `%LOCALAPPDATA%\biowarden\host.log` }
 func (fakeSettings) logTail(int64) (string, error) { return fakeLog, nil }
+
+// fakeProxyPref stands where the proxy preference, credential store and
+// system reader stand. It records writes so tests can inspect a save without
+// touching HKCU or the credential manager.
+type fakeProxyPref struct {
+	mode        proxyMode
+	address     string
+	user        string
+	password    string
+	supported   bool
+	systemCfg   auth.SystemProxy
+	saveCalls   []proxySave
+	clearCalls  int
+	passwordErr error
+}
+
+type proxySave struct {
+	mode     proxyMode
+	address  string
+	user     string
+	password string
+}
+
+func (f *fakeProxyPref) Mode() proxyMode { return f.mode }
+func (f *fakeProxyPref) Address() string { return f.address }
+func (f *fakeProxyPref) User() string    { return f.user }
+
+func (f *fakeProxyPref) Password() (string, bool) {
+	return f.password, f.password != "" && f.passwordErr == nil
+}
+
+func (f *fakeProxyPref) HasCredentials() bool {
+	return f.user != "" || (f.password != "" && f.passwordErr == nil)
+}
+
+func (f *fakeProxyPref) SystemSupported() bool { return f.supported }
+
+func (f *fakeProxyPref) system() (auth.SystemProxy, bool) { return f.systemCfg, f.supported }
+
+func (f *fakeProxyPref) Save(mode proxyMode, address, user, password string) {
+	f.mode, f.address, f.user = mode, address, user
+	f.saveCalls = append(f.saveCalls, proxySave{mode, address, user, password})
+	if password != "" {
+		f.password = password
+	} else {
+		// Match the real seam: a blank field or Off removes the credential.
+		f.password = ""
+		f.clearCalls++
+	}
+}
+
+func (f *fakeProxyPref) ClearPassword() {
+	f.password = ""
+	f.clearCalls++
+}
 
 // fakeLocale stands where mygo.App's language stands, and records the choice.
 type fakeLocale struct {

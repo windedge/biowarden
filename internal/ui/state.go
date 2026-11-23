@@ -62,6 +62,15 @@ type appState struct {
 	mainWindow *mygo.Window
 }
 
+// setPage moves to another page. Settings draft fields are only written when
+// the human commits them, so leaving is the last chance to persist an edit.
+func (app *appState) setPage(next navPage) {
+	if app.page == pageSettings && next != pageSettings {
+		app.settings.commitProxyOnLeave()
+	}
+	app.page = next
+}
+
 // newAppState wires the pages onto their backends and is the GUI process's
 // one assembly point: the credential store, the Hello verifier and the
 // registry seams are built here, once, and handed down to every constructor.
@@ -73,13 +82,20 @@ func newAppState() *appState {
 	verifier := hello.New()
 	reg := registry.New()
 	prefs := newServerPref()
+	proxyPref := newProxyPref()
 	settings := newRealSettings(verifier)
 	app := &appState{
 		browsers: newBrowsersState(reg),
-		settings: newSettingsState(settings, verifier, newAppearancePref(), newLocaleMarker()),
+		settings: newSettingsState(settings, verifier, newAppearancePref(), newLocaleMarker(), proxyPref),
 		log:      newLogState(settings),
 	}
 	app.account = newRealAccountState(store, verifier, session.NewWincredStore(secrets.SessionPrefix), prefs)
+	// The proxy check uses the account's own server when there is one, so a
+	// self-hosted user tests the server they actually sign in against.
+	app.settings.serverURL = app.account.effectiveServerURL
+	// Auth's shared transport reads these closures on every request, so one
+	// wiring at startup is enough; Save only drops stale pooled connections.
+	wireProxySources(proxyPref)
 	app.login = newLoginWindow(&app.account)
 	app.browsers.openConfirmWindow = app.showBrowsersConfirmWindow
 	app.browsers.closeConfirmWindow = app.hideBrowsersConfirmWindow

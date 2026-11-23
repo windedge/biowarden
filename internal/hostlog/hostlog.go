@@ -165,13 +165,13 @@ func (l *Logger) Close() error {
 }
 
 var (
-	secretField = regexp.MustCompile(`"(userKeyB64|keyB64|user_key|sharedSecret|publicKey|encryptedString|ciphertext|data|iv|mac)"\s*:\s*"[^"]*"`)
+	secretField = regexp.MustCompile(`"(userKeyB64|keyB64|user_key|sharedSecret|publicKey|encryptedString|ciphertext|data|iv|mac|proxyPassword|proxy_password|ProxyPassword)"\s*:\s*"[^"]*"`)
 	secretBlob  = regexp.MustCompile(`[A-Za-z0-9+/]{40,}={0,2}`)
 )
 
-// Redact blanks the value of every field that carries key or cipher material,
-// then any long base64 run. The field pass is exact for the protocol's JSON
-// (e.g. a reply logged before sealing); the blob pass catches bare key strings.
+// Redact blanks the value of every field that carries key, cipher or proxy
+// password material, then any long base64 run. The field pass is exact for
+// JSON (e.g. a reply logged before sealing); the blob pass catches bare keys.
 func Redact(message string) string {
 	out := secretField.ReplaceAllString(message, `"$1":"<redacted>"`)
 	return secretBlob.ReplaceAllString(out, "<redacted>")

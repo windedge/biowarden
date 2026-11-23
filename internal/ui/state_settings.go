@@ -1,12 +1,18 @@
 package ui
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/i18n"
 	"github.com/egoist/mygo/ui"
 
+	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/internal/hello"
 	"github.com/windedge/biowarden/locales"
 )
@@ -43,6 +49,65 @@ type helloOutcome struct {
 	err error
 }
 
+// proxyTestState is the Test connection row's outcome. The wording stays a
+// state, not a string, so a language change rewords the line at the next frame.
+type proxyTestState int
+
+const (
+	proxyTestIdle proxyTestState = iota
+	proxyTestTesting
+	proxyTestOK
+	proxyTestRefused
+	proxyTestUnreachable
+)
+
+func (s proxyTestState) label(host string) string {
+	if host == "" {
+		switch s {
+		case proxyTestTesting:
+			return "Testing..."
+		case proxyTestOK:
+			return "The server answered through the proxy; sign-in is not checked."
+		case proxyTestUnreachable:
+			return "Cannot reach the server through the proxy."
+		default:
+			return "Not tested"
+		}
+	}
+	switch s {
+	case proxyTestTesting:
+		return locales.SettingsProxyTestTesting(host)
+	case proxyTestOK:
+		return locales.SettingsProxyTestOK(host)
+	case proxyTestRefused:
+		return locales.SettingsProxyTestRefused()
+	case proxyTestUnreachable:
+		return locales.SettingsProxyTestUnreachable(host)
+	default:
+		return locales.SettingsProxyTestIdle(host)
+	}
+}
+
+type proxyTestOutcome struct{ state proxyTestState }
+
+// proxyTestHost names the server the probe contacts, without scheme or path.
+// An unparseable address leaves no name to show, so the generic wording is
+// used instead.
+func (s *settingsState) proxyTestHost() string {
+	if s.serverURL == nil {
+		return ""
+	}
+	raw := strings.TrimSpace(s.serverURL())
+	if raw == "" {
+		return ""
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	return u.Hostname()
+}
+
 // settingsState is the Settings page's working data. The login item and the
 // Hello status are real; the tray switch and the log level stay in memory.
 type settingsState struct {
@@ -65,6 +130,28 @@ type settingsState struct {
 	appearancePref appearancePref
 	setSource      func(mygo.ThemeSource)
 
+	// proxy is the live preference the auth transport also reads; the form
+	// fields below are a draft, committed on a mode change or when Settings
+	// is left. Typing alone never writes a value.
+	proxy         proxyPref
+	proxyMode     proxyMode
+	proxyAddress  string
+	proxyUser     string
+	proxyPassword string
+	// proxyUseCredentials shows the username and password rows: most proxies
+	// are anonymous, but stored credentials check the box at startup.
+	proxyUseCredentials bool
+	// showProxyPassword follows the login window's eye button.
+	showProxyPassword bool
+	// serverURL picks the account's own server for the proxy test; the default
+	// is the official cloud when there is no account.
+	serverURL func() string
+	// probe is a field so a test can keep the async check off the network.
+	probe           func() proxyTestOutcome
+	proxyTesting    bool
+	proxyTest       proxyTestState
+	proxyTestResult asyncRunner[proxyTestOutcome]
+
 	launchAtLogin bool
 	showTray      bool
 
@@ -80,19 +167,37 @@ type settingsState struct {
 
 // newSettingsState takes the assembled dependencies: the settings backend
 // (the Log page receives the same instance), the verifier the Hello row
-// checks with, the appearance preference and the language marker.
-func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearancePref appearancePref, marker localeMarker) settingsState {
+// checks with, the appearance preference, the language marker and the proxy
+// seam.
+func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearancePref appearancePref, marker localeMarker, proxy proxyPref) settingsState {
 	s := settingsState{
-		backend:        backend,
-		hello:          verifier,
-		locale:         mygoLocale{},
-		marker:         marker,
-		appearancePref: appearancePref,
-		setSource:      mygo.Theme.SetSource,
-		helloResult:    startAsync[helloOutcome](1),
-		showTray:       true,
-		logLevel:       logLevelInfo,
-		logPath:        backend.logPath(),
+		backend:         backend,
+		hello:           verifier,
+		locale:          mygoLocale{},
+		marker:          marker,
+		appearancePref:  appearancePref,
+		setSource:       mygo.Theme.SetSource,
+		helloResult:     startAsync[helloOutcome](1),
+		proxy:           proxy,
+		proxyTestResult: startAsync[proxyTestOutcome](1),
+		showTray:        true,
+		logLevel:        logLevelInfo,
+		logPath:         backend.logPath(),
+	}
+	s.probe = s.probeProxy
+	if s.proxy != nil {
+		s.proxyMode = s.proxy.Mode()
+		s.proxyAddress = s.proxy.Address()
+		s.proxyUser = s.proxy.User()
+		if password, ok := s.proxy.Password(); ok {
+			s.proxyPassword = password
+		}
+	}
+	s.proxyUseCredentials = s.proxy != nil && s.proxy.HasCredentials()
+	if selected := s.proxyOptions(); !containsMode(selected, s.proxyMode) {
+		// A preference written by a build with a system reader must still be
+		// editable on one without it.
+		s.proxyMode = proxySystem
 	}
 	s.languageTag = s.guessLanguageTag()
 	s.appearance = s.appearancePref.load()
@@ -110,10 +215,7 @@ func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearan
 // through the runner; until then it keeps a frame scheduled so the page stops
 // showing "checking" as soon as the answer lands.
 func (s *settingsState) tick(c *ui.Context) {
-	if !s.helloChecking {
-		return
-	}
-	received := s.helloResult.tick(func(r helloOutcome) {
+	if s.helloChecking && !s.helloResult.tick(func(r helloOutcome) {
 		s.helloChecking = false
 		s.helloOK = r.err == nil && r.ok
 		switch {
@@ -124,8 +226,22 @@ func (s *settingsState) tick(c *ui.Context) {
 		default:
 			s.notice = pageNotice{kind: noticeSettingsHelloUnavailable}
 		}
-	})
-	if !received {
+	}) {
+		c.After(100 * time.Millisecond)
+	}
+	s.tickProxyTest(c)
+}
+
+// tickProxyTest lands the finished probe on the UI thread and keeps a frame
+// coming while the request is on the wire.
+func (s *settingsState) tickProxyTest(c *ui.Context) {
+	if !s.proxyTesting {
+		return
+	}
+	if !s.proxyTestResult.tick(func(r proxyTestOutcome) {
+		s.proxyTesting = false
+		s.proxyTest = r.state
+	}) {
 		c.After(100 * time.Millisecond)
 	}
 }
@@ -187,6 +303,130 @@ func (s *settingsState) setAppearance(a appearance) {
 	}
 	if s.appearancePref != nil {
 		s.appearancePref.save(a)
+	}
+}
+
+// proxyOptions is the mode list the row offers: System only exists when the
+// platform seam can read it, so no page has to know the operating system.
+func (s *settingsState) proxyOptions() []proxyMode {
+	supported := s.proxy != nil && s.proxy.SystemSupported()
+	return proxyModes(supported)
+}
+
+func containsMode(modes []proxyMode, want proxyMode) bool {
+	for _, m := range modes {
+		if m == want {
+			return true
+		}
+	}
+	return false
+}
+
+// proxyModeSelect renders the mode row and reports the choice made this
+// frame. The value is an enum, so a translated label never becomes the stored
+// value.
+func (s *settingsState) proxyModeSelect(c *ui.Context) (proxyMode, bool) {
+	selected := s.proxyMode
+	if !containsMode(s.proxyOptions(), selected) {
+		selected = s.proxyOptions()[0]
+	}
+	t := c.Theme()
+	sel := ui.SelectBase(c, &selected)
+	sel.Trigger.Gap(spaceSnug).Padding(spaceTiny, spaceRow).Radius(t.Radius).
+		Background(t.Surface).Border(1, t.Border).
+		Justify(ui.SpaceBetween).MaxWidth(settingsSelectWidth).
+		Children(func() {
+			ui.Text(c, selected.label()).SingleLine()
+			ui.Text(c, "▾").TextColor(t.TextMuted)
+		})
+	sel.Popup(func(panel ui.Element) {
+		panel.Margin(spaceTiny, 0, 0, 0).Padding(spaceTiny).Radius(radiusPopup).
+			Background(t.Background).Border(1, t.Border).
+			Shadow(0, 6, 20, 0, paletteFor(c).popShadow())
+		for _, mode := range s.proxyOptions() {
+			item := sel.Item(mode).Padding(spaceSnug, spaceRow).Radius(t.Radius)
+			if item.Highlighted() {
+				item.Background(t.Accent).TextColor(t.AccentText)
+			}
+			item.Children(func() { ui.Text(c, mode.label()).SingleLine() })
+		}
+	})
+	return selected, sel.Trigger.Changed() && selected != s.proxyMode
+}
+
+// setProxyMode applies a new choice at once: the new mode and the values in
+// the draft go to the preference together, so a switch never saves a stale
+// address or password alongside it.
+func (s *settingsState) setProxyMode(mode proxyMode) {
+	s.proxyMode = mode
+	if mode == proxyOff {
+		s.proxyPassword = ""
+		s.proxyTest = proxyTestIdle
+		s.proxyTesting = false
+	}
+	s.commitProxy()
+}
+
+// startProxyTest probes the committed preference, not the draft: the answer
+// describes the configuration auth would really use, and the transport reads
+// the seam on every request. Switching mode or leaving Settings commits first.
+func (s *settingsState) startProxyTest() {
+	if s.proxyTesting || s.probe == nil {
+		return
+	}
+	s.proxyTesting = true
+	s.proxyTest = proxyTestTesting
+	probe := s.probe
+	s.proxyTestResult.run(func() proxyTestOutcome { return probe() })
+}
+
+// probeProxy checks the account's API root, falling back to the official
+// cloud. Only /api/config is requested: the answer says the proxy and server
+// are reachable, not that a login would succeed.
+func (s *settingsState) probeProxy() proxyTestOutcome {
+	base := defaultServerURL
+	if s.serverURL != nil {
+		if v := trimSpace(s.serverURL()); v != "" {
+			base = v
+		}
+	}
+	cfg, err := auth.NewServerConfig(base)
+	if err != nil {
+		return proxyTestOutcome{state: proxyTestUnreachable}
+	}
+	return probeProxyURL(cfg.API() + "/api/config")
+}
+
+// probeProxyURL builds the ten-second client from auth's own factory so the
+// test travels through the same shared transport as login and refresh.
+func probeProxyURL(rawurl string) proxyTestOutcome {
+	client := auth.NewClient(auth.DefaultServerConfig(), "proxy-check").WithTimeout(10 * time.Second)
+	status, err := client.Probe(context.Background(), rawurl)
+	return proxyTestOutcome{state: classifyProxyProbe(status, err)}
+}
+
+// classifyProxyProbe keeps the three honest outcomes distinct. A 407 answer,
+// whether returned as a status or from CONNECT, is a proxy that refused or
+// asked for credentials; everything else that failed is reported as an
+// unreachable route, and any HTTP status means the server was reached.
+func classifyProxyProbe(status int, err error) proxyTestState {
+	if err == nil {
+		if status == http.StatusProxyAuthRequired {
+			return proxyTestRefused
+		}
+		return proxyTestOK
+	}
+	message := strings.ToLower(err.Error())
+	switch {
+	case errors.Is(err, auth.ErrNetwork) &&
+		(strings.Contains(message, "407") || strings.Contains(message, "proxy authentication required")):
+		return proxyTestRefused
+	case errors.Is(err, auth.ErrNetwork) && strings.Contains(message, "proxyconnect") &&
+		(strings.Contains(message, "403") || strings.Contains(message, "502") ||
+			strings.Contains(message, "tunnel") || strings.Contains(message, "bad gateway")):
+		return proxyTestRefused
+	default:
+		return proxyTestUnreachable
 	}
 }
 

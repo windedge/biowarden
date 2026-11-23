@@ -8,11 +8,10 @@ import (
 	"github.com/windedge/biowarden/locales"
 )
 
-// The settings controls are capped: the page's fields stretch to the window
+// The log controls are capped: that page's fields stretch to the window
 // width, so on a wide window a short value sits in a read-only box that reads
-// as an editor. The text fields match the login window's own field width for a
-// consistent look, and the log level dropdown is narrower because its options
-// are a word each.
+// as an editor. The log level dropdown is narrower because its options are a
+// word each.
 //
 // The cap is a maximum, not a fixed width: a form's label column grows with
 // the longest label, so in a verbose language the room a control gets can be
@@ -99,6 +98,69 @@ func (app *appState) settingsPage(c *ui.Context) {
 									})
 							})
 						})
+					})
+					ui.Fieldset(c, locales.SettingsGroupNetwork(), func() {
+						ui.Field(c, locales.SettingsProxyMode(), func() {
+							if mode, changed := app.settings.proxyModeSelect(c); changed {
+								app.settings.setProxyMode(mode)
+							}
+						})
+						if app.settings.proxyMode == proxyManual {
+							ui.Field(c, locales.SettingsProxyAddress(), func() {
+								ui.TextInput(c.Key("proxy-address"), &app.settings.proxyAddress).
+									Placeholder(locales.SettingsProxyAddressPlaceholder()).
+									Label(locales.SettingsProxyAddress()).MaxWidth(settingsSelectWidth)
+							})
+							// An empty label puts the checkbox in the form's content column.
+							ui.Field(c, "", func() {
+								ui.Checkbox(c, &app.settings.proxyUseCredentials, locales.SettingsProxyCredentials())
+							})
+							if app.settings.proxyUseCredentials {
+								ui.Field(c, locales.SettingsProxyUser(), func() {
+									ui.TextInput(c.Key("proxy-user"), &app.settings.proxyUser).
+										Placeholder(locales.SettingsProxyUser()).
+										Label(locales.SettingsProxyUser()).MaxWidth(settingsSelectWidth)
+								})
+								ui.Field(c, locales.SettingsProxyPassword(), func() {
+									ui.Row(c).Gap(spaceRow).AlignItems(ui.Center).Children(func() {
+										in := ui.TextInput(c.Key("proxy-password"), &app.settings.proxyPassword)
+										if !app.settings.showProxyPassword {
+											in = in.Password()
+										}
+										in.Label(locales.SettingsProxyPassword()).
+											Placeholder(locales.SettingsProxyPassword()).MaxWidth(settingsSelectWidth)
+										plainButton(c, "", false).Children(func() {
+											ui.Icon(c, iconEye).FontSize(t.Rem(fontBody)).Shrink(0)
+										}).Tooltip(locales.SettingsProxyTogglePassword()).OnClick(func() {
+											app.settings.showProxyPassword = !app.settings.showProxyPassword
+											c.Invalidate()
+										})
+									})
+								})
+							}
+						}
+						if app.settings.proxyMode != proxyOff {
+							ui.Field(c, locales.SettingsProxyTestLabel(), func() {
+								ui.Column(c).Gap(spaceHair).Children(func() {
+									secondaryButton(c, locales.SettingsProxyTest(), app.settings.proxyTesting).
+										MaxWidth(settingsSelectWidth).
+										OnClick(func() {
+											app.settings.startProxyTest()
+											c.Invalidate()
+										})
+									ink := t.TextMuted
+									switch app.settings.proxyTest {
+									case proxyTestOK:
+										ink = t.Success
+									case proxyTestRefused, proxyTestUnreachable:
+										ink = t.Danger
+									}
+									// A long result wraps instead of being elided to fit a row.
+									ui.Text(c, app.settings.proxyTest.label(app.settings.proxyTestHost())).
+										FontSize(t.Rem(fontCaption)).TextColor(ink)
+								})
+							})
+						}
 					})
 					ui.Fieldset(c, locales.SettingsGroupLog(), func() {
 						ui.Field(c, locales.SettingsLogLevel(), func() {

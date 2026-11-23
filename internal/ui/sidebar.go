@@ -83,7 +83,7 @@ func (app *appState) sidebar(c *ui.Context) {
 		row := ui.Row(c).Key(id).AlignItems(ui.Center).Gap(spaceSnug).
 			Padding(spaceRow, spaceMedium).Radius(radiusControl).Shrink(0).
 			Role(ui.RoleTreeItem).Focusable().Cursor(ui.CursorPointer).
-			OnClick(func() { app.page = navPageOf(id) })
+			OnClick(func() { app.setPage(navPageOf(id)) })
 		ink, fill := t.Text, ui.Transparent
 		iconColor, weight := t.TextMuted, 400
 		if id == selected {

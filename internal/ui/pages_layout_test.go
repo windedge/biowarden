@@ -53,18 +53,30 @@ func appearanceName(dark bool) string {
 func testPageTextsFit(t *testing.T, dark bool, tag string, windowWidth, windowHeight int) {
 	t.Helper()
 	appLanguage(t, tag)
-	app := &appState{browsers: newBrowsersStateWith(&recordingBrowsersBackend{})}
+	app := &appState{
+		browsers: newBrowsersStateWith(&recordingBrowsersBackend{}),
+		// The Network section is measured with its widest form expanded.
+		settings: settingsState{
+			proxyMode:           proxyManual,
+			proxyUseCredentials: true,
+			proxy: &fakeProxyPref{
+				mode: proxyManual, supported: true,
+				address: "socks5://127.0.0.1:1080", user: "alice", password: "s3cret",
+			},
+		},
+	}
 	app.settings.logLevel = logLevelError
 	app.settings.logPath = `C:\Users\ada\AppData\Local\biowarden\biowarden.log`
 
 	cases := []struct {
-		name string
-		view func(*ui.Context)
+		name   string
+		view   func(*ui.Context)
+		scroll bool
 	}{
-		{"account", app.accountPage},
-		{"browsers", app.browsersPage},
-		{"settings", app.settingsPage},
-		{"log", app.logPage},
+		{"account", app.accountPage, false},
+		{"browsers", app.browsersPage, false},
+		{"settings", app.settingsPage, true},
+		{"log", app.logPage, false},
 	}
 	// The tester reports the box of the element that shows a text
 	// or that is labeled with it, and a widget's box is the
@@ -100,21 +112,76 @@ func testPageTextsFit(t *testing.T, dark bool, tag string, windowWidth, windowHe
 				}
 				right := r.X + r.W
 				bottom := r.Y + r.H
-				// The text must stay inside the content area: it ends before
-				// the page's padding, which is the gap that keeps it off the
-				// window's edge, or it is cut there.
+				// A text must stay inside the content area sideways: it ends
+				// before the page's padding, or it is cut there. A page with a
+				// Scroll may continue below the viewport by design, so only a
+				// page without one is checked against the bottom edge.
 				contentRight := float32(windowWidth) - pagePadding
 				contentBottom := float32(windowHeight) - pagePadding
 				if right > contentRight {
 					t.Errorf("%q ends at %v, past the content area of %v",
 						text, right, contentRight)
 				}
-				if bottom > contentBottom {
+				if !tc.scroll && bottom > contentBottom {
 					t.Errorf("%q ends at %v, past the content area of %v",
 						text, bottom, contentBottom)
 				}
 			}
 		})
+	}
+}
+
+// The credentials checkbox sits in a field with no label, so its tick box
+// shares the content column's left edge with the Address input.
+func TestProxyCredentialsCheckboxAlignsWithAddressInput(t *testing.T) {
+	appLanguage(t, "en")
+	app := &appState{settings: settingsState{
+		proxyMode:           proxyManual,
+		proxyUseCredentials: true,
+	}}
+	tester := ui.NewTester(app.settingsPage, 1200, 900)
+	tester.Frame()
+
+	box, ok := tester.Find(locales.SettingsProxyCredentials())
+	if !ok {
+		t.Fatalf("no credentials checkbox: %v", tester.Texts())
+	}
+	// The Test button is in the same content column as the Address input, so
+	// it stands in for that input, whose box the tester does not expose.
+	input, ok := tester.Find(locales.SettingsProxyTest())
+	if !ok {
+		t.Fatalf("no proxy test button: %v", tester.Texts())
+	}
+	// Find returns the checkbox's text box: to its left are the 16 DIP tick
+	// box (Space(4)) and the 8 DIP gap (Space(2)), 24 DIP in total.
+	if box.X-input.X != 24 {
+		t.Errorf("checkbox text starts at %v, expected 24 past the address input column at %v", box.X, input.X)
+	}
+}
+
+// With the proxy off the mode row stands alone: no address, no credentials
+// checkbox and no connection test.
+func TestProxySectionHidesAddressAndCredentialsWhenOff(t *testing.T) {
+	appLanguage(t, "en")
+	app := &appState{settings: settingsState{proxyMode: proxyOff}}
+	tester := ui.NewTester(app.settingsPage, 1200, 900)
+	tester.Frame()
+
+	for _, want := range []string{locales.SettingsProxyMode(), locales.SettingsProxyModeOff()} {
+		if _, ok := tester.Find(want); !ok {
+			t.Errorf("off mode does not show %q: %v", want, tester.Texts())
+		}
+	}
+	for _, hidden := range []string{
+		locales.SettingsProxyAddress(),
+		locales.SettingsProxyAddressPlaceholder(),
+		locales.SettingsProxyCredentials(),
+		locales.SettingsProxyTestLabel(),
+		locales.SettingsProxyTest(),
+	} {
+		if _, ok := tester.Find(hidden); ok {
+			t.Errorf("off mode still shows %q: %v", hidden, tester.Texts())
+		}
 	}
 }
 

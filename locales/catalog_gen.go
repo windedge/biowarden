@@ -2631,6 +2631,290 @@ func (msgs Messages) SettingsNoticeTrayHidden() string {
 	return Catalog.Format(msgs.locale, "settingsNoticeTrayHidden", nil)
 }
 
+// SettingsGroupNetwork says "Network"
+// in the language the app shows.
+//
+// The settings page's Network section title.
+func SettingsGroupNetwork() string { return In(i18n.Locale()).SettingsGroupNetwork() }
+
+// SettingsGroupNetwork says "Network"
+// in the language of msgs.
+//
+// The settings page's Network section title.
+func (msgs Messages) SettingsGroupNetwork() string {
+	return Catalog.Format(msgs.locale, "settingsGroupNetwork", nil)
+}
+
+// SettingsProxyMode says "Proxy mode"
+// in the language the app shows.
+//
+// The Network section's field label for the proxy mode.
+func SettingsProxyMode() string { return In(i18n.Locale()).SettingsProxyMode() }
+
+// SettingsProxyMode says "Proxy mode"
+// in the language of msgs.
+//
+// The Network section's field label for the proxy mode.
+func (msgs Messages) SettingsProxyMode() string {
+	return Catalog.Format(msgs.locale, "settingsProxyMode", nil)
+}
+
+// SettingsProxyModeSystem says "System"
+// in the language the app shows.
+//
+// The proxy mode that reads the operating system's setting.
+func SettingsProxyModeSystem() string { return In(i18n.Locale()).SettingsProxyModeSystem() }
+
+// SettingsProxyModeSystem says "System"
+// in the language of msgs.
+//
+// The proxy mode that reads the operating system's setting.
+func (msgs Messages) SettingsProxyModeSystem() string {
+	return Catalog.Format(msgs.locale, "settingsProxyModeSystem", nil)
+}
+
+// SettingsProxyModeManual says "Manual"
+// in the language the app shows.
+//
+// The proxy mode with an address and credentials entered in Settings.
+func SettingsProxyModeManual() string { return In(i18n.Locale()).SettingsProxyModeManual() }
+
+// SettingsProxyModeManual says "Manual"
+// in the language of msgs.
+//
+// The proxy mode with an address and credentials entered in Settings.
+func (msgs Messages) SettingsProxyModeManual() string {
+	return Catalog.Format(msgs.locale, "settingsProxyModeManual", nil)
+}
+
+// SettingsProxyModeOff says "Off"
+// in the language the app shows.
+//
+// The proxy mode that connects directly.
+func SettingsProxyModeOff() string { return In(i18n.Locale()).SettingsProxyModeOff() }
+
+// SettingsProxyModeOff says "Off"
+// in the language of msgs.
+//
+// The proxy mode that connects directly.
+func (msgs Messages) SettingsProxyModeOff() string {
+	return Catalog.Format(msgs.locale, "settingsProxyModeOff", nil)
+}
+
+// SettingsProxyAddress says "Address"
+// in the language the app shows.
+//
+// The Manual proxy form's field label for the proxy address.
+func SettingsProxyAddress() string { return In(i18n.Locale()).SettingsProxyAddress() }
+
+// SettingsProxyAddress says "Address"
+// in the language of msgs.
+//
+// The Manual proxy form's field label for the proxy address.
+func (msgs Messages) SettingsProxyAddress() string {
+	return Catalog.Format(msgs.locale, "settingsProxyAddress", nil)
+}
+
+// SettingsProxyCredentials says "Proxy requires credentials"
+// in the language the app shows.
+//
+// The Manual proxy form's checkbox: checked shows the username and password
+// rows; unchecking only hides them, without clearing stored credentials.
+func SettingsProxyCredentials() string { return In(i18n.Locale()).SettingsProxyCredentials() }
+
+// SettingsProxyCredentials says "Proxy requires credentials"
+// in the language of msgs.
+//
+// The Manual proxy form's checkbox: checked shows the username and password
+// rows; unchecking only hides them, without clearing stored credentials.
+func (msgs Messages) SettingsProxyCredentials() string {
+	return Catalog.Format(msgs.locale, "settingsProxyCredentials", nil)
+}
+
+// SettingsProxyAddressPlaceholder says "socks5://127.0.0.1:1080 or http://proxy:8080"
+// in the language the app shows.
+//
+// The Manual proxy address field's example values.
+func SettingsProxyAddressPlaceholder() string {
+	return In(i18n.Locale()).SettingsProxyAddressPlaceholder()
+}
+
+// SettingsProxyAddressPlaceholder says "socks5://127.0.0.1:1080 or http://proxy:8080"
+// in the language of msgs.
+//
+// The Manual proxy address field's example values.
+func (msgs Messages) SettingsProxyAddressPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsProxyAddressPlaceholder", nil)
+}
+
+// SettingsProxyUser says "Username"
+// in the language the app shows.
+//
+// The Manual proxy form's field label for the username.
+func SettingsProxyUser() string { return In(i18n.Locale()).SettingsProxyUser() }
+
+// SettingsProxyUser says "Username"
+// in the language of msgs.
+//
+// The Manual proxy form's field label for the username.
+func (msgs Messages) SettingsProxyUser() string {
+	return Catalog.Format(msgs.locale, "settingsProxyUser", nil)
+}
+
+// SettingsProxyPassword says "Password"
+// in the language the app shows.
+//
+// The Manual proxy form's field label for the password.
+func SettingsProxyPassword() string { return In(i18n.Locale()).SettingsProxyPassword() }
+
+// SettingsProxyPassword says "Password"
+// in the language of msgs.
+//
+// The Manual proxy form's field label for the password.
+func (msgs Messages) SettingsProxyPassword() string {
+	return Catalog.Format(msgs.locale, "settingsProxyPassword", nil)
+}
+
+// SettingsProxyTogglePassword says "Show or hide the proxy password"
+// in the language the app shows.
+//
+// The proxy password field's visibility toggle.
+func SettingsProxyTogglePassword() string { return In(i18n.Locale()).SettingsProxyTogglePassword() }
+
+// SettingsProxyTogglePassword says "Show or hide the proxy password"
+// in the language of msgs.
+//
+// The proxy password field's visibility toggle.
+func (msgs Messages) SettingsProxyTogglePassword() string {
+	return Catalog.Format(msgs.locale, "settingsProxyTogglePassword", nil)
+}
+
+// SettingsProxyTest says "Test connection"
+// in the language the app shows.
+//
+// The field label and button that send one request through the current
+// proxy.
+func SettingsProxyTest() string { return In(i18n.Locale()).SettingsProxyTest() }
+
+// SettingsProxyTest says "Test connection"
+// in the language of msgs.
+//
+// The field label and button that send one request through the current
+// proxy.
+func (msgs Messages) SettingsProxyTest() string {
+	return Catalog.Format(msgs.locale, "settingsProxyTest", nil)
+}
+
+// SettingsProxyTestLabel says "Test"
+// in the language the app shows.
+//
+// The short label of the Network section row holding the proxy connection
+// test.
+func SettingsProxyTestLabel() string { return In(i18n.Locale()).SettingsProxyTestLabel() }
+
+// SettingsProxyTestLabel says "Test"
+// in the language of msgs.
+//
+// The short label of the Network section row holding the proxy connection
+// test.
+func (msgs Messages) SettingsProxyTestLabel() string {
+	return Catalog.Format(msgs.locale, "settingsProxyTestLabel", nil)
+}
+
+// SettingsProxyTestIdle says "Checks that {server} is reachable through the proxy. Sign-in is not tested."
+// in the language the app shows.
+//
+// The Test connection status before the first test; the host is the
+// account's server.
+func SettingsProxyTestIdle(server string) string {
+	return In(i18n.Locale()).SettingsProxyTestIdle(server)
+}
+
+// SettingsProxyTestIdle says "Checks that {server} is reachable through the proxy. Sign-in is not tested."
+// in the language of msgs.
+//
+// The Test connection status before the first test; the host is the
+// account's server.
+func (msgs Messages) SettingsProxyTestIdle(server string) string {
+	return Catalog.Format(msgs.locale, "settingsProxyTestIdle", map[string]any{"server": server})
+}
+
+// SettingsProxyTestTesting says "Checking {server} through the proxy..."
+// in the language the app shows.
+//
+// The Test connection status while the request is on the wire.
+func SettingsProxyTestTesting(server string) string {
+	return In(i18n.Locale()).SettingsProxyTestTesting(server)
+}
+
+// SettingsProxyTestTesting says "Checking {server} through the proxy..."
+// in the language of msgs.
+//
+// The Test connection status while the request is on the wire.
+func (msgs Messages) SettingsProxyTestTesting(server string) string {
+	return Catalog.Format(msgs.locale, "settingsProxyTestTesting", map[string]any{"server": server})
+}
+
+// SettingsProxyTestOK says "{server} answered through the proxy. Sign-in is not tested."
+// in the language the app shows.
+//
+// The status after a server answered through the proxy; it does not claim a
+// login would succeed.
+func SettingsProxyTestOK(server string) string { return In(i18n.Locale()).SettingsProxyTestOK(server) }
+
+// SettingsProxyTestOK says "{server} answered through the proxy. Sign-in is not tested."
+// in the language of msgs.
+//
+// The status after a server answered through the proxy; it does not claim a
+// login would succeed.
+func (msgs Messages) SettingsProxyTestOK(server string) string {
+	return Catalog.Format(msgs.locale, "settingsProxyTestOK", map[string]any{"server": server})
+}
+
+// SettingsProxyTestRefused says "The proxy refused the connection or needs credentials."
+// in the language the app shows.
+//
+// The status when the proxy answered 407 or refused the CONNECT tunnel.
+func SettingsProxyTestRefused() string { return In(i18n.Locale()).SettingsProxyTestRefused() }
+
+// SettingsProxyTestRefused says "The proxy refused the connection or needs credentials."
+// in the language of msgs.
+//
+// The status when the proxy answered 407 or refused the CONNECT tunnel.
+func (msgs Messages) SettingsProxyTestRefused() string {
+	return Catalog.Format(msgs.locale, "settingsProxyTestRefused", nil)
+}
+
+// SettingsProxyTestUnreachable says "{server} did not answer through the proxy."
+// in the language the app shows.
+//
+// The status when the server could not be reached through the proxy.
+func SettingsProxyTestUnreachable(server string) string {
+	return In(i18n.Locale()).SettingsProxyTestUnreachable(server)
+}
+
+// SettingsProxyTestUnreachable says "{server} did not answer through the proxy."
+// in the language of msgs.
+//
+// The status when the server could not be reached through the proxy.
+func (msgs Messages) SettingsProxyTestUnreachable(server string) string {
+	return Catalog.Format(msgs.locale, "settingsProxyTestUnreachable", map[string]any{"server": server})
+}
+
+// SettingsNoticeProxySaved says "Proxy settings saved."
+// in the language the app shows.
+//
+// The settings page's status line after proxy settings were written.
+func SettingsNoticeProxySaved() string { return In(i18n.Locale()).SettingsNoticeProxySaved() }
+
+// SettingsNoticeProxySaved says "Proxy settings saved."
+// in the language of msgs.
+//
+// The settings page's status line after proxy settings were written.
+func (msgs Messages) SettingsNoticeProxySaved() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeProxySaved", nil)
+}
+
 // LogTitle says "Log"
 // in the language the app shows.
 //

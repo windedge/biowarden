@@ -96,7 +96,7 @@ type Client struct {
 // desktop app's appId.
 func NewClient(cfg ServerConfig, deviceID string) *Client {
 	return &Client{
-		http:     &http.Client{Timeout: 30 * time.Second},
+		http:     &http.Client{Timeout: 30 * time.Second, Transport: SharedTransport()},
 		urls:     cfg.URLs(),
 		deviceID: deviceID,
 	}
@@ -109,8 +109,26 @@ func NewClient(cfg ServerConfig, deviceID string) *Client {
 // leaving the page checking for half a minute.
 func (c *Client) WithTimeout(timeout time.Duration) *Client {
 	dup := *c
-	dup.http = &http.Client{Timeout: timeout}
+	dup.http = &http.Client{Timeout: timeout, Transport: c.http.Transport}
 	return &dup
+}
+
+// Probe sends one GET with the desktop headers and reports the HTTP status.
+// Every status is returned, including non-2xx, so the Settings proxy check can
+// tell a server that answered from a proxy that refused the connection.
+func (c *Client) Probe(ctx context.Context, rawurl string) (int, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawurl, nil)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %v", ErrNetwork, err)
+	}
+	c.applyHeaders(req)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %v", ErrNetwork, err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+	return resp.StatusCode, nil
 }
 
 // URLs returns the service URLs the client was built with.

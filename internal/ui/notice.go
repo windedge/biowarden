@@ -110,6 +110,7 @@ const (
 	noticeSettingsAutostartOff
 	noticeSettingsTrayShown
 	noticeSettingsTrayHidden
+	noticeSettingsProxySaved
 
 	noticeLogReadFailed
 	noticeLogRefreshed
@@ -269,6 +270,8 @@ func (n pageNotice) text() string {
 		return locales.SettingsNoticeTrayShown()
 	case noticeSettingsTrayHidden:
 		return locales.SettingsNoticeTrayHidden()
+	case noticeSettingsProxySaved:
+		return locales.SettingsNoticeProxySaved()
 	case noticeLogReadFailed:
 		return locales.LogNoticeReadFailed(errorDetail(n.err))
 	case noticeLogRefreshed:

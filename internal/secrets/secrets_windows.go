@@ -20,6 +20,8 @@ import (
 // index rebuild falls back to the target name.
 const maxCommentLen = 256
 
+const proxyTargetName = Prefix + "/" + ProxySubtree
+
 type windowsStore struct {
 	prefix string
 }
@@ -36,13 +38,18 @@ func (s *windowsStore) accountTarget(userID string) string { return s.prefix + "
 func (s *windowsStore) indexTarget() string                { return s.prefix + "/Index" }
 
 // isKeyTarget reports whether a credential in this namespace belongs to the
-// key index. The index entry itself and the persisted-login subtree under
-// <prefix>/Session/ are not accounts, so they never show up in the GUI list.
+// key index. The index, the persisted-login subtree and the proxy password are
+// not accounts, so they never show up in the GUI list.
 func (s *windowsStore) isKeyTarget(target string) bool {
-	if target == s.indexTarget() {
+	if target == s.indexTarget() || isProxyTarget(s.prefix, target) {
 		return false
 	}
 	return !strings.HasPrefix(target, s.prefix+"/"+SessionSubtree+"/")
+}
+
+func isProxyTarget(prefix, target string) bool {
+	base := prefix + "/" + ProxySubtree
+	return target == base || strings.HasPrefix(target, base+"/")
 }
 
 func (s *windowsStore) List() ([]Account, error) {
@@ -154,6 +161,44 @@ func accountFromCredential(cred *wincred.Credential, prefix string) Account {
 		acc.CreatedAt = cred.LastWritten
 	}
 	return acc
+}
+
+type windowsProxySecrets struct{ target string }
+
+// NewProxySecrets returns the Credential Manager backed proxy password at
+// Biowarden/Proxy.
+func NewProxySecrets() ProxySecrets { return &windowsProxySecrets{target: proxyTargetName} }
+
+func newProxySecretsWithPrefix(prefix string) ProxySecrets {
+	return &windowsProxySecrets{target: prefix + "/" + ProxySubtree}
+}
+
+func (s *windowsProxySecrets) GetProxyPassword() (string, error) {
+	cred, err := wincred.GetGenericCredential(s.target)
+	if errors.Is(err, wincred.ErrElementNotFound) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	return string(cred.CredentialBlob), nil
+}
+
+func (s *windowsProxySecrets) PutProxyPassword(password string) error {
+	cred := wincred.NewGenericCredential(s.target)
+	cred.CredentialBlob = []byte(password)
+	return cred.Write()
+}
+
+func (s *windowsProxySecrets) RemoveProxyPassword() error {
+	cred, err := wincred.GetGenericCredential(s.target)
+	if errors.Is(err, wincred.ErrElementNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return cred.Delete()
 }
 
 func (s *windowsStore) writeIndex(accounts []Account) error {
