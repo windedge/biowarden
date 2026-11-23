@@ -188,6 +188,7 @@
   "settingsProxyCredentials": "代理需要驗證",
   "settingsProxyAddressPlaceholder": "socks5://127.0.0.1:1080 或 http://proxy:8080",
   "settingsProxyAddressEmptyHint": "在設定地址前，流量將直連。",
+  "settingsProxyAddressInvalid": "代理地址必須為主機:連接埠，或含連接埠的 http(s)、socks5 URL。",
   "settingsProxyUser": "使用者名稱",
   "settingsProxyPassword": "密碼",
   "settingsProxyTogglePassword": "顯示或隱藏代理密碼",

@@ -60,6 +60,7 @@ const (
 	proxyTestRefused
 	proxyTestUnreachable
 	proxyTestInvalid
+	proxyTestInvalidAddress
 )
 
 func (s proxyTestState) label(host string) string {
@@ -68,6 +69,8 @@ func (s proxyTestState) label(host string) string {
 	switch s {
 	case proxyTestInvalid:
 		return locales.SettingsProxyTestInvalid()
+	case proxyTestInvalidAddress:
+		return locales.SettingsProxyAddressInvalid()
 	case proxyTestRefused:
 		return locales.SettingsProxyTestRefused()
 	}
@@ -374,16 +377,27 @@ func (s *settingsState) setProxyMode(mode proxyMode) {
 	s.commitProxy()
 }
 
-// startProxyTest probes the committed preference, not the draft: the answer
-// describes the configuration auth would really use, and the transport reads
-// the seam on every request. Switching mode or leaving Settings commits first.
+// startProxyTest commits the draft first: the probe must use the address the
+// person sees, not an older value still held by the preference seam.
 func (s *settingsState) startProxyTest() {
 	if s.proxyTesting || s.probe == nil {
 		return
 	}
-	if s.proxyMode == proxyManual && trimSpace(s.proxyAddress) == "" {
-		s.proxyTest = proxyTestInvalid
-		return
+	if s.proxyMode == proxyManual {
+		if trimSpace(s.proxyAddress) == "" {
+			s.proxyTest = proxyTestInvalid
+			return
+		}
+		if s.hasProxyChanges() {
+			if err := s.commitProxy(); err != nil {
+				if errors.Is(err, auth.ErrInvalidProxyAddress) {
+					s.proxyTest = proxyTestInvalidAddress
+				} else {
+					s.proxyTest = proxyTestInvalid
+				}
+				return
+			}
+		}
 	}
 	s.proxyTesting = true
 	s.proxyTest = proxyTestTesting
@@ -430,8 +444,10 @@ func classifyProxyProbe(status int, err error) proxyTestState {
 	}
 	message := strings.ToLower(err.Error())
 	switch {
-	case strings.Contains(message, auth.ErrNoProxyAddress.Error()):
+	case errors.Is(err, auth.ErrNoProxyAddress):
 		return proxyTestInvalid
+	case errors.Is(err, auth.ErrInvalidProxyAddress):
+		return proxyTestInvalidAddress
 	case errors.Is(err, auth.ErrNetwork) &&
 		(strings.Contains(message, "407") || strings.Contains(message, "proxy authentication required")):
 		return proxyTestRefused

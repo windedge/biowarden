@@ -189,6 +189,7 @@
   "settingsProxyCredentials": "代理需要认证",
   "settingsProxyAddressPlaceholder": "socks5://127.0.0.1:1080 或 http://proxy:8080",
   "settingsProxyAddressEmptyHint": "在设置地址前，流量将直连。",
+  "settingsProxyAddressInvalid": "代理地址必须为主机:端口，或带端口的 http(s)、socks5 URL。",
   "settingsProxyUser": "用户名",
   "settingsProxyPassword": "密码",
   "settingsProxyTogglePassword": "显示或隐藏代理密码",

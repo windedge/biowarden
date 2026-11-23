@@ -951,6 +951,10 @@
   "@settingsProxyAddressEmptyHint": {
     "description": "The warning under the Manual address field while it is blank."
   },
+  "settingsProxyAddressInvalid": "Proxy address must be host:port or a http(s) or socks5 URL with a port.",
+  "@settingsProxyAddressInvalid": {
+    "description": "The warning under the Manual address field, and the Test connection status, when the address has no usable host and port."
+  },
   "settingsProxyUser": "Username",
   "@settingsProxyUser": {
     "description": "The Manual proxy form's field label for the username."

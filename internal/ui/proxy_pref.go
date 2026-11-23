@@ -61,9 +61,16 @@ func (s *settingsState) commitProxy() error {
 	if s.proxy == nil {
 		return nil
 	}
-	if s.proxyMode == proxyManual && trimSpace(s.proxyAddress) == "" {
-		s.notice = pageNotice{kind: noticeSettingsProxyAddressEmpty}
-		return auth.ErrNoProxyAddress
+	if s.proxyMode == proxyManual {
+		address := trimSpace(s.proxyAddress)
+		if address == "" {
+			s.notice = pageNotice{kind: noticeSettingsProxyAddressEmpty}
+			return auth.ErrNoProxyAddress
+		}
+		if err := auth.ValidateProxyAddress(address); err != nil {
+			s.notice = pageNotice{kind: noticeSettingsProxyAddressInvalid}
+			return err
+		}
 	}
 	password := s.proxyPassword
 	if s.proxyMode == proxyOff {

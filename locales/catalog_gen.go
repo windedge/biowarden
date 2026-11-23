@@ -2777,6 +2777,22 @@ func (msgs Messages) SettingsProxyAddressEmptyHint() string {
 	return Catalog.Format(msgs.locale, "settingsProxyAddressEmptyHint", nil)
 }
 
+// SettingsProxyAddressInvalid says "Proxy address must be host:port or a http(s) or socks5 URL with a port."
+// in the language the app shows.
+//
+// The warning under the Manual address field, and the Test connection
+// status, when the address has no usable host and port.
+func SettingsProxyAddressInvalid() string { return In(i18n.Locale()).SettingsProxyAddressInvalid() }
+
+// SettingsProxyAddressInvalid says "Proxy address must be host:port or a http(s) or socks5 URL with a port."
+// in the language of msgs.
+//
+// The warning under the Manual address field, and the Test connection
+// status, when the address has no usable host and port.
+func (msgs Messages) SettingsProxyAddressInvalid() string {
+	return Catalog.Format(msgs.locale, "settingsProxyAddressInvalid", nil)
+}
+
 // SettingsProxyUser says "Username"
 // in the language the app shows.
 //

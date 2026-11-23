@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"errors"
 	"time"
 
 	"github.com/egoist/mygo/ui"
 
+	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/locales"
 )
 
@@ -116,8 +118,11 @@ func (app *appState) settingsPage(c *ui.Context) {
 									ui.TextInput(c.Key("proxy-address"), &app.settings.proxyAddress).
 										Placeholder(locales.SettingsProxyAddressPlaceholder()).
 										Label(locales.SettingsProxyAddress()).MaxWidth(settingsSelectWidth)
-									if trimSpace(app.settings.proxyAddress) == "" {
+									if addr := trimSpace(app.settings.proxyAddress); addr == "" {
 										ui.Text(c, locales.SettingsProxyAddressEmptyHint()).
+											FontSize(t.Rem(fontCaption)).TextColor(t.Danger)
+									} else if errors.Is(auth.ValidateProxyAddress(addr), auth.ErrInvalidProxyAddress) {
+										ui.Text(c, locales.SettingsProxyAddressInvalid()).
 											FontSize(t.Rem(fontCaption)).TextColor(t.Danger)
 									}
 								})

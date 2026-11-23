@@ -188,6 +188,7 @@
   "settingsProxyCredentials": "プロキシに認証が必要",
   "settingsProxyAddressPlaceholder": "socks5://127.0.0.1:1080 または http://proxy:8080",
   "settingsProxyAddressEmptyHint": "アドレスが設定されるまで通信は直接行われます。",
+  "settingsProxyAddressInvalid": "プロキシのアドレスは host:port、またはポートを含む http(s) または socks5 の URL にしてください。",
   "settingsProxyUser": "ユーザー名",
   "settingsProxyPassword": "パスワード",
   "settingsProxyTogglePassword": "プロキシのパスワードを表示または非表示にする",

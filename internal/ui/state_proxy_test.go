@@ -251,6 +251,41 @@ func TestProxyFormRejectsBlankManualAddress(t *testing.T) {
 	}
 }
 
+func TestProxyFormRejectsInvalidManualAddress(t *testing.T) {
+	appLanguage(t, "en")
+	fake, s := proxyFixture()
+	s.proxyAddress = "127.0.0.1"
+	if err := s.commitProxy(); !errors.Is(err, auth.ErrInvalidProxyAddress) {
+		t.Fatalf("commit error = %v, want ErrInvalidProxyAddress", err)
+	}
+	if len(fake.saveCalls) != 0 || fake.address != "old:8080" {
+		t.Fatalf("invalid address wrote: calls=%+v address=%q", fake.saveCalls, fake.address)
+	}
+	if s.notice.kind != noticeSettingsProxyAddressInvalid || s.notice.ok {
+		t.Fatalf("notice = %+v, want the invalid proxy address notice", s.notice)
+	}
+	if !strings.Contains(s.notice.text(), locales.SettingsProxyAddressInvalid()) {
+		t.Fatalf("notice text = %q", s.notice.text())
+	}
+
+	probes := 0
+	s.probe = func() proxyTestOutcome {
+		probes++
+		return proxyTestOutcome{state: proxyTestOK}
+	}
+	s.startProxyTest()
+	if probes != 0 || s.proxyTesting || s.proxyTest != proxyTestInvalidAddress {
+		t.Fatalf("invalid draft: probes=%d testing=%v state=%v", probes, s.proxyTesting, s.proxyTest)
+	}
+
+	app := &appState{settings: s}
+	tester := ui.NewTester(app.settingsPage, 1200, 900)
+	tester.Frame()
+	if !tester.HasText(locales.SettingsProxyAddressInvalid()) {
+		t.Errorf("no invalid address hint or status: %v", tester.Texts())
+	}
+}
+
 func TestProxyFormTypingDoesNotWrite(t *testing.T) {
 	fake, s := proxyFixture()
 	s.proxyAddress, s.proxyUser, s.proxyPassword = "new:8080", "alice", "newpw"
@@ -291,13 +326,23 @@ func TestProxyFormCommitsOnPageLeave(t *testing.T) {
 	}
 }
 
-func TestProxyFormTestUsesCommittedValues(t *testing.T) {
+func TestProxyFormTestCommitsDraftFirst(t *testing.T) {
 	fake, s := proxyFixture()
 	s.proxyAddress = "draft:8080"
 	s.proxyPassword = "draftpw"
+	var probedAddress string
+	s.probe = func() proxyTestOutcome {
+		// The probe reads the preference through the same seam as auth.
+		probedAddress = fake.Address()
+		return proxyTestOutcome{state: proxyTestOK}
+	}
 	s.startProxyTest()
-	if len(fake.saveCalls) != 0 {
-		t.Fatalf("test wrote the draft: %+v", fake.saveCalls)
+	if len(fake.saveCalls) < 1 {
+		t.Fatalf("test did not commit the draft: %+v", fake.saveCalls)
+	}
+	want := proxySave{mode: proxyManual, address: "draft:8080", user: "old", password: "draftpw"}
+	if fake.saveCalls[0] != want {
+		t.Fatalf("save = %+v, want %+v", fake.saveCalls[0], want)
 	}
 	if !s.proxyTesting || s.proxyTest != proxyTestTesting {
 		t.Fatalf("test did not start: testing=%v state=%v", s.proxyTesting, s.proxyTest)
@@ -311,6 +356,9 @@ func TestProxyFormTestUsesCommittedValues(t *testing.T) {
 	s.proxyTesting = false
 	if s.proxyTest != proxyTestOK {
 		t.Fatalf("test state = %v, want ok", s.proxyTest)
+	}
+	if probedAddress != "draft:8080" {
+		t.Fatalf("probe target = %q, want the draft address", probedAddress)
 	}
 }
 
@@ -456,7 +504,8 @@ func TestProxyProbeClassification(t *testing.T) {
 		{"connect 407", 0, fmt.Errorf("%w: proxyconnect tcp: 407 Proxy Authentication Required", auth.ErrNetwork), proxyTestRefused},
 		{"tunnel refused", 0, fmt.Errorf("%w: proxyconnect tcp: tunnel forbidden", auth.ErrNetwork), proxyTestRefused},
 		{"dead proxy", 0, fmt.Errorf("%w: dial tcp: connection refused", auth.ErrNetwork), proxyTestUnreachable},
-		{"missing address", 0, fmt.Errorf("%w: %s", auth.ErrNetwork, auth.ErrNoProxyAddress), proxyTestInvalid},
+		{"missing address", 0, fmt.Errorf("%w: %w", auth.ErrNetwork, auth.ErrNoProxyAddress), proxyTestInvalid},
+		{"invalid address", 0, fmt.Errorf("%w: %w", auth.ErrNetwork, auth.ErrInvalidProxyAddress), proxyTestInvalidAddress},
 	}
 	for _, tc := range cases {
 		if got := classifyProxyProbe(tc.status, tc.err); got != tc.want {

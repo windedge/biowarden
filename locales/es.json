@@ -188,6 +188,7 @@
   "settingsProxyCredentials": "El proxy requiere credenciales",
   "settingsProxyAddressPlaceholder": "socks5://127.0.0.1:1080 o http://proxy:8080",
   "settingsProxyAddressEmptyHint": "El tráfico va directo hasta que se establece una dirección.",
+  "settingsProxyAddressInvalid": "La dirección del proxy debe ser host:puerto o una URL http(s) o socks5 con puerto.",
   "settingsProxyUser": "Usuario",
   "settingsProxyPassword": "Contraseña",
   "settingsProxyTogglePassword": "Mostrar u ocultar la contraseña del proxy",
