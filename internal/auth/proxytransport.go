@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"os"
@@ -24,6 +25,11 @@ const (
 
 // ProxySetting is the current Manual configuration. The password is supplied
 // by the caller so auth never has to read the credential store.
+// ErrNoProxyAddress reports a Manual setting without a usable address.
+// A proxy function returning it makes the request fail instead of silently
+// going direct, which would defeat the point of choosing a proxy.
+var ErrNoProxyAddress = errors.New("auth: manual proxy mode set but address empty")
+
 type ProxySetting struct {
 	Mode     ProxyMode
 	Addr     string
@@ -118,7 +124,7 @@ func proxyForRequest(req *http.Request) (*url.URL, error) {
 			return u, nil
 		}
 		logInvalidProxyAddress()
-		return nil, nil
+		return nil, ErrNoProxyAddress
 	case ProxyModeOff:
 		return nil, nil
 	default:
@@ -165,5 +171,5 @@ func logInvalidProxyAddress() {
 		return
 	}
 	// The address may embed credentials, so only the outcome is logged.
-	logger().Debug("auth: invalid proxy address, using a direct connection")
+	logger().Debug("auth: invalid proxy address, request will fail")
 }

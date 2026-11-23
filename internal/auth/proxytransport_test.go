@@ -3,6 +3,7 @@ package auth
 import (
 	"bufio"
 	"context"
+	"errors"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -140,24 +141,33 @@ func TestManualProxySendsBasicAuthorization(t *testing.T) {
 	}
 }
 
-func TestManualInvalidAddressGoesDirect(t *testing.T) {
-	resetProxyState(t)
+func TestManualInvalidAddressFailsRequest(t *testing.T) {
+	for _, tc := range []struct{ name, addr string }{
+		{"empty", ""},
+		{"whitespace", "   "},
+		{"malformed", "http://%zz"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resetProxyState(t)
 
-	var direct atomic.Int32
-	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		direct.Add(1)
-		fmt.Fprint(w, "direct")
-	}))
-	defer target.Close()
+			var direct atomic.Int32
+			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				direct.Add(1)
+				fmt.Fprint(w, "direct")
+			}))
+			defer target.Close()
 
-	ConfigureProxy(func() ProxySetting {
-		return ProxySetting{Mode: ProxyModeManual, Addr: "http://%zz"}
-	}, nil)
-	if got := getBody(t, &http.Client{Transport: SharedTransport()}, target.URL); got != "direct" {
-		t.Fatalf("body = %q, want direct", got)
-	}
-	if direct.Load() != 1 {
-		t.Fatalf("direct hits = %d, want 1", direct.Load())
+			ConfigureProxy(func() ProxySetting {
+				return ProxySetting{Mode: ProxyModeManual, Addr: tc.addr}
+			}, nil)
+			_, err := (&http.Client{Transport: SharedTransport()}).Get(target.URL)
+			if !errors.Is(err, ErrNoProxyAddress) {
+				t.Fatalf("GET error = %v, want ErrNoProxyAddress", err)
+			}
+			if direct.Load() != 0 {
+				t.Fatalf("direct hits = %d, want 0", direct.Load())
+			}
+		})
 	}
 }
 
