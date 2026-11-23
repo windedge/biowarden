@@ -25,10 +25,13 @@ const (
 
 // ProxySetting is the current Manual configuration. The password is supplied
 // by the caller so auth never has to read the credential store.
-// ErrNoProxyAddress reports a Manual setting without a usable address.
-// A proxy function returning it makes the request fail instead of silently
-// going direct, which would defeat the point of choosing a proxy.
-var ErrNoProxyAddress = errors.New("auth: manual proxy mode set but address empty")
+// ErrNoProxyAddress reports a Manual setting without an address.
+// A proxy function returning either address error makes the request fail
+// instead of silently going direct, which would defeat choosing a proxy.
+var (
+	ErrNoProxyAddress      = errors.New("auth: manual proxy mode set but address empty")
+	ErrInvalidProxyAddress = errors.New("Proxy address must be host:port or http(s)://host:port or socks5(h)://host:port")
+)
 
 type ProxySetting struct {
 	Mode     ProxyMode
@@ -107,11 +110,11 @@ func proxyForRequest(req *http.Request) (*url.URL, error) {
 				if req.URL != nil && req.URL.Scheme == "https" {
 					addr = cfg.HTTPS
 				}
-				if u := parseProxyURL(addr, "", ""); u != nil {
+				if u, err := parseProxyURL(addr, "", ""); err == nil {
 					return u, nil
 				}
 				// WinINET can publish only socks=, which has no HTTP fallback.
-				if u := parseProxyURL(socksAddress(cfg.SOCKS), "", ""); u != nil {
+				if u, err := parseProxyURL(socksAddress(cfg.SOCKS), "", ""); err == nil {
 					return u, nil
 				}
 			}
@@ -120,11 +123,12 @@ func proxyForRequest(req *http.Request) (*url.URL, error) {
 	case ProxyModeEnvironment:
 		return environmentProxy(req)
 	case ProxyModeManual:
-		if u := parseProxyURL(setting.Addr, setting.User, setting.Password); u != nil {
-			return u, nil
+		u, err := parseProxyURL(setting.Addr, setting.User, setting.Password)
+		if err != nil {
+			logInvalidProxyAddress()
+			return nil, err
 		}
-		logInvalidProxyAddress()
-		return nil, ErrNoProxyAddress
+		return u, nil
 	case ProxyModeOff:
 		return nil, nil
 	default:
@@ -132,30 +136,42 @@ func proxyForRequest(req *http.Request) (*url.URL, error) {
 	}
 }
 
-// parseProxyURL accepts both host:port and a full URL. Go's net/http dials
-// socks5 and socks5h proxy URLs itself, including username/password auth, so
-// no extra dialer is needed.
-func parseProxyURL(raw, user, password string) *url.URL {
+// ValidateProxyAddress reports whether addr is a usable Manual proxy
+// address. UI callers use it to reject a draft before it reaches the seam.
+func ValidateProxyAddress(addr string) error {
+	_, err := parseProxyURL(addr, "", "")
+	return err
+}
+
+// parseProxyURL accepts host:port and a bare http(s)/socks5(h) URL with no
+// path, query, fragment or embedded credentials. Credentials come from the
+// separate fields; Go's net/http dials socks5(h) URLs itself.
+func parseProxyURL(raw, user, password string) (*url.URL, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return nil
+		return nil, ErrNoProxyAddress
 	}
 	if !strings.Contains(raw, "://") {
 		raw = "http://" + raw
 	}
 	u, err := url.Parse(raw)
-	if err != nil || u.Host == "" {
-		return nil
+	if err != nil {
+		return nil, ErrInvalidProxyAddress
 	}
+	invalid := u.Hostname() == "" || u.Port() == "" || u.User != nil ||
+		(u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != ""
 	switch u.Scheme {
 	case "http", "https", "socks5", "socks5h":
 	default:
-		return nil
+		invalid = true
+	}
+	if invalid {
+		return nil, ErrInvalidProxyAddress
 	}
 	if user != "" || password != "" {
 		u.User = url.UserPassword(user, password)
 	}
-	return u
+	return u, nil
 }
 
 func socksAddress(addr string) string {

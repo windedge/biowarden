@@ -3,8 +3,8 @@ package auth
 import (
 	"bufio"
 	"context"
-	"errors"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -54,36 +54,56 @@ func TestParseProxyURLTable(t *testing.T) {
 	cases := []struct {
 		name, raw, user, password, want string
 		ok                              bool
+		wantErr                         error
 	}{
-		{"host and port", "127.0.0.1:8080", "", "", "http://127.0.0.1:8080", true},
-		{"full URL", "http://proxy.example:8080", "", "", "http://proxy.example:8080", true},
-		{"credentials", "proxy.example:8080", "alice", "s3cret", "http://alice:s3cret@proxy.example:8080", true},
-		{"socks5 credentials", "socks5://127.0.0.1:1080", "alice", "s3cret", "socks5://alice:s3cret@127.0.0.1:1080", true},
-		{"socks5h", "socks5h://127.0.0.1:1080", "", "", "socks5h://127.0.0.1:1080", true},
-		{"bracketed IPv6", "[::1]:1080", "", "", "http://[::1]:1080", true},
-		{"bad escape", "http://%zz", "", "", "", false},
-		{"wrong scheme", "ftp://proxy.example:21", "", "", "", false},
-		{"empty", "  ", "", "", "", false},
+		{"host and port", "127.0.0.1:8080", "", "", "http://127.0.0.1:8080", true, nil},
+		{"full URL", "http://proxy.example:8080", "", "", "http://proxy.example:8080", true, nil},
+		{"https URL", "https://proxy.example:8443", "", "", "https://proxy.example:8443", true, nil},
+		{"credentials", "proxy.example:8080", "alice", "s3cret", "http://alice:s3cret@proxy.example:8080", true, nil},
+		{"socks5 credentials", "socks5://127.0.0.1:1080", "alice", "s3cret", "socks5://alice:s3cret@127.0.0.1:1080", true, nil},
+		{"socks5h", "socks5h://127.0.0.1:1080", "", "", "socks5h://127.0.0.1:1080", true, nil},
+		{"uppercase scheme", "SOCKS5://host:1080", "", "", "socks5://host:1080", true, nil},
+		{"surrounding spaces", "  proxy.example:8080  ", "", "", "http://proxy.example:8080", true, nil},
+		{"root path", "http://127.0.0.1:1081/", "", "", "http://127.0.0.1:1081/", true, nil},
+		{"bracketed IPv6", "[::1]:1080", "", "", "http://[::1]:1080", true, nil},
+		{"bracketed IPv6 URL", "socks5://[::1]:1081", "", "", "socks5://[::1]:1081", true, nil},
+		{"wrong scheme", "sockjjs5y://host:1080", "", "", "", false, ErrInvalidProxyAddress},
+		{"bare host", "127.0.0.1", "", "", "", false, ErrInvalidProxyAddress},
+		{"bare bracketed IPv6", "socks5://[::1]", "", "", "", false, ErrInvalidProxyAddress},
+		{"empty host", "http://:1081", "", "", "", false, ErrInvalidProxyAddress},
+		{"no port", "http://host", "", "", "", false, ErrInvalidProxyAddress},
+		{"path", "http://127.0.0.1:1081/path", "", "", "", false, ErrInvalidProxyAddress},
+		{"query", "http://127.0.0.1:1081/?key=1", "", "", "", false, ErrInvalidProxyAddress},
+		{"fragment", "http://127.0.0.1:1081/#part", "", "", "", false, ErrInvalidProxyAddress},
+		{"embedded credentials", "http://user:pass@host:1080", "", "", "", false, ErrInvalidProxyAddress},
+		{"bad escape", "http://%zz", "", "", "", false, ErrInvalidProxyAddress},
+		{"empty", "  ", "", "", "", false, ErrNoProxyAddress},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			u := parseProxyURL(tc.raw, tc.user, tc.password)
+			u, err := parseProxyURL(tc.raw, tc.user, tc.password)
 			if !tc.ok {
-				if u != nil {
-					t.Fatalf("parseProxyURL(%q) = %q, want nil", tc.raw, u)
+				if u != nil || !errors.Is(err, tc.wantErr) {
+					t.Fatalf("parseProxyURL(%q) = %q, %v; want nil, %v", tc.raw, u, err, tc.wantErr)
 				}
-				return
-			}
-			if u == nil {
-				t.Fatalf("parseProxyURL(%q) = nil, want %q", tc.raw, tc.want)
-			}
-			if got := u.String(); got != tc.want {
-				t.Fatalf("parseProxyURL(%q) = %q, want %q", tc.raw, got, tc.want)
-			}
-			if tc.user != "" {
-				if got, _ := u.User.Password(); got != tc.password {
-					t.Fatalf("password = %q, want %q", got, tc.password)
+			} else {
+				if err != nil {
+					t.Fatalf("parseProxyURL(%q): %v", tc.raw, err)
 				}
+				if u == nil {
+					t.Fatalf("parseProxyURL(%q) = nil, want %q", tc.raw, tc.want)
+				}
+				if got := u.String(); got != tc.want {
+					t.Fatalf("parseProxyURL(%q) = %q, want %q", tc.raw, got, tc.want)
+				}
+				if tc.user != "" {
+					if got, _ := u.User.Password(); got != tc.password {
+						t.Fatalf("password = %q, want %q", got, tc.password)
+					}
+				}
+			}
+			if got := ValidateProxyAddress(tc.raw); !errors.Is(got, tc.wantErr) {
+				t.Fatalf("ValidateProxyAddress(%q) = %v, want %v", tc.raw, got, tc.wantErr)
 			}
 		})
 	}
@@ -142,10 +162,17 @@ func TestManualProxySendsBasicAuthorization(t *testing.T) {
 }
 
 func TestManualInvalidAddressFailsRequest(t *testing.T) {
-	for _, tc := range []struct{ name, addr string }{
-		{"empty", ""},
-		{"whitespace", "   "},
-		{"malformed", "http://%zz"},
+	for _, tc := range []struct {
+		name, addr string
+		wantErr    error
+	}{
+		{"empty", "", ErrNoProxyAddress},
+		{"whitespace", "   ", ErrNoProxyAddress},
+		{"malformed", "http://%zz", ErrInvalidProxyAddress},
+		{"bare host", "127.0.0.1", ErrInvalidProxyAddress},
+		{"empty host", "http://:1081", ErrInvalidProxyAddress},
+		{"path", "http://127.0.0.1:1081/path", ErrInvalidProxyAddress},
+		{"embedded credentials", "http://user:pass@host:1080", ErrInvalidProxyAddress},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			resetProxyState(t)
@@ -161,8 +188,8 @@ func TestManualInvalidAddressFailsRequest(t *testing.T) {
 				return ProxySetting{Mode: ProxyModeManual, Addr: tc.addr}
 			}, nil)
 			_, err := (&http.Client{Transport: SharedTransport()}).Get(target.URL)
-			if !errors.Is(err, ErrNoProxyAddress) {
-				t.Fatalf("GET error = %v, want ErrNoProxyAddress", err)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("GET error = %v, want %v", err, tc.wantErr)
 			}
 			if direct.Load() != 0 {
 				t.Fatalf("direct hits = %d, want 0", direct.Load())
