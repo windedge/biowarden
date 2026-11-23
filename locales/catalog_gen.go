@@ -2821,7 +2821,7 @@ func (msgs Messages) SettingsProxyTestLabel() string {
 	return Catalog.Format(msgs.locale, "settingsProxyTestLabel", nil)
 }
 
-// SettingsProxyTestIdle says "Checks that {server} is reachable through the proxy. Sign-in is not tested."
+// SettingsProxyTestIdle says "Checks that {server} is reachable through the proxy."
 // in the language the app shows.
 //
 // The Test connection status before the first test; the host is the
@@ -2830,7 +2830,7 @@ func SettingsProxyTestIdle(server string) string {
 	return In(i18n.Locale()).SettingsProxyTestIdle(server)
 }
 
-// SettingsProxyTestIdle says "Checks that {server} is reachable through the proxy. Sign-in is not tested."
+// SettingsProxyTestIdle says "Checks that {server} is reachable through the proxy."
 // in the language of msgs.
 //
 // The Test connection status before the first test; the host is the
@@ -2855,14 +2855,14 @@ func (msgs Messages) SettingsProxyTestTesting(server string) string {
 	return Catalog.Format(msgs.locale, "settingsProxyTestTesting", map[string]any{"server": server})
 }
 
-// SettingsProxyTestOK says "{server} answered through the proxy. Sign-in is not tested."
+// SettingsProxyTestOK says "{server} answered through the proxy."
 // in the language the app shows.
 //
 // The status after a server answered through the proxy; it does not claim a
 // login would succeed.
 func SettingsProxyTestOK(server string) string { return In(i18n.Locale()).SettingsProxyTestOK(server) }
 
-// SettingsProxyTestOK says "{server} answered through the proxy. Sign-in is not tested."
+// SettingsProxyTestOK says "{server} answered through the proxy."
 // in the language of msgs.
 //
 // The status after a server answered through the proxy; it does not claim a

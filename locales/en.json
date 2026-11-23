@@ -963,7 +963,7 @@
   "@settingsProxyTestLabel": {
     "description": "The short label of the Network section row holding the proxy connection test."
   },
-  "settingsProxyTestIdle": "Checks that {server} is reachable through the proxy. Sign-in is not tested.",
+  "settingsProxyTestIdle": "Checks that {server} is reachable through the proxy.",
   "@settingsProxyTestIdle": {
     "description": "The Test connection status before the first test; the host is the account's server.",
     "placeholders": {
@@ -983,7 +983,7 @@
       }
     }
   },
-  "settingsProxyTestOK": "{server} answered through the proxy. Sign-in is not tested.",
+  "settingsProxyTestOK": "{server} answered through the proxy.",
   "@settingsProxyTestOK": {
     "description": "The status after a server answered through the proxy; it does not claim a login would succeed.",
     "placeholders": {
