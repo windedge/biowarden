@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.7] - 2026-11-23
+
+### Added
+
+- A Network section on the Settings page with System, Manual and Off proxy
+  modes. System follows the Windows IE/WinINET proxy setting and falls back
+  to environment variables when that setting cannot be read.
+- Manual mode accepts an HTTP/HTTPS CONNECT or SOCKS5 address with an optional
+  username and password. The password goes into its own Windows Credential
+  Manager entry (`Biowarden/Proxy`) and is redacted from logs.
+- A Test connection button that requests the server's API configuration endpoint
+  through the current proxy. Its status line names the server host it contacted
+  and states that sign-in is not tested.
+
+### Changed
+
+- Login, two-factor challenges, session checks and refresh now share one HTTP
+  transport, so switching proxy modes takes effect on the next request without
+  a restart.
+
+### Fixed
+
+- An incomplete Manual proxy address no longer silently falls back to a direct
+  connection.
+- The credential index no longer treats the proxy password entry as an account,
+  which used to show up as a fake account.
+
 ## [0.1.6] - 2026-11-05
 
 ### Added

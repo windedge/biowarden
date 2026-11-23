@@ -59,9 +59,18 @@ const (
 	proxyTestOK
 	proxyTestRefused
 	proxyTestUnreachable
+	proxyTestInvalid
 )
 
 func (s proxyTestState) label(host string) string {
+	// These states name the configuration, not the server, so they read the
+	// same whether or not a host was found.
+	switch s {
+	case proxyTestInvalid:
+		return locales.SettingsProxyTestInvalid()
+	case proxyTestRefused:
+		return locales.SettingsProxyTestRefused()
+	}
 	if host == "" {
 		switch s {
 		case proxyTestTesting:
@@ -79,8 +88,6 @@ func (s proxyTestState) label(host string) string {
 		return locales.SettingsProxyTestTesting(host)
 	case proxyTestOK:
 		return locales.SettingsProxyTestOK(host)
-	case proxyTestRefused:
-		return locales.SettingsProxyTestRefused()
 	case proxyTestUnreachable:
 		return locales.SettingsProxyTestUnreachable(host)
 	default:
@@ -374,6 +381,10 @@ func (s *settingsState) startProxyTest() {
 	if s.proxyTesting || s.probe == nil {
 		return
 	}
+	if s.proxyMode == proxyManual && trimSpace(s.proxyAddress) == "" {
+		s.proxyTest = proxyTestInvalid
+		return
+	}
 	s.proxyTesting = true
 	s.proxyTest = proxyTestTesting
 	probe := s.probe
@@ -405,10 +416,11 @@ func probeProxyURL(rawurl string) proxyTestOutcome {
 	return proxyTestOutcome{state: classifyProxyProbe(status, err)}
 }
 
-// classifyProxyProbe keeps the three honest outcomes distinct. A 407 answer,
-// whether returned as a status or from CONNECT, is a proxy that refused or
-// asked for credentials; everything else that failed is reported as an
-// unreachable route, and any HTTP status means the server was reached.
+// classifyProxyProbe keeps the outcomes distinct. A missing address is a
+// broken setting, not an unreachable server; a 407 answer, whether returned
+// as a status or from CONNECT, is a proxy that refused or asked for
+// credentials; any other failure is an unreachable route, and any HTTP
+// status means the server was reached.
 func classifyProxyProbe(status int, err error) proxyTestState {
 	if err == nil {
 		if status == http.StatusProxyAuthRequired {
@@ -418,6 +430,8 @@ func classifyProxyProbe(status int, err error) proxyTestState {
 	}
 	message := strings.ToLower(err.Error())
 	switch {
+	case strings.Contains(message, auth.ErrNoProxyAddress.Error()):
+		return proxyTestInvalid
 	case errors.Is(err, auth.ErrNetwork) &&
 		(strings.Contains(message, "407") || strings.Contains(message, "proxy authentication required")):
 		return proxyTestRefused

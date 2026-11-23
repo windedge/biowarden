@@ -2701,6 +2701,22 @@ func (msgs Messages) SettingsProxyModeOff() string {
 	return Catalog.Format(msgs.locale, "settingsProxyModeOff", nil)
 }
 
+// SettingsProxySystemHint says "When Windows has no proxy configured, environment variables are used, then direct."
+// in the language the app shows.
+//
+// The System mode's note on the fallback order for readers who expected
+// only the Windows setting.
+func SettingsProxySystemHint() string { return In(i18n.Locale()).SettingsProxySystemHint() }
+
+// SettingsProxySystemHint says "When Windows has no proxy configured, environment variables are used, then direct."
+// in the language of msgs.
+//
+// The System mode's note on the fallback order for readers who expected
+// only the Windows setting.
+func (msgs Messages) SettingsProxySystemHint() string {
+	return Catalog.Format(msgs.locale, "settingsProxySystemHint", nil)
+}
+
 // SettingsProxyAddress says "Address"
 // in the language the app shows.
 //
@@ -2745,6 +2761,20 @@ func SettingsProxyAddressPlaceholder() string {
 // The Manual proxy address field's example values.
 func (msgs Messages) SettingsProxyAddressPlaceholder() string {
 	return Catalog.Format(msgs.locale, "settingsProxyAddressPlaceholder", nil)
+}
+
+// SettingsProxyAddressEmptyHint says "Traffic goes direct until an address is set."
+// in the language the app shows.
+//
+// The warning under the Manual address field while it is blank.
+func SettingsProxyAddressEmptyHint() string { return In(i18n.Locale()).SettingsProxyAddressEmptyHint() }
+
+// SettingsProxyAddressEmptyHint says "Traffic goes direct until an address is set."
+// in the language of msgs.
+//
+// The warning under the Manual address field while it is blank.
+func (msgs Messages) SettingsProxyAddressEmptyHint() string {
+	return Catalog.Format(msgs.locale, "settingsProxyAddressEmptyHint", nil)
 }
 
 // SettingsProxyUser says "Username"
@@ -2901,6 +2931,20 @@ func (msgs Messages) SettingsProxyTestUnreachable(server string) string {
 	return Catalog.Format(msgs.locale, "settingsProxyTestUnreachable", map[string]any{"server": server})
 }
 
+// SettingsProxyTestInvalid says "Proxy address is empty; nothing to test."
+// in the language the app shows.
+//
+// The status when Manual mode has no address, so no probe was sent.
+func SettingsProxyTestInvalid() string { return In(i18n.Locale()).SettingsProxyTestInvalid() }
+
+// SettingsProxyTestInvalid says "Proxy address is empty; nothing to test."
+// in the language of msgs.
+//
+// The status when Manual mode has no address, so no probe was sent.
+func (msgs Messages) SettingsProxyTestInvalid() string {
+	return Catalog.Format(msgs.locale, "settingsProxyTestInvalid", nil)
+}
+
 // SettingsNoticeProxySaved says "Proxy settings saved."
 // in the language the app shows.
 //
@@ -2913,6 +2957,24 @@ func SettingsNoticeProxySaved() string { return In(i18n.Locale()).SettingsNotice
 // The settings page's status line after proxy settings were written.
 func (msgs Messages) SettingsNoticeProxySaved() string {
 	return Catalog.Format(msgs.locale, "settingsNoticeProxySaved", nil)
+}
+
+// SettingsNoticeProxyAddressEmpty says "Proxy address is empty."
+// in the language the app shows.
+//
+// The settings page's status when a Manual address was needed before the
+// settings could be saved.
+func SettingsNoticeProxyAddressEmpty() string {
+	return In(i18n.Locale()).SettingsNoticeProxyAddressEmpty()
+}
+
+// SettingsNoticeProxyAddressEmpty says "Proxy address is empty."
+// in the language of msgs.
+//
+// The settings page's status when a Manual address was needed before the
+// settings could be saved.
+func (msgs Messages) SettingsNoticeProxyAddressEmpty() string {
+	return Catalog.Format(msgs.locale, "settingsNoticeProxyAddressEmpty", nil)
 }
 
 // LogTitle says "Log"

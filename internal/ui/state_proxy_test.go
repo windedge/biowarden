@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -207,6 +208,49 @@ func TestProxyFormModeSwitchCommitsDraft(t *testing.T) {
 	}
 }
 
+// A blank Manual address must never be stored: the transport would then
+// fail every request, with only a debug log to explain why.
+func TestProxyFormRejectsBlankManualAddress(t *testing.T) {
+	for _, addr := range []string{"", "   "} {
+		fake, s := proxyFixture()
+		s.proxyAddress = addr
+		s.proxyPassword = "newpw"
+		if err := s.commitProxy(); !errors.Is(err, auth.ErrNoProxyAddress) {
+			t.Fatalf("commit %q error = %v, want ErrNoProxyAddress", addr, err)
+		}
+		if len(fake.saveCalls) != 0 || fake.address != "old:8080" || fake.password != "oldpw" {
+			t.Fatalf("blank address wrote: calls=%+v address=%q password=%q", fake.saveCalls, fake.address, fake.password)
+		}
+		if s.notice.kind != noticeSettingsProxyAddressEmpty || s.notice.ok {
+			t.Fatalf("notice = %+v, want the danger proxy address notice", s.notice)
+		}
+	}
+
+	// Leaving Settings is the other commit path, and it must refuse too.
+	fake, s := proxyFixture()
+	s.proxyAddress = ""
+	app := &appState{page: pageSettings, settings: s}
+	app.setPage(pageLog)
+	if len(fake.saveCalls) != 0 || fake.address != "old:8080" {
+		t.Fatalf("leaving with a blank address wrote: %+v, address=%q", fake.saveCalls, fake.address)
+	}
+	if app.settings.notice.kind != noticeSettingsProxyAddressEmpty {
+		t.Fatalf("leave notice = %+v, want the proxy address notice", app.settings.notice)
+	}
+
+	// The other modes can save without an address.
+	for _, mode := range []proxyMode{proxyOff, proxySystem} {
+		fake, s := proxyFixture()
+		s.proxyMode, s.proxyAddress = mode, ""
+		if err := s.commitProxy(); err != nil {
+			t.Fatalf("%v commit with no address: %v", mode, err)
+		}
+		if len(fake.saveCalls) != 1 || fake.saveCalls[0].mode != mode {
+			t.Fatalf("%v saved = %+v", mode, fake.saveCalls)
+		}
+	}
+}
+
 func TestProxyFormTypingDoesNotWrite(t *testing.T) {
 	fake, s := proxyFixture()
 	s.proxyAddress, s.proxyUser, s.proxyPassword = "new:8080", "alice", "newpw"
@@ -267,6 +311,72 @@ func TestProxyFormTestUsesCommittedValues(t *testing.T) {
 	s.proxyTesting = false
 	if s.proxyTest != proxyTestOK {
 		t.Fatalf("test state = %v, want ok", s.proxyTest)
+	}
+}
+
+func TestProxyFormEmptyAddressSkipsTest(t *testing.T) {
+	appLanguage(t, "en")
+	fake, s := proxyFixture()
+	s.proxyAddress = "   "
+	probeCalls := 0
+	s.probe = func() proxyTestOutcome {
+		probeCalls++
+		return proxyTestOutcome{state: proxyTestOK}
+	}
+	s.startProxyTest()
+	if probeCalls != 0 || s.proxyTesting || s.proxyTest != proxyTestInvalid {
+		t.Fatalf("empty address: probes=%d testing=%v state=%v, want 0/false/invalid", probeCalls, s.proxyTesting, s.proxyTest)
+	}
+
+	app := &appState{settings: s}
+	tester := ui.NewTester(app.settingsPage, 1200, 900)
+	tester.Frame()
+	if !tester.HasText(locales.SettingsProxyTestInvalid()) {
+		t.Errorf("no invalid address status: %v", tester.Texts())
+	}
+	if !tester.HasText(locales.SettingsProxyAddressEmptyHint()) {
+		t.Errorf("no blank address hint: %v", tester.Texts())
+	}
+	if err := tester.Click(locales.SettingsProxyTest()); err != nil {
+		t.Fatal(err)
+	}
+	tester.Frame()
+	if probeCalls != 0 {
+		t.Fatalf("disabled Test button sent %d probes", probeCalls)
+	}
+
+	// With an address saved, the same button sends the probe again.
+	s.proxyAddress = "new:8080"
+	if err := s.commitProxy(); err != nil {
+		t.Fatal(err)
+	}
+	if fake.address != "new:8080" {
+		t.Fatalf("address after commit = %q", fake.address)
+	}
+	s.startProxyTest()
+	if !s.proxyTesting || s.proxyTest != proxyTestTesting {
+		t.Fatalf("after filling address: testing=%v state=%v", s.proxyTesting, s.proxyTest)
+	}
+	select {
+	case r := <-s.proxyTestResult.Ch():
+		s.proxyTest = r.state
+	case <-time.After(2 * time.Second):
+		t.Fatal("probe queued no result")
+	}
+	if probeCalls != 1 || s.proxyTest != proxyTestOK {
+		t.Fatalf("after filling address: probes=%d state=%v", probeCalls, s.proxyTest)
+	}
+}
+
+func TestProxySystemHintShowsFallback(t *testing.T) {
+	appLanguage(t, "en")
+	app := &appState{}
+	app.settings.proxyMode = proxySystem
+	app.settings.proxy = &fakeProxyPref{mode: proxySystem, supported: true}
+	tester := ui.NewTester(app.settingsPage, 1200, 900)
+	tester.Frame()
+	if !tester.HasText(locales.SettingsProxySystemHint()) {
+		t.Errorf("no System fallback hint: %v", tester.Texts())
 	}
 }
 
@@ -346,6 +456,7 @@ func TestProxyProbeClassification(t *testing.T) {
 		{"connect 407", 0, fmt.Errorf("%w: proxyconnect tcp: 407 Proxy Authentication Required", auth.ErrNetwork), proxyTestRefused},
 		{"tunnel refused", 0, fmt.Errorf("%w: proxyconnect tcp: tunnel forbidden", auth.ErrNetwork), proxyTestRefused},
 		{"dead proxy", 0, fmt.Errorf("%w: dial tcp: connection refused", auth.ErrNetwork), proxyTestUnreachable},
+		{"missing address", 0, fmt.Errorf("%w: %s", auth.ErrNetwork, auth.ErrNoProxyAddress), proxyTestInvalid},
 	}
 	for _, tc := range cases {
 		if got := classifyProxyProbe(tc.status, tc.err); got != tc.want {

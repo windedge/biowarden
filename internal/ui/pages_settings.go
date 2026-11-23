@@ -101,15 +101,26 @@ func (app *appState) settingsPage(c *ui.Context) {
 					})
 					ui.Fieldset(c, locales.SettingsGroupNetwork(), func() {
 						ui.Field(c, locales.SettingsProxyMode(), func() {
-							if mode, changed := app.settings.proxyModeSelect(c); changed {
-								app.settings.setProxyMode(mode)
-							}
+							ui.Column(c).Gap(spaceHair).Children(func() {
+								if mode, changed := app.settings.proxyModeSelect(c); changed {
+									app.settings.setProxyMode(mode)
+								}
+								if app.settings.proxyMode == proxySystem {
+									muted(c, locales.SettingsProxySystemHint())
+								}
+							})
 						})
 						if app.settings.proxyMode == proxyManual {
 							ui.Field(c, locales.SettingsProxyAddress(), func() {
-								ui.TextInput(c.Key("proxy-address"), &app.settings.proxyAddress).
-									Placeholder(locales.SettingsProxyAddressPlaceholder()).
-									Label(locales.SettingsProxyAddress()).MaxWidth(settingsSelectWidth)
+								ui.Column(c).Gap(spaceHair).Children(func() {
+									ui.TextInput(c.Key("proxy-address"), &app.settings.proxyAddress).
+										Placeholder(locales.SettingsProxyAddressPlaceholder()).
+										Label(locales.SettingsProxyAddress()).MaxWidth(settingsSelectWidth)
+									if trimSpace(app.settings.proxyAddress) == "" {
+										ui.Text(c, locales.SettingsProxyAddressEmptyHint()).
+											FontSize(t.Rem(fontCaption)).TextColor(t.Danger)
+									}
+								})
 							})
 							// An empty label puts the checkbox in the form's content column.
 							ui.Field(c, "", func() {
@@ -142,7 +153,9 @@ func (app *appState) settingsPage(c *ui.Context) {
 						if app.settings.proxyMode != proxyOff {
 							ui.Field(c, locales.SettingsProxyTestLabel(), func() {
 								ui.Column(c).Gap(spaceHair).Children(func() {
-									secondaryButton(c, locales.SettingsProxyTest(), app.settings.proxyTesting).
+									secondaryButton(c, locales.SettingsProxyTest(),
+										app.settings.proxyTesting ||
+											(app.settings.proxyMode == proxyManual && trimSpace(app.settings.proxyAddress) == "")).
 										MaxWidth(settingsSelectWidth).
 										OnClick(func() {
 											app.settings.startProxyTest()
@@ -152,7 +165,7 @@ func (app *appState) settingsPage(c *ui.Context) {
 									switch app.settings.proxyTest {
 									case proxyTestOK:
 										ink = t.Success
-									case proxyTestRefused, proxyTestUnreachable:
+									case proxyTestRefused, proxyTestUnreachable, proxyTestInvalid:
 										ink = t.Danger
 									}
 									// A long result wraps instead of being elided to fit a row.

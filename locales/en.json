@@ -931,6 +931,10 @@
   "@settingsProxyModeOff": {
     "description": "The proxy mode that connects directly."
   },
+  "settingsProxySystemHint": "When Windows has no proxy configured, environment variables are used, then direct.",
+  "@settingsProxySystemHint": {
+    "description": "The System mode's note on the fallback order for readers who expected only the Windows setting."
+  },
   "settingsProxyAddress": "Address",
   "@settingsProxyAddress": {
     "description": "The Manual proxy form's field label for the proxy address."
@@ -942,6 +946,10 @@
   "settingsProxyAddressPlaceholder": "socks5://127.0.0.1:1080 or http://proxy:8080",
   "@settingsProxyAddressPlaceholder": {
     "description": "The Manual proxy address field's example values."
+  },
+  "settingsProxyAddressEmptyHint": "Traffic goes direct until an address is set.",
+  "@settingsProxyAddressEmptyHint": {
+    "description": "The warning under the Manual address field while it is blank."
   },
   "settingsProxyUser": "Username",
   "@settingsProxyUser": {
@@ -1007,9 +1015,17 @@
       }
     }
   },
+  "settingsProxyTestInvalid": "Proxy address is empty; nothing to test.",
+  "@settingsProxyTestInvalid": {
+    "description": "The status when Manual mode has no address, so no probe was sent."
+  },
   "settingsNoticeProxySaved": "Proxy settings saved.",
   "@settingsNoticeProxySaved": {
     "description": "The settings page's status line after proxy settings were written."
+  },
+  "settingsNoticeProxyAddressEmpty": "Proxy address is empty.",
+  "@settingsNoticeProxyAddressEmpty": {
+    "description": "The settings page's status when a Manual address was needed before the settings could be saved."
   },
   "logTitle": "Log",
   "@logTitle": {

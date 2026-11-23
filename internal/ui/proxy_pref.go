@@ -54,10 +54,16 @@ func (m proxyMode) stored() registry.ProxyMode {
 
 // commitProxy writes the Settings draft through the seam. A mode without
 // credentials also drops the stored password, and a blank field means the
-// human cleared it rather than wanting the old one kept.
-func (s *settingsState) commitProxy() {
+// human cleared it rather than wanting the old one kept. Manual without an
+// address is refused: saving it would leave login failing without a word
+// about why.
+func (s *settingsState) commitProxy() error {
 	if s.proxy == nil {
-		return
+		return nil
+	}
+	if s.proxyMode == proxyManual && trimSpace(s.proxyAddress) == "" {
+		s.notice = pageNotice{kind: noticeSettingsProxyAddressEmpty}
+		return auth.ErrNoProxyAddress
 	}
 	password := s.proxyPassword
 	if s.proxyMode == proxyOff {
@@ -66,14 +72,16 @@ func (s *settingsState) commitProxy() {
 	}
 	s.proxy.Save(s.proxyMode, trimSpace(s.proxyAddress), trimSpace(s.proxyUser), password)
 	s.notice = pageNotice{kind: noticeSettingsProxySaved, ok: true}
+	return nil
 }
 
 // commitProxyOnLeave persists a draft only when it differs from what the seam
 // holds, so browsing away from an untouched page writes nothing.
-func (s *settingsState) commitProxyOnLeave() {
+func (s *settingsState) commitProxyOnLeave() error {
 	if s.hasProxyChanges() {
-		s.commitProxy()
+		return s.commitProxy()
 	}
+	return nil
 }
 
 func (s *settingsState) hasProxyChanges() bool {

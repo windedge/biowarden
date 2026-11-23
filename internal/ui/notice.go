@@ -111,6 +111,7 @@ const (
 	noticeSettingsTrayShown
 	noticeSettingsTrayHidden
 	noticeSettingsProxySaved
+	noticeSettingsProxyAddressEmpty
 
 	noticeLogReadFailed
 	noticeLogRefreshed
@@ -186,7 +187,7 @@ func (n pageNotice) severity() noticeSeverity {
 		noticeAccountSessionRevoked, noticeAccountSessionReadFailed,
 		noticeAccountRemoveSessionFailed,
 		noticeSettingsAutostartReadFailed, noticeSettingsHelloCheckFailed,
-		noticeSettingsAutostartWriteFailed,
+		noticeSettingsAutostartWriteFailed, noticeSettingsProxyAddressEmpty,
 		noticeLogReadFailed, noticeLogOpenFailed,
 		noticeBrowsersReadFailed, noticeBrowsersManifestWriteFailed,
 		noticeBrowsersManifestDeleteFailed:
@@ -272,6 +273,8 @@ func (n pageNotice) text() string {
 		return locales.SettingsNoticeTrayHidden()
 	case noticeSettingsProxySaved:
 		return locales.SettingsNoticeProxySaved()
+	case noticeSettingsProxyAddressEmpty:
+		return locales.SettingsNoticeProxyAddressEmpty()
 	case noticeLogReadFailed:
 		return locales.LogNoticeReadFailed(errorDetail(n.err))
 	case noticeLogRefreshed:
