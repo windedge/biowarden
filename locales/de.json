@@ -170,8 +170,6 @@
   "settingsLogLevelDebug": "Debug",
   "settingsNoticeAutostartReadFailed": "Lesen der Autostart-Einstellung fehlgeschlagen: {detail}",
   "settingsNoticeHelloCheckFailed": "Die Windows-Hello-Prüfung ist fehlgeschlagen: {detail}",
-  "settingsNoticeHelloAvailable": "Windows Hello ist verfügbar",
-  "settingsNoticeHelloUnavailable": "Windows Hello ist nicht verfügbar: Es ist kein Gesicht / Fingerabdruck / PIN eingerichtet",
   "settingsNoticeAutostartWriteFailed": "Setzen des Autostarts fehlgeschlagen: {detail}",
   "settingsNoticeAutostartOn": "Autostart bei Anmeldung ist an",
   "settingsNoticeAutostartOff": "Autostart bei Anmeldung ist aus",

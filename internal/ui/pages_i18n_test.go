@@ -102,7 +102,6 @@ func TestPageNoticeFollowsTheLanguage(t *testing.T) {
 	notices := []pageNotice{
 		{kind: noticeAccountKeySaved, ok: true},
 		{kind: noticeAccountVerified, args: []string{"user-1"}, ok: true},
-		{kind: noticeSettingsHelloUnavailable},
 		{kind: noticeLogRefreshed, ok: true},
 		{kind: noticeBrowsersManifestWritten, args: []string{"Firefox"}, ok: true},
 		{kind: noticeBrowsersBulk, bulk: &bulkSummary{installed: 2}},

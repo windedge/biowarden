@@ -876,14 +876,6 @@
       }
     }
   },
-  "settingsNoticeHelloAvailable": "Windows Hello is available",
-  "@settingsNoticeHelloAvailable": {
-    "description": "The settings page's status line when Hello is available."
-  },
-  "settingsNoticeHelloUnavailable": "Windows Hello is unavailable: no face / fingerprint / PIN is configured",
-  "@settingsNoticeHelloUnavailable": {
-    "description": "The settings page's status line when Hello is not configured."
-  },
   "settingsNoticeAutostartWriteFailed": "Setting autostart failed: {detail}",
   "@settingsNoticeAutostartWriteFailed": {
     "description": "The settings page's status line when the autostart write failed.",

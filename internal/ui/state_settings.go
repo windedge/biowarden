@@ -228,13 +228,10 @@ func (s *settingsState) tick(c *ui.Context) {
 	if s.helloChecking && !s.helloResult.tick(func(r helloOutcome) {
 		s.helloChecking = false
 		s.helloOK = r.err == nil && r.ok
-		switch {
-		case r.err != nil:
+		// The Hello row already reports availability and configured factors.
+		// Only a failed check needs a banner: the row cannot tell it from "not configured".
+		if r.err != nil {
 			s.notice = pageNotice{kind: noticeSettingsHelloCheckFailed, err: r.err}
-		case r.ok:
-			s.notice = pageNotice{kind: noticeSettingsHelloAvailable, ok: true}
-		default:
-			s.notice = pageNotice{kind: noticeSettingsHelloUnavailable}
 		}
 	}) {
 		c.After(100 * time.Millisecond)

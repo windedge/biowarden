@@ -171,8 +171,6 @@
   "settingsLogLevelDebug": "调试",
   "settingsNoticeAutostartReadFailed": "读取自启动设置失败：{detail}",
   "settingsNoticeHelloCheckFailed": "Windows Hello 检测失败：{detail}",
-  "settingsNoticeHelloAvailable": "Windows Hello 可用",
-  "settingsNoticeHelloUnavailable": "Windows Hello 不可用：尚未配置人脸 / 指纹 / PIN",
   "settingsNoticeAutostartWriteFailed": "设置自启动失败：{detail}",
   "settingsNoticeAutostartOn": "已开启登录时自动启动",
   "settingsNoticeAutostartOff": "已关闭登录时自动启动",

@@ -2529,36 +2529,6 @@ func (msgs Messages) SettingsNoticeHelloCheckFailed(detail string) string {
 	return Catalog.Format(msgs.locale, "settingsNoticeHelloCheckFailed", map[string]any{"detail": detail})
 }
 
-// SettingsNoticeHelloAvailable says "Windows Hello is available"
-// in the language the app shows.
-//
-// The settings page's status line when Hello is available.
-func SettingsNoticeHelloAvailable() string { return In(i18n.Locale()).SettingsNoticeHelloAvailable() }
-
-// SettingsNoticeHelloAvailable says "Windows Hello is available"
-// in the language of msgs.
-//
-// The settings page's status line when Hello is available.
-func (msgs Messages) SettingsNoticeHelloAvailable() string {
-	return Catalog.Format(msgs.locale, "settingsNoticeHelloAvailable", nil)
-}
-
-// SettingsNoticeHelloUnavailable says "Windows Hello is unavailable: no face / fingerprint / PIN is configured"
-// in the language the app shows.
-//
-// The settings page's status line when Hello is not configured.
-func SettingsNoticeHelloUnavailable() string {
-	return In(i18n.Locale()).SettingsNoticeHelloUnavailable()
-}
-
-// SettingsNoticeHelloUnavailable says "Windows Hello is unavailable: no face / fingerprint / PIN is configured"
-// in the language of msgs.
-//
-// The settings page's status line when Hello is not configured.
-func (msgs Messages) SettingsNoticeHelloUnavailable() string {
-	return Catalog.Format(msgs.locale, "settingsNoticeHelloUnavailable", nil)
-}
-
 // SettingsNoticeAutostartWriteFailed says "Setting autostart failed: {detail}"
 // in the language the app shows.
 //

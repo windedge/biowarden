@@ -170,8 +170,6 @@
   "settingsLogLevelDebug": "Depuración",
   "settingsNoticeAutostartReadFailed": "No se pudo leer el ajuste de inicio automático: {detail}",
   "settingsNoticeHelloCheckFailed": "La comprobación de Windows Hello falló: {detail}",
-  "settingsNoticeHelloAvailable": "Windows Hello está disponible",
-  "settingsNoticeHelloUnavailable": "Windows Hello no está disponible: no hay rostro / huella / PIN configurados",
   "settingsNoticeAutostartWriteFailed": "No se pudo cambiar el inicio automático: {detail}",
   "settingsNoticeAutostartOn": "El inicio automático al iniciar sesión está activado",
   "settingsNoticeAutostartOff": "El inicio automático al iniciar sesión está desactivado",

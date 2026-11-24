@@ -170,8 +170,6 @@
   "settingsLogLevelDebug": "デバッグ",
   "settingsNoticeAutostartReadFailed": "自動起動の設定の読み取りに失敗しました: {detail}",
   "settingsNoticeHelloCheckFailed": "Windows Hello の確認に失敗しました: {detail}",
-  "settingsNoticeHelloAvailable": "Windows Hello を利用できます",
-  "settingsNoticeHelloUnavailable": "Windows Hello を利用できません。顔 / 指紋 / PIN が構成されていません",
   "settingsNoticeAutostartWriteFailed": "自動起動の設定に失敗しました: {detail}",
   "settingsNoticeAutostartOn": "サインイン時の自動起動がオンになりました",
   "settingsNoticeAutostartOff": "サインイン時の自動起動がオフになりました",

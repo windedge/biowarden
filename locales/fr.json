@@ -170,8 +170,6 @@
   "settingsLogLevelDebug": "Débogage",
   "settingsNoticeAutostartReadFailed": "La lecture du paramètre de démarrage automatique a échoué : {detail}",
   "settingsNoticeHelloCheckFailed": "La vérification de Windows Hello a échoué : {detail}",
-  "settingsNoticeHelloAvailable": "Windows Hello est disponible",
-  "settingsNoticeHelloUnavailable": "Windows Hello n'est pas disponible : aucun visage / empreinte digitale / PIN n'est configuré",
   "settingsNoticeAutostartWriteFailed": "La modification du démarrage automatique a échoué : {detail}",
   "settingsNoticeAutostartOn": "Le démarrage automatique à l'ouverture de session est activé",
   "settingsNoticeAutostartOff": "Le démarrage automatique à l'ouverture de session est désactivé",

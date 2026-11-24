@@ -170,8 +170,6 @@
   "settingsLogLevelDebug": "偵錯",
   "settingsNoticeAutostartReadFailed": "讀取自動啟動設定失敗：{detail}",
   "settingsNoticeHelloCheckFailed": "Windows Hello 檢查失敗：{detail}",
-  "settingsNoticeHelloAvailable": "Windows Hello 可用",
-  "settingsNoticeHelloUnavailable": "Windows Hello 無法使用：尚未設定臉部 / 指紋 / PIN",
   "settingsNoticeAutostartWriteFailed": "設定自動啟動失敗：{detail}",
   "settingsNoticeAutostartOn": "已開啟登入時自動啟動",
   "settingsNoticeAutostartOff": "已關閉登入時自動啟動",

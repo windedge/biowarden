@@ -103,8 +103,6 @@ const (
 
 	noticeSettingsAutostartReadFailed
 	noticeSettingsHelloCheckFailed
-	noticeSettingsHelloAvailable
-	noticeSettingsHelloUnavailable
 	noticeSettingsAutostartWriteFailed
 	noticeSettingsAutostartOn
 	noticeSettingsAutostartOff
@@ -178,7 +176,6 @@ func (n pageNotice) severity() noticeSeverity {
 	case noticeAccountSessionUnverified, noticeAccountSessionUnverifiedNetwork,
 		noticeAccountSessionUnverifiedRateLimited, noticeAccountSessionUnverifiedServer,
 		noticeAccountHelloUnavailable,
-		noticeSettingsHelloUnavailable,
 		noticeLogMissing,
 		noticeBrowsersUninstallForeign:
 		return severityWarning
@@ -258,10 +255,6 @@ func (n pageNotice) text() string {
 		return locales.SettingsNoticeAutostartReadFailed(errorDetail(n.err))
 	case noticeSettingsHelloCheckFailed:
 		return locales.SettingsNoticeHelloCheckFailed(errorDetail(n.err))
-	case noticeSettingsHelloAvailable:
-		return locales.SettingsNoticeHelloAvailable()
-	case noticeSettingsHelloUnavailable:
-		return locales.SettingsNoticeHelloUnavailable()
 	case noticeSettingsAutostartWriteFailed:
 		return locales.SettingsNoticeAutostartWriteFailed(errorDetail(n.err))
 	case noticeSettingsAutostartOn:
