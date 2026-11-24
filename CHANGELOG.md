@@ -9,28 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- A Network section on the Settings page with System, Manual and Off proxy
-  modes. System follows the Windows IE/WinINET proxy setting and falls back
-  to environment variables when that setting cannot be read.
-- Manual mode accepts an HTTP/HTTPS CONNECT or SOCKS5 address with an optional
-  username and password. The password goes into its own Windows Credential
-  Manager entry (`Biowarden/Proxy`) and is redacted from logs.
-- A Test connection button that requests the server's API configuration endpoint
-  through the current proxy. Its status line names the server host it contacted
-  and states that sign-in is not tested.
+- A Network section on the Settings page with None, HTTP, SOCKS5 and System
+  proxy modes. System follows the Windows IE/WinINET proxy setting and falls
+  back to environment variables when that setting cannot be read. HTTP and
+  SOCKS5 ask for a host and port, plus an optional password kept in the
+  Windows Credential Manager (`Biowarden/Proxy`) and redacted from logs. A
+  Test connection button requests the server's API configuration endpoint
+  through the current proxy and names the server host it contacted.
 
 ### Changed
 
 - Login, two-factor challenges, session checks and refresh now share one HTTP
   transport, so switching proxy modes takes effect on the next request without
   a restart.
-
-### Fixed
-
-- An incomplete Manual proxy address no longer silently falls back to a direct
-  connection.
-- The credential index no longer treats the proxy password entry as an account,
-  which used to show up as a fake account.
 
 ## [0.1.6] - 2026-11-05
 
@@ -287,7 +278,8 @@ Credential Manager behind a biometrics check.
 - Deleting an account key also clears the stored login session.
 - Registry tests never touch the real user hive (private app hive instead).
 
-[unreleased]: https://github.com/windedge/biowarden/compare/v0.1.6...HEAD
+[unreleased]: https://github.com/windedge/biowarden/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/windedge/biowarden/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/windedge/biowarden/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/windedge/biowarden/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/windedge/biowarden/compare/v0.1.3...v0.1.4
