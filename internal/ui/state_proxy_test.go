@@ -226,16 +226,35 @@ func TestProxyFormRejectsBlankManualAddress(t *testing.T) {
 		}
 	}
 
-	// Leaving Settings is the other commit path, and it must refuse too.
+	// Switching to Manual is not a save attempt: keep the draft, write nothing
+	// and leave the page banner alone. The inline hint explains the blank field.
 	fake, s := proxyFixture()
+	s.proxyMode, s.proxyAddress, s.proxyUser, s.proxyPassword = proxyOff, "", "draft", "draftpw"
+	s.setProxyMode(proxyManual)
+	if len(fake.saveCalls) != 0 || fake.address != "old:8080" || fake.password != "oldpw" {
+		t.Fatalf("switching with a blank address wrote: %+v, address=%q password=%q", fake.saveCalls, fake.address, fake.password)
+	}
+	if s.notice.kind != noticeNone {
+		t.Fatalf("switch notice = %+v, want none", s.notice)
+	}
+	if s.proxyMode != proxyManual || s.proxyAddress != "" || s.proxyUser != "draft" || s.proxyPassword != "draftpw" {
+		t.Fatalf("switch lost the draft: mode=%v address=%q user=%q password=%q", s.proxyMode, s.proxyAddress, s.proxyUser, s.proxyPassword)
+	}
+
+	// Leaving Settings is the other quiet commit path.
+	fake, s = proxyFixture()
 	s.proxyAddress = ""
+	s.proxyUser = "draft"
 	app := &appState{page: pageSettings, settings: s}
 	app.setPage(pageLog)
 	if len(fake.saveCalls) != 0 || fake.address != "old:8080" {
 		t.Fatalf("leaving with a blank address wrote: %+v, address=%q", fake.saveCalls, fake.address)
 	}
-	if app.settings.notice.kind != noticeSettingsProxyAddressEmpty {
-		t.Fatalf("leave notice = %+v, want the proxy address notice", app.settings.notice)
+	if app.settings.notice.kind != noticeNone {
+		t.Fatalf("leave notice = %+v, want none", app.settings.notice)
+	}
+	if app.settings.proxyAddress != "" || app.settings.proxyUser != "draft" {
+		t.Fatalf("leaving lost the draft: address=%q user=%q", app.settings.proxyAddress, app.settings.proxyUser)
 	}
 
 	// The other modes can save without an address.

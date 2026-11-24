@@ -52,19 +52,33 @@ func (m proxyMode) stored() registry.ProxyMode {
 	}
 }
 
-// commitProxy writes the Settings draft through the seam. A mode without
-// credentials also drops the stored password, and a blank field means the
-// human cleared it rather than wanting the old one kept. Manual without an
-// address is refused: saving it would leave login failing without a word
-// about why.
+// commitProxy writes the Settings draft through the seam and reports an
+// empty Manual address on the page. A mode without credentials also drops the
+// stored password, and a blank password means the human cleared it rather than
+// wanting the old one kept.
 func (s *settingsState) commitProxy() error {
+	return s.commitProxyDraft(true)
+}
+
+// commitProxyQuiet is for a mode switch or leaving the page: with no address
+// yet there is nothing to save, and the inline hint under the field already
+// explains that traffic goes direct.
+func (s *settingsState) commitProxyQuiet() error {
+	return s.commitProxyDraft(false)
+}
+
+func (s *settingsState) commitProxyDraft(noticeEmpty bool) error {
 	if s.proxy == nil {
 		return nil
 	}
 	if s.proxyMode == proxyManual {
 		address := trimSpace(s.proxyAddress)
 		if address == "" {
-			s.notice = pageNotice{kind: noticeSettingsProxyAddressEmpty}
+			if noticeEmpty {
+				s.notice = pageNotice{kind: noticeSettingsProxyAddressEmpty}
+			} else {
+				s.notice = pageNotice{}
+			}
 			return auth.ErrNoProxyAddress
 		}
 		if err := auth.ValidateProxyAddress(address); err != nil {
@@ -86,7 +100,7 @@ func (s *settingsState) commitProxy() error {
 // holds, so browsing away from an untouched page writes nothing.
 func (s *settingsState) commitProxyOnLeave() error {
 	if s.hasProxyChanges() {
-		return s.commitProxy()
+		return s.commitProxyQuiet()
 	}
 	return nil
 }

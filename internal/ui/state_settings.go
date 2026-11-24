@@ -374,7 +374,7 @@ func (s *settingsState) setProxyMode(mode proxyMode) {
 		s.proxyTest = proxyTestIdle
 		s.proxyTesting = false
 	}
-	s.commitProxy()
+	s.commitProxyQuiet()
 }
 
 // startProxyTest commits the draft first: the probe must use the address the
