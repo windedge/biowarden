@@ -911,41 +911,49 @@
   "@settingsProxyMode": {
     "description": "The Network section's field label for the proxy mode."
   },
+  "settingsProxyModeNone": "None",
+  "@settingsProxyModeNone": {
+    "description": "The proxy mode that connects directly."
+  },
+  "settingsProxyModeHTTP": "HTTP proxy",
+  "@settingsProxyModeHTTP": {
+    "description": "The proxy mode that tunnels through an HTTP proxy at the given host and port."
+  },
+  "settingsProxyModeSOCKS5": "SOCKS5 proxy",
+  "@settingsProxyModeSOCKS5": {
+    "description": "The proxy mode that tunnels through a SOCKS5 proxy at the given host and port."
+  },
   "settingsProxyModeSystem": "System",
   "@settingsProxyModeSystem": {
     "description": "The proxy mode that reads the operating system's setting."
-  },
-  "settingsProxyModeManual": "Manual",
-  "@settingsProxyModeManual": {
-    "description": "The proxy mode with an address and credentials entered in Settings."
-  },
-  "settingsProxyModeOff": "Off",
-  "@settingsProxyModeOff": {
-    "description": "The proxy mode that connects directly."
   },
   "settingsProxySystemHint": "When Windows has no proxy configured, environment variables are used, then direct.",
   "@settingsProxySystemHint": {
     "description": "The System mode's note on the fallback order for readers who expected only the Windows setting."
   },
-  "settingsProxyAddress": "Address",
-  "@settingsProxyAddress": {
-    "description": "The Manual proxy form's field label for the proxy address."
+  "settingsProxyHost": "Host",
+  "@settingsProxyHost": {
+    "description": "The Manual proxy form's field label for the proxy host."
   },
-  "settingsProxyCredentials": "Proxy requires credentials",
+  "settingsProxyPort": "Port",
+  "@settingsProxyPort": {
+    "description": "The Manual proxy form's field label for the proxy port."
+  },
+  "settingsProxyPortPlaceholder": "7890",
+  "@settingsProxyPortPlaceholder": {
+    "description": "The Manual proxy port field's example value."
+  },
+  "settingsProxyCredentials": "The proxy server requires a password",
   "@settingsProxyCredentials": {
     "description": "The Manual proxy form's checkbox: checked shows the username and password rows; unchecking only hides them, without clearing stored credentials."
   },
-  "settingsProxyAddressPlaceholder": "socks5://127.0.0.1:1080 or http://proxy:8080",
-  "@settingsProxyAddressPlaceholder": {
-    "description": "The Manual proxy address field's example values."
-  },
-  "settingsProxyAddressEmptyHint": "Traffic goes direct until an address is set.",
+  "settingsProxyAddressEmptyHint": "Traffic goes direct until a host is set.",
   "@settingsProxyAddressEmptyHint": {
-    "description": "The warning under the Manual address field while it is blank."
+    "description": "The warning under the Manual host field while it is blank."
   },
-  "settingsProxyAddressInvalid": "Proxy address must be host:port or a http(s) or socks5 URL with a port.",
+  "settingsProxyAddressInvalid": "Enter a host and a port from 1 to 65535.",
   "@settingsProxyAddressInvalid": {
-    "description": "The warning under the Manual address field, and the Test connection status, when the address has no usable host and port."
+    "description": "The warning beside the Manual port field, and the Test connection status, when the host or port is not usable."
   },
   "settingsProxyUser": "Username",
   "@settingsProxyUser": {

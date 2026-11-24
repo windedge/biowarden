@@ -57,11 +57,11 @@ func testPageTextsFit(t *testing.T, dark bool, tag string, windowWidth, windowHe
 		browsers: newBrowsersStateWith(&recordingBrowsersBackend{}),
 		// The Network section is measured with its widest form expanded.
 		settings: settingsState{
-			proxyMode:           proxyManual,
+			proxyMode:           proxySOCKS5,
 			proxyUseCredentials: true,
 			proxy: &fakeProxyPref{
-				mode: proxyManual, supported: true,
-				address: "socks5://127.0.0.1:1080", user: "alice", password: "s3cret",
+				mode: proxySOCKS5, supported: true,
+				host: "127.0.0.1", port: "1080", user: "alice", password: "s3cret",
 			},
 		},
 	}
@@ -132,11 +132,11 @@ func testPageTextsFit(t *testing.T, dark bool, tag string, windowWidth, windowHe
 }
 
 // The credentials checkbox sits in a field with no label, so its tick box
-// shares the content column's left edge with the Address input.
+// shares the content column's left edge with the Host input.
 func TestProxyCredentialsCheckboxAlignsWithAddressInput(t *testing.T) {
 	appLanguage(t, "en")
 	app := &appState{settings: settingsState{
-		proxyMode:           proxyManual,
+		proxyMode:           proxyHTTP,
 		proxyUseCredentials: true,
 	}}
 	tester := ui.NewTester(app.settingsPage, 1200, 900)
@@ -146,7 +146,7 @@ func TestProxyCredentialsCheckboxAlignsWithAddressInput(t *testing.T) {
 	if !ok {
 		t.Fatalf("no credentials checkbox: %v", tester.Texts())
 	}
-	// The Test button is in the same content column as the Address input, so
+	// The Test button is in the same content column as the Host input, so
 	// it stands in for that input, whose box the tester does not expose.
 	input, ok := tester.Find(locales.SettingsProxyTest())
 	if !ok {
@@ -155,32 +155,33 @@ func TestProxyCredentialsCheckboxAlignsWithAddressInput(t *testing.T) {
 	// Find returns the checkbox's text box: to its left are the 16 DIP tick
 	// box (Space(4)) and the 8 DIP gap (Space(2)), 24 DIP in total.
 	if box.X-input.X != 24 {
-		t.Errorf("checkbox text starts at %v, expected 24 past the address input column at %v", box.X, input.X)
+		t.Errorf("checkbox text starts at %v, expected 24 past the host input column at %v", box.X, input.X)
 	}
 }
 
-// With the proxy off the mode row stands alone: no address, no credentials
-// checkbox and no connection test.
-func TestProxySectionHidesAddressAndCredentialsWhenOff(t *testing.T) {
+// With no proxy the mode row stands alone: no host, port, credentials
+// checkbox or connection test.
+func TestProxySectionHidesHostAndCredentialsWhenNone(t *testing.T) {
 	appLanguage(t, "en")
-	app := &appState{settings: settingsState{proxyMode: proxyOff}}
+	app := &appState{settings: settingsState{proxyMode: proxyNone}}
 	tester := ui.NewTester(app.settingsPage, 1200, 900)
 	tester.Frame()
 
-	for _, want := range []string{locales.SettingsProxyMode(), locales.SettingsProxyModeOff()} {
+	for _, want := range []string{locales.SettingsProxyMode(), locales.SettingsProxyModeNone()} {
 		if _, ok := tester.Find(want); !ok {
-			t.Errorf("off mode does not show %q: %v", want, tester.Texts())
+			t.Errorf("none mode does not show %q: %v", want, tester.Texts())
 		}
 	}
 	for _, hidden := range []string{
-		locales.SettingsProxyAddress(),
-		locales.SettingsProxyAddressPlaceholder(),
+		locales.SettingsProxyHost(),
+		locales.SettingsProxyPort(),
+		locales.SettingsProxyPortPlaceholder(),
 		locales.SettingsProxyCredentials(),
 		locales.SettingsProxyTestLabel(),
 		locales.SettingsProxyTest(),
 	} {
 		if _, ok := tester.Find(hidden); ok {
-			t.Errorf("off mode still shows %q: %v", hidden, tester.Texts())
+			t.Errorf("none mode still shows %q: %v", hidden, tester.Texts())
 		}
 	}
 }

@@ -34,22 +34,31 @@ func (p *hkcuProxyPref) readString(name string) string {
 }
 
 func (p *hkcuProxyPref) Mode() ProxyMode {
-	return ParseProxyMode(p.readString(proxyModeValueName))
+	return ParseProxyModeWithAddress(p.readString(proxyModeValueName), p.readString(proxyURLValueName))
 }
 
-func (p *hkcuProxyPref) Address() string { return p.readString(proxyURLValueName) }
-func (p *hkcuProxyPref) User() string    { return p.readString(proxyUserValueName) }
+func (p *hkcuProxyPref) Host() string {
+	host, _ := splitHostPort(p.readString(proxyURLValueName))
+	return host
+}
 
-func (p *hkcuProxyPref) Set(mode ProxyMode, address, user string) {
+func (p *hkcuProxyPref) Port() string {
+	_, port := splitHostPort(p.readString(proxyURLValueName))
+	return port
+}
+
+func (p *hkcuProxyPref) User() string { return p.readString(proxyUserValueName) }
+
+func (p *hkcuProxyPref) Set(mode ProxyMode, host, port, user string) {
 	key, _, err := registry.CreateKey(p.root, proxyKeyPath, registry.SET_VALUE)
 	if err != nil {
 		return
 	}
 	defer key.Close()
-	// One key holds all three values: a partially written choice is a
-	// corrupted choice, so write them together and ignore individual failures.
-	_ = key.SetStringValue(proxyModeValueName, string(ParseProxyMode(string(mode))))
-	_ = key.SetStringValue(proxyURLValueName, address)
+	// One key holds all values: a partially written choice is a corrupted
+	// choice, so write them together and ignore individual failures.
+	_ = key.SetStringValue(proxyModeValueName, string(ParseProxyModeWithAddress(string(mode), host)))
+	_ = key.SetStringValue(proxyURLValueName, joinHostPort(host, port))
 	_ = key.SetStringValue(proxyUserValueName, user)
 }
 

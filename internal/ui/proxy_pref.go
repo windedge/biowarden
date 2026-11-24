@@ -2,6 +2,9 @@ package ui
 
 import (
 	"log"
+	"net"
+	"strconv"
+	"strings"
 
 	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/internal/registry"
@@ -10,46 +13,75 @@ import (
 	"github.com/windedge/biowarden/locales"
 )
 
-// proxyMode is the Settings page's proxy choice. It is an enum so a label can
+// proxyMode is the Settings page's proxy type. It is an enum so a label can
 // follow the language without ever being written back as a stored value.
 type proxyMode int
 
 const (
-	proxySystem proxyMode = iota
-	proxyManual
-	proxyOff
+	proxyNone proxyMode = iota
+	proxyHTTP
+	proxySOCKS5
+	proxySystem
 )
 
-// proxyModes are the choices in display order. System is first when the
-// platform can read it; otherwise the row offers only what this build can do.
+// proxyModes are the choices in display order. System is last and only when
+// the platform can read it; otherwise the row offers only what this build can
+// do.
 func proxyModes(systemSupported bool) []proxyMode {
-	modes := []proxyMode{proxyManual, proxyOff}
+	modes := []proxyMode{proxyNone, proxyHTTP, proxySOCKS5}
 	if systemSupported {
-		return append([]proxyMode{proxySystem}, modes...)
+		return append(modes, proxySystem)
 	}
 	return modes
 }
 
 func (m proxyMode) label() string {
 	switch m {
-	case proxyManual:
-		return locales.SettingsProxyModeManual()
-	case proxyOff:
-		return locales.SettingsProxyModeOff()
+	case proxyNone:
+		return locales.SettingsProxyModeNone()
+	case proxyHTTP:
+		return locales.SettingsProxyModeHTTP()
+	case proxySOCKS5:
+		return locales.SettingsProxyModeSOCKS5()
 	default:
 		return locales.SettingsProxyModeSystem()
 	}
 }
 
+// manual reports whether a mode asks for a host and a port.
+func (m proxyMode) manual() bool { return m == proxyHTTP || m == proxySOCKS5 }
+
 func (m proxyMode) stored() registry.ProxyMode {
 	switch m {
-	case proxyManual:
-		return registry.ProxyModeManual
-	case proxyOff:
-		return registry.ProxyModeOff
+	case proxyNone:
+		return registry.ProxyModeNone
+	case proxyHTTP:
+		return registry.ProxyModeHTTP
+	case proxySOCKS5:
+		return registry.ProxyModeSOCKS5
 	default:
 		return registry.ProxyModeSystem
 	}
+}
+
+// proxyURL assembles the full address auth expects from the type and the two
+// form fields. The scheme lives in the mode, never in the stored address.
+func proxyURL(mode proxyMode, host, port string) string {
+	if !mode.manual() {
+		return ""
+	}
+	scheme := "http"
+	if mode == proxySOCKS5 {
+		scheme = "socks5"
+	}
+	return scheme + "://" + net.JoinHostPort(strings.TrimSpace(host), strings.TrimSpace(port))
+}
+
+// validProxyPort is the form's light check before auth validates the composed
+// URL: a port is a decimal number in the TCP range.
+func validProxyPort(port string) bool {
+	n, err := strconv.Atoi(strings.TrimSpace(port))
+	return err == nil && n >= 1 && n <= 65535
 }
 
 // commitProxy writes the Settings draft through the seam and reports only a
@@ -60,9 +92,9 @@ func (s *settingsState) commitProxy() error {
 	return s.commitProxyDraft(true)
 }
 
-// commitProxyQuiet is for a mode switch or leaving the page: with no address
-// yet there is nothing to save, and the inline hint under the field already
-// explains that traffic goes direct.
+// commitProxyQuiet is for a mode switch or leaving the page: with no host or
+// port yet there is nothing to save, and the inline hint under the field
+// already explains that traffic goes direct.
 func (s *settingsState) commitProxyQuiet() error {
 	return s.commitProxyDraft(false)
 }
@@ -71,9 +103,9 @@ func (s *settingsState) commitProxyDraft(noticeEmpty bool) error {
 	if s.proxy == nil {
 		return nil
 	}
-	if s.proxyMode == proxyManual {
-		address := trimSpace(s.proxyAddress)
-		if address == "" {
+	host, port := trimSpace(s.proxyHost), trimSpace(s.proxyPort)
+	if s.proxyMode.manual() {
+		if host == "" {
 			if noticeEmpty {
 				s.notice = pageNotice{kind: noticeSettingsProxyAddressEmpty}
 			} else {
@@ -81,17 +113,21 @@ func (s *settingsState) commitProxyDraft(noticeEmpty bool) error {
 			}
 			return auth.ErrNoProxyAddress
 		}
-		if err := auth.ValidateProxyAddress(address); err != nil {
+		if !validProxyPort(port) {
+			s.notice = pageNotice{kind: noticeSettingsProxyAddressInvalid}
+			return auth.ErrInvalidProxyAddress
+		}
+		if err := auth.ValidateProxyAddress(proxyURL(s.proxyMode, host, port)); err != nil {
 			s.notice = pageNotice{kind: noticeSettingsProxyAddressInvalid}
 			return err
 		}
 	}
 	password := s.proxyPassword
-	if s.proxyMode == proxyOff {
+	if s.proxyMode == proxyNone {
 		password = ""
 		s.proxyPassword = ""
 	}
-	s.proxy.Save(s.proxyMode, trimSpace(s.proxyAddress), trimSpace(s.proxyUser), password)
+	s.proxy.Save(s.proxyMode, host, port, trimSpace(s.proxyUser), password)
 	// A successful save clears an earlier failure notice; the section itself
 	// already shows what took effect.
 	s.notice = pageNotice{}
@@ -112,12 +148,13 @@ func (s *settingsState) hasProxyChanges() bool {
 		return false
 	}
 	if s.proxyMode != s.proxy.Mode() ||
-		trimSpace(s.proxyAddress) != trimSpace(s.proxy.Address()) ||
+		trimSpace(s.proxyHost) != trimSpace(s.proxy.Host()) ||
+		trimSpace(s.proxyPort) != trimSpace(s.proxy.Port()) ||
 		trimSpace(s.proxyUser) != trimSpace(s.proxy.User()) {
 		return true
 	}
 	stored, _ := s.proxy.Password()
-	if s.proxyMode == proxyOff {
+	if s.proxyMode == proxyNone {
 		return stored != "" || s.proxyPassword != ""
 	}
 	return s.proxyPassword != stored
@@ -125,14 +162,12 @@ func (s *settingsState) hasProxyChanges() bool {
 
 func proxyModeFromStored(value registry.ProxyMode) proxyMode {
 	switch value {
-	case registry.ProxyModeEnvironment:
-		// Old GUI builds offered this mode. System mode still falls back to
-		// the environment when no OS proxy is available.
-		return proxySystem
-	case registry.ProxyModeManual:
-		return proxyManual
-	case registry.ProxyModeOff:
-		return proxyOff
+	case registry.ProxyModeHTTP:
+		return proxyHTTP
+	case registry.ProxyModeSOCKS5:
+		return proxySOCKS5
+	case registry.ProxyModeNone:
+		return proxyNone
 	default:
 		return proxySystem
 	}
@@ -140,9 +175,9 @@ func proxyModeFromStored(value registry.ProxyMode) proxyMode {
 
 func (m proxyMode) authMode() auth.ProxyMode {
 	switch m {
-	case proxyManual:
+	case proxyHTTP, proxySOCKS5:
 		return auth.ProxyModeManual
-	case proxyOff:
+	case proxyNone:
 		return auth.ProxyModeOff
 	default:
 		return auth.ProxyModeSystem
@@ -154,7 +189,8 @@ func (m proxyMode) authMode() auth.ProxyMode {
 // The pages never import the platform seams themselves.
 type proxyPref interface {
 	Mode() proxyMode
-	Address() string
+	Host() string
+	Port() string
 	User() string
 	Password() (string, bool)
 	// HasCredentials reports whether anything is stored, so a saved login
@@ -163,9 +199,9 @@ type proxyPref interface {
 	SystemSupported() bool
 	// system reports the OS setting auth uses in System mode.
 	system() (auth.SystemProxy, bool)
-	// Save writes the three preference values and the password, then drops the
+	// Save writes the preference values and the password, then drops the
 	// pooled connections that may still point at the previous proxy.
-	Save(mode proxyMode, address, user, password string)
+	Save(mode proxyMode, host, port, user, password string)
 	ClearPassword()
 }
 
@@ -190,7 +226,8 @@ func newProxyPref() proxyPref {
 }
 
 func (p *runtimeProxyPref) Mode() proxyMode { return proxyModeFromStored(p.pref.Mode()) }
-func (p *runtimeProxyPref) Address() string { return p.pref.Address() }
+func (p *runtimeProxyPref) Host() string    { return p.pref.Host() }
+func (p *runtimeProxyPref) Port() string    { return p.pref.Port() }
 func (p *runtimeProxyPref) User() string    { return p.pref.User() }
 
 func (p *runtimeProxyPref) Password() (string, bool) {
@@ -219,9 +256,9 @@ func (p *runtimeProxyPref) system() (auth.SystemProxy, bool) {
 	return auth.SystemProxy{HTTP: cfg.HTTP, HTTPS: cfg.HTTPS, SOCKS: cfg.SOCKS, Override: cfg.Override}, ok
 }
 
-func (p *runtimeProxyPref) Save(mode proxyMode, address, user, password string) {
-	p.pref.Set(mode.stored(), trimSpace(address), trimSpace(user))
-	if mode == proxyOff {
+func (p *runtimeProxyPref) Save(mode proxyMode, host, port, user, password string) {
+	p.pref.Set(mode.stored(), trimSpace(host), trimSpace(port), trimSpace(user))
+	if mode == proxyNone {
 		p.ClearPassword()
 	} else if password == "" {
 		// An empty field removes a stored password: leaving the old one would
@@ -256,9 +293,10 @@ func wireProxySources(pref proxyPref) {
 		return
 	}
 	auth.ConfigureProxy(func() auth.ProxySetting {
+		mode := pref.Mode()
 		setting := auth.ProxySetting{
-			Mode: pref.Mode().authMode(),
-			Addr: pref.Address(),
+			Mode: mode.authMode(),
+			Addr: proxyURL(mode, pref.Host(), pref.Port()),
 			User: pref.User(),
 		}
 		if password, ok := pref.Password(); ok {

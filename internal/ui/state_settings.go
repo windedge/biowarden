@@ -145,7 +145,8 @@ type settingsState struct {
 	// is left. Typing alone never writes a value.
 	proxy         proxyPref
 	proxyMode     proxyMode
-	proxyAddress  string
+	proxyHost     string
+	proxyPort     string
 	proxyUser     string
 	proxyPassword string
 	// proxyUseCredentials shows the username and password rows: most proxies
@@ -197,7 +198,8 @@ func newSettingsState(backend settingsBackend, verifier hello.Verifier, appearan
 	s.probe = s.probeProxy
 	if s.proxy != nil {
 		s.proxyMode = s.proxy.Mode()
-		s.proxyAddress = s.proxy.Address()
+		s.proxyHost = s.proxy.Host()
+		s.proxyPort = s.proxy.Port()
 		s.proxyUser = s.proxy.User()
 		if password, ok := s.proxy.Password(); ok {
 			s.proxyPassword = password
@@ -366,7 +368,7 @@ func (s *settingsState) proxyModeSelect(c *ui.Context) (proxyMode, bool) {
 // address or password alongside it.
 func (s *settingsState) setProxyMode(mode proxyMode) {
 	s.proxyMode = mode
-	if mode == proxyOff {
+	if mode == proxyNone {
 		s.proxyPassword = ""
 		s.proxyTest = proxyTestIdle
 		s.proxyTesting = false
@@ -380,9 +382,13 @@ func (s *settingsState) startProxyTest() {
 	if s.proxyTesting || s.probe == nil {
 		return
 	}
-	if s.proxyMode == proxyManual {
-		if trimSpace(s.proxyAddress) == "" {
+	if s.proxyMode.manual() {
+		switch {
+		case trimSpace(s.proxyHost) == "":
 			s.proxyTest = proxyTestInvalid
+			return
+		case !validProxyPort(s.proxyPort):
+			s.proxyTest = proxyTestInvalidAddress
 			return
 		}
 		if s.hasProxyChanges() {

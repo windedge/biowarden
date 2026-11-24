@@ -55,7 +55,8 @@ func (fakeSettings) logTail(int64) (string, error) { return fakeLog, nil }
 // touching HKCU or the credential manager.
 type fakeProxyPref struct {
 	mode        proxyMode
-	address     string
+	host        string
+	port        string
 	user        string
 	password    string
 	supported   bool
@@ -67,13 +68,15 @@ type fakeProxyPref struct {
 
 type proxySave struct {
 	mode     proxyMode
-	address  string
+	host     string
+	port     string
 	user     string
 	password string
 }
 
 func (f *fakeProxyPref) Mode() proxyMode { return f.mode }
-func (f *fakeProxyPref) Address() string { return f.address }
+func (f *fakeProxyPref) Host() string    { return f.host }
+func (f *fakeProxyPref) Port() string    { return f.port }
 func (f *fakeProxyPref) User() string    { return f.user }
 
 func (f *fakeProxyPref) Password() (string, bool) {
@@ -88,9 +91,9 @@ func (f *fakeProxyPref) SystemSupported() bool { return f.supported }
 
 func (f *fakeProxyPref) system() (auth.SystemProxy, bool) { return f.systemCfg, f.supported }
 
-func (f *fakeProxyPref) Save(mode proxyMode, address, user, password string) {
-	f.mode, f.address, f.user = mode, address, user
-	f.saveCalls = append(f.saveCalls, proxySave{mode, address, user, password})
+func (f *fakeProxyPref) Save(mode proxyMode, host, port, user, password string) {
+	f.mode, f.host, f.port, f.user = mode, host, port, user
+	f.saveCalls = append(f.saveCalls, proxySave{mode, host, port, user, password})
 	if password != "" {
 		f.password = password
 	} else {

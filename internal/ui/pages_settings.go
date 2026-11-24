@@ -1,12 +1,10 @@
 package ui
 
 import (
-	"errors"
 	"time"
 
 	"github.com/egoist/mygo/ui"
 
-	"github.com/windedge/biowarden/internal/auth"
 	"github.com/windedge/biowarden/locales"
 )
 
@@ -22,6 +20,7 @@ import (
 const (
 	settingsFieldWidth  = 400
 	settingsSelectWidth = 260
+	settingsPortWidth   = 120
 )
 
 // settingsPage mirrors the reference SettingsTab, extended with the log
@@ -112,16 +111,24 @@ func (app *appState) settingsPage(c *ui.Context) {
 								}
 							})
 						})
-						if app.settings.proxyMode == proxyManual {
-							ui.Field(c, locales.SettingsProxyAddress(), func() {
+						if app.settings.proxyMode.manual() {
+							ui.Field(c, locales.SettingsProxyHost(), func() {
 								ui.Column(c).Gap(spaceHair).Children(func() {
-									ui.TextInput(c.Key("proxy-address"), &app.settings.proxyAddress).
-										Placeholder(locales.SettingsProxyAddressPlaceholder()).
-										Label(locales.SettingsProxyAddress()).MaxWidth(settingsSelectWidth)
-									if addr := trimSpace(app.settings.proxyAddress); addr == "" {
+									ui.TextInput(c.Key("proxy-host"), &app.settings.proxyHost).
+										Placeholder(locales.SettingsProxyHost()).
+										Label(locales.SettingsProxyHost()).MaxWidth(settingsSelectWidth)
+									if trimSpace(app.settings.proxyHost) == "" {
 										ui.Text(c, locales.SettingsProxyAddressEmptyHint()).
 											FontSize(t.Rem(fontCaption)).TextColor(t.Danger)
-									} else if errors.Is(auth.ValidateProxyAddress(addr), auth.ErrInvalidProxyAddress) {
+									}
+								})
+							})
+							ui.Field(c, locales.SettingsProxyPort(), func() {
+								ui.Column(c).Gap(spaceHair).Children(func() {
+									ui.TextInput(c.Key("proxy-port"), &app.settings.proxyPort).
+										Placeholder(locales.SettingsProxyPortPlaceholder()).
+										Label(locales.SettingsProxyPort()).MaxWidth(settingsPortWidth)
+									if port := trimSpace(app.settings.proxyPort); port != "" && !validProxyPort(port) {
 										ui.Text(c, locales.SettingsProxyAddressInvalid()).
 											FontSize(t.Rem(fontCaption)).TextColor(t.Danger)
 									}
@@ -155,12 +162,13 @@ func (app *appState) settingsPage(c *ui.Context) {
 								})
 							}
 						}
-						if app.settings.proxyMode != proxyOff {
+						if app.settings.proxyMode != proxyNone {
 							ui.Field(c, locales.SettingsProxyTestLabel(), func() {
 								ui.Column(c).Gap(spaceHair).Children(func() {
 									secondaryButton(c, locales.SettingsProxyTest(),
 										app.settings.proxyTesting ||
-											(app.settings.proxyMode == proxyManual && trimSpace(app.settings.proxyAddress) == "")).
+											(app.settings.proxyMode.manual() &&
+												(trimSpace(app.settings.proxyHost) == "" || !validProxyPort(app.settings.proxyPort)))).
 										MaxWidth(settingsSelectWidth).
 										OnClick(func() {
 											app.settings.startProxyTest()

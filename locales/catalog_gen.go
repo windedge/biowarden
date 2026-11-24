@@ -2629,6 +2629,52 @@ func (msgs Messages) SettingsProxyMode() string {
 	return Catalog.Format(msgs.locale, "settingsProxyMode", nil)
 }
 
+// SettingsProxyModeNone says "None"
+// in the language the app shows.
+//
+// The proxy mode that connects directly.
+func SettingsProxyModeNone() string { return In(i18n.Locale()).SettingsProxyModeNone() }
+
+// SettingsProxyModeNone says "None"
+// in the language of msgs.
+//
+// The proxy mode that connects directly.
+func (msgs Messages) SettingsProxyModeNone() string {
+	return Catalog.Format(msgs.locale, "settingsProxyModeNone", nil)
+}
+
+// SettingsProxyModeHTTP says "HTTP proxy"
+// in the language the app shows.
+//
+// The proxy mode that tunnels through an HTTP proxy at the given host and
+// port.
+func SettingsProxyModeHTTP() string { return In(i18n.Locale()).SettingsProxyModeHTTP() }
+
+// SettingsProxyModeHTTP says "HTTP proxy"
+// in the language of msgs.
+//
+// The proxy mode that tunnels through an HTTP proxy at the given host and
+// port.
+func (msgs Messages) SettingsProxyModeHTTP() string {
+	return Catalog.Format(msgs.locale, "settingsProxyModeHTTP", nil)
+}
+
+// SettingsProxyModeSOCKS5 says "SOCKS5 proxy"
+// in the language the app shows.
+//
+// The proxy mode that tunnels through a SOCKS5 proxy at the given host and
+// port.
+func SettingsProxyModeSOCKS5() string { return In(i18n.Locale()).SettingsProxyModeSOCKS5() }
+
+// SettingsProxyModeSOCKS5 says "SOCKS5 proxy"
+// in the language of msgs.
+//
+// The proxy mode that tunnels through a SOCKS5 proxy at the given host and
+// port.
+func (msgs Messages) SettingsProxyModeSOCKS5() string {
+	return Catalog.Format(msgs.locale, "settingsProxyModeSOCKS5", nil)
+}
+
 // SettingsProxyModeSystem says "System"
 // in the language the app shows.
 //
@@ -2641,34 +2687,6 @@ func SettingsProxyModeSystem() string { return In(i18n.Locale()).SettingsProxyMo
 // The proxy mode that reads the operating system's setting.
 func (msgs Messages) SettingsProxyModeSystem() string {
 	return Catalog.Format(msgs.locale, "settingsProxyModeSystem", nil)
-}
-
-// SettingsProxyModeManual says "Manual"
-// in the language the app shows.
-//
-// The proxy mode with an address and credentials entered in Settings.
-func SettingsProxyModeManual() string { return In(i18n.Locale()).SettingsProxyModeManual() }
-
-// SettingsProxyModeManual says "Manual"
-// in the language of msgs.
-//
-// The proxy mode with an address and credentials entered in Settings.
-func (msgs Messages) SettingsProxyModeManual() string {
-	return Catalog.Format(msgs.locale, "settingsProxyModeManual", nil)
-}
-
-// SettingsProxyModeOff says "Off"
-// in the language the app shows.
-//
-// The proxy mode that connects directly.
-func SettingsProxyModeOff() string { return In(i18n.Locale()).SettingsProxyModeOff() }
-
-// SettingsProxyModeOff says "Off"
-// in the language of msgs.
-//
-// The proxy mode that connects directly.
-func (msgs Messages) SettingsProxyModeOff() string {
-	return Catalog.Format(msgs.locale, "settingsProxyModeOff", nil)
 }
 
 // SettingsProxySystemHint says "When Windows has no proxy configured, environment variables are used, then direct."
@@ -2687,28 +2705,56 @@ func (msgs Messages) SettingsProxySystemHint() string {
 	return Catalog.Format(msgs.locale, "settingsProxySystemHint", nil)
 }
 
-// SettingsProxyAddress says "Address"
+// SettingsProxyHost says "Host"
 // in the language the app shows.
 //
-// The Manual proxy form's field label for the proxy address.
-func SettingsProxyAddress() string { return In(i18n.Locale()).SettingsProxyAddress() }
+// The Manual proxy form's field label for the proxy host.
+func SettingsProxyHost() string { return In(i18n.Locale()).SettingsProxyHost() }
 
-// SettingsProxyAddress says "Address"
+// SettingsProxyHost says "Host"
 // in the language of msgs.
 //
-// The Manual proxy form's field label for the proxy address.
-func (msgs Messages) SettingsProxyAddress() string {
-	return Catalog.Format(msgs.locale, "settingsProxyAddress", nil)
+// The Manual proxy form's field label for the proxy host.
+func (msgs Messages) SettingsProxyHost() string {
+	return Catalog.Format(msgs.locale, "settingsProxyHost", nil)
 }
 
-// SettingsProxyCredentials says "Proxy requires credentials"
+// SettingsProxyPort says "Port"
+// in the language the app shows.
+//
+// The Manual proxy form's field label for the proxy port.
+func SettingsProxyPort() string { return In(i18n.Locale()).SettingsProxyPort() }
+
+// SettingsProxyPort says "Port"
+// in the language of msgs.
+//
+// The Manual proxy form's field label for the proxy port.
+func (msgs Messages) SettingsProxyPort() string {
+	return Catalog.Format(msgs.locale, "settingsProxyPort", nil)
+}
+
+// SettingsProxyPortPlaceholder says "7890"
+// in the language the app shows.
+//
+// The Manual proxy port field's example value.
+func SettingsProxyPortPlaceholder() string { return In(i18n.Locale()).SettingsProxyPortPlaceholder() }
+
+// SettingsProxyPortPlaceholder says "7890"
+// in the language of msgs.
+//
+// The Manual proxy port field's example value.
+func (msgs Messages) SettingsProxyPortPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsProxyPortPlaceholder", nil)
+}
+
+// SettingsProxyCredentials says "The proxy server requires a password"
 // in the language the app shows.
 //
 // The Manual proxy form's checkbox: checked shows the username and password
 // rows; unchecking only hides them, without clearing stored credentials.
 func SettingsProxyCredentials() string { return In(i18n.Locale()).SettingsProxyCredentials() }
 
-// SettingsProxyCredentials says "Proxy requires credentials"
+// SettingsProxyCredentials says "The proxy server requires a password"
 // in the language of msgs.
 //
 // The Manual proxy form's checkbox: checked shows the username and password
@@ -2717,48 +2763,32 @@ func (msgs Messages) SettingsProxyCredentials() string {
 	return Catalog.Format(msgs.locale, "settingsProxyCredentials", nil)
 }
 
-// SettingsProxyAddressPlaceholder says "socks5://127.0.0.1:1080 or http://proxy:8080"
+// SettingsProxyAddressEmptyHint says "Traffic goes direct until a host is set."
 // in the language the app shows.
 //
-// The Manual proxy address field's example values.
-func SettingsProxyAddressPlaceholder() string {
-	return In(i18n.Locale()).SettingsProxyAddressPlaceholder()
-}
-
-// SettingsProxyAddressPlaceholder says "socks5://127.0.0.1:1080 or http://proxy:8080"
-// in the language of msgs.
-//
-// The Manual proxy address field's example values.
-func (msgs Messages) SettingsProxyAddressPlaceholder() string {
-	return Catalog.Format(msgs.locale, "settingsProxyAddressPlaceholder", nil)
-}
-
-// SettingsProxyAddressEmptyHint says "Traffic goes direct until an address is set."
-// in the language the app shows.
-//
-// The warning under the Manual address field while it is blank.
+// The warning under the Manual host field while it is blank.
 func SettingsProxyAddressEmptyHint() string { return In(i18n.Locale()).SettingsProxyAddressEmptyHint() }
 
-// SettingsProxyAddressEmptyHint says "Traffic goes direct until an address is set."
+// SettingsProxyAddressEmptyHint says "Traffic goes direct until a host is set."
 // in the language of msgs.
 //
-// The warning under the Manual address field while it is blank.
+// The warning under the Manual host field while it is blank.
 func (msgs Messages) SettingsProxyAddressEmptyHint() string {
 	return Catalog.Format(msgs.locale, "settingsProxyAddressEmptyHint", nil)
 }
 
-// SettingsProxyAddressInvalid says "Proxy address must be host:port or a http(s) or socks5 URL with a port."
+// SettingsProxyAddressInvalid says "Enter a host and a port from 1 to 65535."
 // in the language the app shows.
 //
-// The warning under the Manual address field, and the Test connection
-// status, when the address has no usable host and port.
+// The warning beside the Manual port field, and the Test connection status,
+// when the host or port is not usable.
 func SettingsProxyAddressInvalid() string { return In(i18n.Locale()).SettingsProxyAddressInvalid() }
 
-// SettingsProxyAddressInvalid says "Proxy address must be host:port or a http(s) or socks5 URL with a port."
+// SettingsProxyAddressInvalid says "Enter a host and a port from 1 to 65535."
 // in the language of msgs.
 //
-// The warning under the Manual address field, and the Test connection
-// status, when the address has no usable host and port.
+// The warning beside the Manual port field, and the Test connection status,
+// when the host or port is not usable.
 func (msgs Messages) SettingsProxyAddressInvalid() string {
 	return Catalog.Format(msgs.locale, "settingsProxyAddressInvalid", nil)
 }
