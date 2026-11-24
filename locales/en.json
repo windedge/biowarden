@@ -1023,10 +1023,6 @@
   "@settingsProxyTestInvalid": {
     "description": "The status when Manual mode has no address, so no probe was sent."
   },
-  "settingsNoticeProxySaved": "Proxy settings saved.",
-  "@settingsNoticeProxySaved": {
-    "description": "The settings page's status line after proxy settings were written."
-  },
   "settingsNoticeProxyAddressEmpty": "Proxy address is empty.",
   "@settingsNoticeProxyAddressEmpty": {
     "description": "The settings page's status when a Manual address was needed before the settings could be saved."

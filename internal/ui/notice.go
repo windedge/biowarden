@@ -110,7 +110,6 @@ const (
 	noticeSettingsAutostartOff
 	noticeSettingsTrayShown
 	noticeSettingsTrayHidden
-	noticeSettingsProxySaved
 	noticeSettingsProxyAddressEmpty
 	noticeSettingsProxyAddressInvalid
 
@@ -273,8 +272,6 @@ func (n pageNotice) text() string {
 		return locales.SettingsNoticeTrayShown()
 	case noticeSettingsTrayHidden:
 		return locales.SettingsNoticeTrayHidden()
-	case noticeSettingsProxySaved:
-		return locales.SettingsNoticeProxySaved()
 	case noticeSettingsProxyAddressEmpty:
 		return locales.SettingsNoticeProxyAddressEmpty()
 	case noticeSettingsProxyAddressInvalid:

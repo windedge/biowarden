@@ -2961,20 +2961,6 @@ func (msgs Messages) SettingsProxyTestInvalid() string {
 	return Catalog.Format(msgs.locale, "settingsProxyTestInvalid", nil)
 }
 
-// SettingsNoticeProxySaved says "Proxy settings saved."
-// in the language the app shows.
-//
-// The settings page's status line after proxy settings were written.
-func SettingsNoticeProxySaved() string { return In(i18n.Locale()).SettingsNoticeProxySaved() }
-
-// SettingsNoticeProxySaved says "Proxy settings saved."
-// in the language of msgs.
-//
-// The settings page's status line after proxy settings were written.
-func (msgs Messages) SettingsNoticeProxySaved() string {
-	return Catalog.Format(msgs.locale, "settingsNoticeProxySaved", nil)
-}
-
 // SettingsNoticeProxyAddressEmpty says "Proxy address is empty."
 // in the language the app shows.
 //

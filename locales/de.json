@@ -200,7 +200,6 @@
   "settingsProxyTestRefused": "Der Proxy hat die Verbindung abgelehnt oder verlangt Anmeldedaten.",
   "settingsProxyTestUnreachable": "{server} hat über den Proxy nicht geantwortet.",
   "settingsProxyTestInvalid": "Proxy-Adresse ist leer; es gibt nichts zu testen.",
-  "settingsNoticeProxySaved": "Proxy-Einstellungen gespeichert.",
   "settingsNoticeProxyAddressEmpty": "Proxy-Adresse ist leer.",
   "logTitle": "Protokoll",
   "logLevelLine": "Stufe {level} · {path}",

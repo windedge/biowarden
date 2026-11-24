@@ -200,7 +200,6 @@
   "settingsProxyTestRefused": "Le proxy a refusé la connexion ou demande des identifiants.",
   "settingsProxyTestUnreachable": "{server} n'a pas répondu via le proxy.",
   "settingsProxyTestInvalid": "L'adresse du proxy est vide ; rien à tester.",
-  "settingsNoticeProxySaved": "Paramètres du proxy enregistrés.",
   "settingsNoticeProxyAddressEmpty": "L'adresse du proxy est vide.",
   "logTitle": "Journal",
   "logLevelLine": "Niveau {level} · {path}",

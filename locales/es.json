@@ -200,7 +200,6 @@
   "settingsProxyTestRefused": "El proxy rechazó la conexión o pide credenciales.",
   "settingsProxyTestUnreachable": "{server} no respondió a través del proxy.",
   "settingsProxyTestInvalid": "La dirección del proxy está vacía; no hay nada que probar.",
-  "settingsNoticeProxySaved": "Ajustes del proxy guardados.",
   "settingsNoticeProxyAddressEmpty": "La dirección del proxy está vacía.",
   "logTitle": "Registro",
   "logLevelLine": "Nivel {level} · {path}",

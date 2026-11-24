@@ -200,7 +200,6 @@
   "settingsProxyTestRefused": "プロキシが接続を拒否したか、認証情報を要求しています。",
   "settingsProxyTestUnreachable": "{server} がプロキシ経由で応答しませんでした。",
   "settingsProxyTestInvalid": "プロキシのアドレスが空です。テストするものがありません。",
-  "settingsNoticeProxySaved": "プロキシ設定を保存しました。",
   "settingsNoticeProxyAddressEmpty": "プロキシのアドレスが空です。",
   "logTitle": "ログ",
   "logLevelLine": "レベル {level} · {path}",

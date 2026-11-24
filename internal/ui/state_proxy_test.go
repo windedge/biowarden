@@ -206,6 +206,9 @@ func TestProxyFormModeSwitchCommitsDraft(t *testing.T) {
 	if s.proxyPassword != "" {
 		t.Fatalf("off kept the draft password %q", s.proxyPassword)
 	}
+	if s.notice.kind != noticeNone {
+		t.Fatalf("save notice = %+v, want none", s.notice)
+	}
 }
 
 // A blank Manual address must never be stored: the transport would then
@@ -267,6 +270,25 @@ func TestProxyFormRejectsBlankManualAddress(t *testing.T) {
 		if len(fake.saveCalls) != 1 || fake.saveCalls[0].mode != mode {
 			t.Fatalf("%v saved = %+v", mode, fake.saveCalls)
 		}
+		if s.notice.kind != noticeNone {
+			t.Fatalf("%v notice = %+v, want none", mode, s.notice)
+		}
+	}
+}
+
+func TestProxyFormSuccessfulSaveClearsFailureNotice(t *testing.T) {
+	fake, s := proxyFixture()
+	s.proxyAddress = "new:8080"
+	s.notice = pageNotice{kind: noticeSettingsProxyAddressInvalid}
+	if err := s.commitProxy(); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+	want := proxySave{mode: proxyManual, address: "new:8080", user: "old", password: "oldpw"}
+	if len(fake.saveCalls) != 1 || fake.saveCalls[0] != want {
+		t.Fatalf("save calls = %+v, want %+v", fake.saveCalls, want)
+	}
+	if s.notice.kind != noticeNone {
+		t.Fatalf("notice = %+v, want none after a successful save", s.notice)
 	}
 }
 
@@ -339,6 +361,9 @@ func TestProxyFormCommitsOnPageLeave(t *testing.T) {
 	app.setPage(pageAccount)
 	if len(fake.saveCalls) != 2 || fake.saveCalls[1].password != "" {
 		t.Fatalf("cleared password not committed: %+v", fake.saveCalls)
+	}
+	if app.settings.notice.kind != noticeNone {
+		t.Fatalf("notice = %+v, want none after saving on leave", app.settings.notice)
 	}
 	if fake.password != "" || fake.clearCalls != 1 {
 		t.Fatalf("stored password = %q, clears = %d", fake.password, fake.clearCalls)
@@ -419,6 +444,9 @@ func TestProxyFormEmptyAddressSkipsTest(t *testing.T) {
 	}
 	if fake.address != "new:8080" {
 		t.Fatalf("address after commit = %q", fake.address)
+	}
+	if s.notice.kind != noticeNone {
+		t.Fatalf("notice = %+v, want none after a successful commit", s.notice)
 	}
 	s.startProxyTest()
 	if !s.proxyTesting || s.proxyTest != proxyTestTesting {

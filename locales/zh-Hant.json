@@ -200,7 +200,6 @@
   "settingsProxyTestRefused": "代理拒絕了連線或需要驗證。",
   "settingsProxyTestUnreachable": "{server} 未透過代理作出回應。",
   "settingsProxyTestInvalid": "代理地址為空；沒有可測試的內容。",
-  "settingsNoticeProxySaved": "代理設定已儲存。",
   "settingsNoticeProxyAddressEmpty": "代理地址為空。",
   "logTitle": "記錄",
   "logLevelLine": "層級 {level} · {path}",

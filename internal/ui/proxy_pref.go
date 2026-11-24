@@ -52,9 +52,9 @@ func (m proxyMode) stored() registry.ProxyMode {
 	}
 }
 
-// commitProxy writes the Settings draft through the seam and reports an
-// empty Manual address on the page. A mode without credentials also drops the
-// stored password, and a blank password means the human cleared it rather than
+// commitProxy writes the Settings draft through the seam and reports only a
+// failure on the page. A mode without credentials also drops the stored
+// password, and a blank password means the human cleared it rather than
 // wanting the old one kept.
 func (s *settingsState) commitProxy() error {
 	return s.commitProxyDraft(true)
@@ -92,7 +92,9 @@ func (s *settingsState) commitProxyDraft(noticeEmpty bool) error {
 		s.proxyPassword = ""
 	}
 	s.proxy.Save(s.proxyMode, trimSpace(s.proxyAddress), trimSpace(s.proxyUser), password)
-	s.notice = pageNotice{kind: noticeSettingsProxySaved, ok: true}
+	// A successful save clears an earlier failure notice; the section itself
+	// already shows what took effect.
+	s.notice = pageNotice{}
 	return nil
 }
 
